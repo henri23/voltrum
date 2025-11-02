@@ -116,7 +116,7 @@ b8 application_init(Client* client_state) {
     }
 
     // Initialize UI with configuration from client
-    if (!ui_initialize(UI_Theme::CATPPUCCIN_MOCHA,
+    if (!ui_initialize(client_state->config.theme,
             &client_state->layers,
             client_state->menu_callback,
             client_state->config.name,

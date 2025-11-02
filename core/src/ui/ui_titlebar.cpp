@@ -543,9 +543,7 @@ button_fallback:
 
 INTERNAL_FUNC void draw_titlebar_gradient() {
     // Get current theme palette for gradient colors
-    extern UI_Theme ui_get_current_theme(); // Internal function from ui.cpp
-    UI_Theme current_theme = ui_get_current_theme();
-    const UI_Theme_Palette& palette = ui_themes_get_palette(current_theme);
+    const UI_Theme_Palette& palette = get_current_palette();
 
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
@@ -557,21 +555,9 @@ INTERNAL_FUNC void draw_titlebar_gradient() {
     ImVec2 gradient_max =
         ImVec2(state.titlebar_min.x + gradient_width, state.titlebar_max.y);
 
-    // Choose gradient colors based on current theme
-    u32 gradient_start_color, gradient_end_color;
-
-    if (current_theme == UI_Theme::DARK) {
-        // Orange to transparent gradient for dark theme (complements Voltrum
-        // branding)
-        gradient_start_color =
-            IM_COL32(236, 158, 36, 80); // Orange accent with transparency
-        gradient_end_color = IM_COL32(236, 158, 36, 0); // Fully transparent
-    } else {
-        // Purple to transparent gradient for Catppuccin theme
-        gradient_start_color =
-            IM_COL32(203, 166, 247, 60); // Mauve with transparency
-        gradient_end_color = IM_COL32(203, 166, 247, 0); // Fully transparent
-    }
+    // Use gradient colors from theme palette
+    u32 gradient_start_color = palette.titlebar_gradient_start;
+    u32 gradient_end_color = palette.titlebar_gradient_end;
 
     // Render horizontal gradient
     draw_list->AddRectFilledMultiColor(gradient_min,

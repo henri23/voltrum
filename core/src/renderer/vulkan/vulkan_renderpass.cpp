@@ -4,7 +4,8 @@
 #include "renderer/vulkan/vulkan_types.hpp"
 
 // Internal function declarations
-INTERNAL_FUNC void vulkan_renderpass_create_main_internal(Vulkan_Context* context,
+INTERNAL_FUNC void vulkan_renderpass_create_main_internal(
+    Vulkan_Context* context,
     Vulkan_Renderpass* out_renderpass,
     f32 x,
     f32 y,
@@ -80,7 +81,8 @@ void vulkan_renderpass_create(Vulkan_Context* context,
     out_renderpass->type = type;
 }
 
-INTERNAL_FUNC void vulkan_renderpass_create_main_internal(Vulkan_Context* context,
+INTERNAL_FUNC void vulkan_renderpass_create_main_internal(
+    Vulkan_Context* context,
     Vulkan_Renderpass* out_renderpass,
     // Definition of the area of the image that we want to render to
     f32 x,
@@ -310,6 +312,7 @@ void vulkan_renderpass_end(Vulkan_Command_Buffer* command_buffer,
 
 INTERNAL_FUNC void vulkan_renderpass_create_ui_internal(Vulkan_Context* context,
     Vulkan_Renderpass* out_renderpass,
+    // TODO: Change with vec4
     f32 x,
     f32 y,
     f32 w,
@@ -362,7 +365,8 @@ INTERNAL_FUNC void vulkan_renderpass_create_ui_internal(Vulkan_Context* context,
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_attachment_reference;
 
-    // UI renderpass doesn't need depth attachment - ImGui handles layering through draw order
+    // UI renderpass doesn't need depth attachment - ImGui handles layering
+    // through draw order
     subpass.pDepthStencilAttachment = nullptr;
 
     subpass.inputAttachmentCount = 0;

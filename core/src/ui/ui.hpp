@@ -44,6 +44,12 @@ VOLTRUM_API b8 ui_register_component(const UI_Layer* component);
 UI_Theme ui_get_current_theme();
 
 /**
+ * Set the UI theme at runtime
+ * @param theme - new theme to apply
+ */
+VOLTRUM_API void ui_set_theme(UI_Theme theme);
+
+/**
  * Get the UI event callback for registration by application
  * @return PFN_event_callback for UI event handling
  */

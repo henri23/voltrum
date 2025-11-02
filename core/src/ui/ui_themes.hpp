@@ -10,6 +10,7 @@ struct ImGuiStyle;
  */
 enum class UI_Theme {
     DARK = 0,        // Current Walnut-inspired dark theme
+    LIGHT,           // Light theme
     CATPPUCCIN_MOCHA, // Catppuccin Mocha color scheme
     COUNT            // Number of available themes
 };
@@ -28,9 +29,14 @@ struct UI_Theme_Palette {
     u32 background;
     u32 background_dark;
     u32 titlebar;
+    u32 window_bg;
     u32 property_field;
     u32 background_popup;
     u32 clear_color;        // Window clear/background color
+
+    // Titlebar gradient colors
+    u32 titlebar_gradient_start;
+    u32 titlebar_gradient_end;
 
     // Text colors
     u32 text;
@@ -69,6 +75,13 @@ struct UI_Theme_Palette {
 
     // Docking colors
     u32 docking_preview;
+
+    // Component colors for custom wrappers
+    u32 component_primary;
+    u32 component_secondary;
+    u32 component_success;
+    u32 component_warning;
+    u32 component_info;
 };
 
 /**

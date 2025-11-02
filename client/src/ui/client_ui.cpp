@@ -1,8 +1,10 @@
 #include "client_ui.hpp"
 
 // Direct ImGui access (now available as public dependency from core)
-#include <imgui.h>
 #include <core/logger.hpp>
+#include <ui/ui.hpp>
+
+#include <imgui.h>
 
 internal_variable b8 show_demo_window;
 
@@ -26,9 +28,9 @@ void client_ui_render_voltrum_window(void* user_data) {
 
     ImGui::Spacing();
 
-	local_persist f32 slider_value = 0.0f;
-	local_persist ImVec4 clear_color = {};
-	local_persist u32 counter = 0;
+    local_persist f32 slider_value = 0.0f;
+    local_persist ImVec4 clear_color = {};
+    local_persist u32 counter = 0;
 
     // Interactive controls section
     ImGui::SeparatorText("Interactive Controls");
@@ -60,7 +62,6 @@ void client_ui_render_voltrum_window(void* user_data) {
     ImGui::End();
 }
 
-
 // Menu system implementation (migrated from core/src/ui/ui_components.cpp)
 void client_ui_render_menus(void* user_data) {
 
@@ -87,6 +88,25 @@ void client_ui_render_menus(void* user_data) {
     if (ImGui::BeginMenu("View")) {
         ImGui::MenuItem("Voltrum Window", nullptr, nullptr);
         ImGui::MenuItem("Demo Window", nullptr, &show_demo_window);
+
+        ImGui::Separator();
+
+        // Theme submenu
+        if (ImGui::BeginMenu("Theme")) {
+            if (ImGui::MenuItem("Dark")) {
+                ui_set_theme(UI_Theme::DARK);
+                CORE_DEBUG("Theme changed to Dark");
+            }
+            if (ImGui::MenuItem("Light")) {
+                ui_set_theme(UI_Theme::LIGHT);
+                CORE_DEBUG("Theme changed to Light");
+            }
+            if (ImGui::MenuItem("Catppuccin Mocha")) {
+                ui_set_theme(UI_Theme::CATPPUCCIN_MOCHA);
+                CORE_DEBUG("Theme changed to Catppuccin Mocha");
+            }
+            ImGui::EndMenu();
+        }
 
         ImGui::EndMenu();
     }

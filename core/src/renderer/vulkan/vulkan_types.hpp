@@ -184,7 +184,6 @@ struct Vulkan_Object_Shader {
     // One descriptor set per vulkan_image
     // Dynamic arrays because I need 1 for each swapchain image
     VkDescriptorSet* global_descriptor_sets;
-    b8* is_updated_list;
 
     Vulkan_Buffer global_uniform_buffer;
 

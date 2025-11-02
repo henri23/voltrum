@@ -1,128 +1,24 @@
 #include "ui_themes.hpp"
 #include "imgui.h"
 
-// Dark theme palette (current Walnut-inspired theme) - C++17 compatible
-static const UI_Theme_Palette dark_palette = {
-    // Primary colors
-    IM_COL32(236, 158, 36, 255), // accent
-    IM_COL32(39, 185, 242, 255), // highlight
-    IM_COL32(83, 232, 254, 255), // nice_blue
-    IM_COL32(78, 151, 166, 255), // compliment
-
-    // Background colors
-    IM_COL32(36, 36, 36, 255), // background
-    IM_COL32(26, 26, 26, 255), // background_dark
-    IM_COL32(21, 21, 21, 255), // titlebar
-    IM_COL32(15, 15, 15, 255), // property_field
-    IM_COL32(50, 50, 50, 255), // background_popup
-    IM_COL32(0, 0, 0, 255),    // clear_color (black)
-
-    // Text colors
-    IM_COL32(192, 192, 192, 255), // text
-    IM_COL32(210, 210, 210, 255), // text_brighter
-    IM_COL32(128, 128, 128, 255), // text_darker
-    IM_COL32(230, 51, 51, 255),   // text_error
-
-    // UI element colors
-    IM_COL32(77, 77, 77, 255),    // muted
-    IM_COL32(47, 47, 47, 255),    // group_header
-    IM_COL32(237, 192, 119, 255), // selection
-    IM_COL32(237, 201, 142, 23),  // selection_muted
-
-    // Button colors
-    IM_COL32(56, 56, 56, 200), // button
-    IM_COL32(70, 70, 70, 255), // button_hovered
-    IM_COL32(56, 56, 56, 150), // button_active
-
-    // Tab colors
-    IM_COL32(255, 225, 135, 30), // tab_hovered
-    IM_COL32(255, 225, 135, 60), // tab_active
-
-    // Resize grip colors
-    IM_COL32(232, 232, 232, 64),  // resize_grip (25% alpha)
-    IM_COL32(207, 207, 207, 171), // resize_grip_hovered (67% alpha)
-    IM_COL32(117, 117, 117, 242), // resize_grip_active (95% alpha)
-
-    // Scrollbar colors
-    IM_COL32(5, 5, 5, 135),       // scrollbar_bg (53% alpha)
-    IM_COL32(79, 79, 79, 255),    // scrollbar_grab
-    IM_COL32(105, 105, 105, 255), // scrollbar_grab_hovered
-    IM_COL32(130, 130, 130, 255), // scrollbar_grab_active
-
-    // Separator colors
-    IM_COL32(39, 185, 242, 150), // separator_hovered
-
-    // Docking colors
-    IM_COL32(39, 185, 242, 255) // docking_preview (blue)
-};
-
-// Catppuccin Mocha theme palette - C++17 compatible
-static const UI_Theme_Palette catppuccin_mocha_palette = {
-    // Primary colors (Catppuccin Mocha)
-    IM_COL32(245, 194, 231, 255), // accent (Pink)
-    IM_COL32(137, 180, 250, 255), // highlight (Blue)
-    IM_COL32(116, 199, 236, 255), // nice_blue (Sky)
-    IM_COL32(148, 226, 213, 255), // compliment (Teal)
-
-    // Background colors (Catppuccin Mocha)
-    IM_COL32(49, 50, 68, 255), // background (Surface0)
-    IM_COL32(30, 30, 46, 255), // background_dark (Base)
-    IM_COL32(24, 24, 37, 255), // titlebar (Mantle)
-    IM_COL32(17, 17, 27, 255), // property_field (Crust)
-    IM_COL32(69, 71, 90, 255), // background_popup (Surface1)
-    IM_COL32(30, 30, 46, 255), // clear_color (Base)
-
-    // Text colors (Catppuccin Mocha)
-    IM_COL32(205, 214, 244, 255), // text (Text)
-    IM_COL32(166, 173, 200, 255), // text_brighter (Subtext1)
-    IM_COL32(127, 132, 156, 255), // text_darker (Subtext0)
-    IM_COL32(243, 139, 168, 255), // text_error (Red)
-
-    // UI element colors (Catppuccin Mocha)
-    IM_COL32(88, 91, 112, 255),   // muted (Surface2)
-    IM_COL32(69, 71, 90, 255),    // group_header (Surface1)
-    IM_COL32(203, 166, 247, 255), // selection (Mauve)
-    IM_COL32(203, 166, 247, 60),  // selection_muted (Mauve with alpha)
-
-    // Button colors (Catppuccin Mocha)
-    IM_COL32(69, 71, 90, 200),  // button (Surface1 with alpha)
-    IM_COL32(88, 91, 112, 255), // button_hovered (Surface2)
-    IM_COL32(49, 50, 68, 255),  // button_active (Surface0)
-
-    // Tab colors (Catppuccin Mocha)
-    IM_COL32(203, 166, 247, 77),  // tab_hovered (Mauve 30% alpha)
-    IM_COL32(203, 166, 247, 153), // tab_active (Mauve 60% alpha)
-
-    // Resize grip colors (Catppuccin Mocha)
-    IM_COL32(166, 173, 200, 64),  // resize_grip (Subtext1 25% alpha)
-    IM_COL32(166, 173, 200, 171), // resize_grip_hovered (Subtext1 67% alpha)
-    IM_COL32(205, 214, 244, 242), // resize_grip_active (Text 95% alpha)
-
-    // Scrollbar colors (Catppuccin Mocha)
-    IM_COL32(17, 17, 27, 135),    // scrollbar_bg (Crust 53% alpha)
-    IM_COL32(88, 91, 112, 255),   // scrollbar_grab (Surface2)
-    IM_COL32(108, 112, 134, 255), // scrollbar_grab_hovered (Overlay0)
-    IM_COL32(127, 132, 156, 255), // scrollbar_grab_active (Subtext0)
-
-    // Separator colors (Catppuccin Mocha)
-    IM_COL32(137, 180, 250, 150), // separator_hovered (Blue with alpha)
-
-    // Docking colors (Catppuccin Mocha)
-    IM_COL32(245, 194, 231, 255) // docking_preview (Pink)
-};
+// Include theme palettes
+#include "themes/catppuccin_mocha_theme.hpp"
+#include "themes/dark_theme.hpp"
+#include "themes/light_theme.hpp"
 
 // Theme palette array
 internal_variable const UI_Theme_Palette* theme_palettes[] = {&dark_palette,
+    &light_palette,
     &catppuccin_mocha_palette};
 
 // Theme names
-static const char* theme_names[] = {"Dark", "Catppuccin Mocha"};
+static const char* theme_names[] = {"Dark", "Light", "Catppuccin Mocha"};
 
-static_assert(sizeof(theme_palettes) / sizeof(theme_palettes[0]) ==
+STATIC_ASSERT(sizeof(theme_palettes) / sizeof(theme_palettes[0]) ==
                   (int)UI_Theme::COUNT,
     "Theme palette array size must match UI_Theme enum count");
 
-static_assert(sizeof(theme_names) / sizeof(theme_names[0]) ==
+STATIC_ASSERT(sizeof(theme_names) / sizeof(theme_names[0]) ==
                   (int)UI_Theme::COUNT,
     "Theme names array size must match UI_Theme enum count");
 
@@ -202,7 +98,7 @@ void ui_themes_apply(UI_Theme theme, ImGuiStyle& style) {
         ImGui::ColorConvertU32ToFloat4(palette.separator_hovered);
 
     colors[ImGuiCol_WindowBg] =
-        ImGui::ColorConvertU32ToFloat4(palette.titlebar);
+        ImGui::ColorConvertU32ToFloat4(palette.window_bg);
     colors[ImGuiCol_ChildBg] =
         ImGui::ColorConvertU32ToFloat4(palette.background);
     colors[ImGuiCol_PopupBg] =

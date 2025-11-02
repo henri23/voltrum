@@ -311,6 +311,22 @@ INTERNAL_FUNC b8 setup_imgui_context(f32 main_scale, void* window) {
 // Internal accessor for current theme (for core UI components only)
 UI_Theme ui_get_current_theme() { return ui_state.current_theme; }
 
+// Set UI theme at runtime
+void ui_set_theme(UI_Theme theme) {
+    if ((int)theme >= (int)UI_Theme::COUNT) {
+        CORE_WARN("Invalid theme index, defaulting to DARK");
+        theme = UI_Theme::DARK;
+    }
+
+    ui_state.current_theme = theme;
+
+    // Re-apply theme to ImGui style
+    ImGuiStyle& style = ImGui::GetStyle();
+    ui_themes_apply(theme, style);
+
+    CORE_DEBUG("Theme changed to: %d", (int)theme);
+}
+
 // Expose UI event callback for application registration
 PFN_event_callback ui_get_event_callback() { return ui_event_handler; }
 
