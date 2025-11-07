@@ -45,11 +45,29 @@ s32 string_format_v(
 
 u64 string_length(const char* string) {
 	u64 length = 0;
-	// Continue to iterate inside the string until we find the 
+	// Continue to iterate inside the string until we find the
 	// null terminator /0 whose ASCII value is 0
 	while(string[length] != 0) {
 		length++;
 	}
 	return length;
+}
+
+void string_copy(
+    char* dest,
+    const char* source,
+    u64 max_length) {
+    if (!dest || !source || max_length == 0) {
+        return;
+    }
+
+    u64 i = 0;
+    // Copy characters until we hit null terminator or max_length - 1
+    while (i < max_length - 1 && source[i] != 0) {
+        dest[i] = source[i];
+        i++;
+    }
+    // Always null terminate
+    dest[i] = 0;
 }
 

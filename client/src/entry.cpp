@@ -93,8 +93,7 @@ b8 create_client(Client* client_state) {
     client_state->config.name = "Voltrum EDA";
     client_state->config.width = 1280;
     client_state->config.height = 720;
-    // client_state->config.theme = UI_Theme::CATPPUCCIN_MOCHA;
-    client_state->config.theme = UI_Theme::LIGHT;
+    client_state->config.theme = UI_Theme::CATPPUCCIN_MOCHA;
 
     // Set up lifecycle callbacks
     client_state->initialize = client_initialize;

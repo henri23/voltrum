@@ -340,16 +340,16 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
     constexpr f32 f = 10.0f;
 
     verts[0].position.x = 0.0 * f;
-    verts[0].position.y = -0.5 * f;
+    verts[0].position.y = -1 * f;
 
-    verts[1].position.x = 0.5 * f;
-    verts[1].position.y = 0.5 * f;
+    verts[1].position.x = 1 * f;
+    verts[1].position.y = 1 * f;
 
     verts[2].position.x = 0 * f;
-    verts[2].position.y = 0.5 * f;
+    verts[2].position.y = 1 * f;
 
-    verts[3].position.x = 0.5 * f;
-    verts[3].position.y = -0.5 * f;
+    verts[3].position.x = 1 * f;
+    verts[3].position.y = -1 * f;
 
     constexpr u32 index_count = 6;
     u32 indices[index_count] = {0, 1, 2, 0, 3, 1};

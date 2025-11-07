@@ -1,10 +1,11 @@
 #include "ui_fonts.hpp"
 
-#include "resources/loaders/binary_loader.hpp"
 #include "containers/auto_array.hpp"
 #include "core/asserts.hpp"
 #include "core/logger.hpp"
 #include "imgui.h"
+#include "resources/loaders/binary_loader.hpp"
+#include <cstdio>
 #include <cstring>
 
 // Font information structure (internal only)
@@ -36,10 +37,17 @@ struct UI_Font_Registry {
 // Internal font system state
 internal_variable UI_Font_Registry font_registry = {};
 
-// Default embedded font data (placeholder - in real implementation would be actual font data)
-// For now, we'll use ImGui's default font
+// Default embedded font data (placeholder - in real implementation would be
+// actual font data) For now, we'll use ImGui's default font
 internal_variable const u8 default_font_data[] = {0}; // Placeholder
 internal_variable const u32 default_font_data_size = 0;
+
+// Font name storage pool (to avoid stack memory issues)
+constexpr u32 MAX_FONT_NAME_COUNT = 128;
+constexpr u32 FONT_NAME_LENGTH = 64;
+internal_variable char font_name_pool[MAX_FONT_NAME_COUNT][FONT_NAME_LENGTH] =
+    {};
+internal_variable u32 font_name_pool_index = 0;
 
 // Internal functions
 INTERNAL_FUNC UI_Font_Info* find_font_by_name(const char* name);
@@ -58,16 +66,26 @@ b8 ui_fonts_initialize() {
     font_registry.default_font = nullptr;
     font_registry.is_initialized = true;
 
+    // Reset font name pool
+    font_name_pool_index = 0;
+
     CORE_INFO("Font management system initialized");
     return true;
 }
 
-b8 ui_fonts_register_embedded(const char* name, const char* family, UI_Font_Weight weight, UI_Font_Style style, const u8* data, u32 data_size, f32 size) {
+b8 ui_fonts_register_embedded(const char* name,
+    const char* family,
+    UI_Font_Weight weight,
+    UI_Font_Style style,
+    const u8* data,
+    u32 data_size,
+    f32 size) {
     RUNTIME_ASSERT_MSG(name, "Font name cannot be null");
     RUNTIME_ASSERT_MSG(family, "Font family cannot be null");
     // Note: data can be null for default font
     if (data != nullptr) {
-        RUNTIME_ASSERT_MSG(data_size > 0, "Font data size must be positive when data is provided");
+        RUNTIME_ASSERT_MSG(data_size > 0,
+            "Font data size must be positive when data is provided");
     }
 
     if (!font_registry.is_initialized) {
@@ -82,8 +100,7 @@ b8 ui_fonts_register_embedded(const char* name, const char* family, UI_Font_Weig
     }
 
     // Create and add font info
-    UI_Font_Info font_info = {
-        name,
+    UI_Font_Info font_info = {name,
         family,
         weight,
         style,
@@ -100,7 +117,12 @@ b8 ui_fonts_register_embedded(const char* name, const char* family, UI_Font_Weig
     return true;
 }
 
-b8 ui_fonts_register_system(const char* name, const char* family, UI_Font_Weight weight, UI_Font_Style style, const char* filepath, f32 size) {
+b8 ui_fonts_register_system(const char* name,
+    const char* family,
+    UI_Font_Weight weight,
+    UI_Font_Style style,
+    const char* filepath,
+    f32 size) {
     RUNTIME_ASSERT_MSG(name, "Font name cannot be null");
     RUNTIME_ASSERT_MSG(family, "Font family cannot be null");
     RUNTIME_ASSERT_MSG(filepath, "Font filepath cannot be null");
@@ -117,21 +139,23 @@ b8 ui_fonts_register_system(const char* name, const char* family, UI_Font_Weight
     }
 
     // Create and add font info for system font
-    UI_Font_Info font_info = {
-        name,
+    UI_Font_Info font_info = {name,
         family,
         weight,
         style,
         size,
         (const u8*)filepath, // Store filepath for system fonts
-        0,              // 0 indicates system font
+        0,                   // 0 indicates system font
         nullptr,
         false,
         false};
 
     font_registry.fonts.push_back(font_info);
 
-    CORE_DEBUG("Registered system font: %s -> %s (%.1fpt)", name, filepath, size);
+    CORE_DEBUG("Registered system font: %s -> %s (%.1fpt)",
+        name,
+        filepath,
+        size);
     return true;
 }
 
@@ -157,16 +181,15 @@ b8 ui_fonts_load_all() {
 
         if (font_info->data && font_info->data_size > 0) {
             // Load embedded font from memory
-            font_info->imgui_font = io.Fonts->AddFontFromMemoryTTF(
-                (void*)font_info->data,
-                font_info->data_size,
-                font_info->size,
-                &config);
+            font_info->imgui_font =
+                io.Fonts->AddFontFromMemoryTTF((void*)font_info->data,
+                    font_info->data_size,
+                    font_info->size,
+                    &config);
         } else if (font_info->data && font_info->data_size == 0) {
             // Load system font from file (filepath stored in data pointer)
             const char* filepath = (const char*)font_info->data;
-            font_info->imgui_font = io.Fonts->AddFontFromFileTTF(
-                filepath,
+            font_info->imgui_font = io.Fonts->AddFontFromFileTTF(filepath,
                 font_info->size,
                 &config);
         } else {
@@ -223,16 +246,16 @@ b8 ui_fonts_set_default(const char* name) {
     return true;
 }
 
-ImFont* ui_fonts_find_by_style(const char* family, UI_Font_Weight weight, UI_Font_Style style) {
+ImFont* ui_fonts_find_by_style(const char* family,
+    UI_Font_Weight weight,
+    UI_Font_Style style) {
     RUNTIME_ASSERT_MSG(family, "Font family cannot be null");
 
     for (u32 i = 0; i < font_registry.fonts.size(); ++i) {
         const UI_Font_Info* font_info = &font_registry.fonts[i];
 
-        if (font_info->is_loaded &&
-            strcmp(font_info->family, family) == 0 &&
-            font_info->weight == weight &&
-            font_info->style == style) {
+        if (font_info->is_loaded && strcmp(font_info->family, family) == 0 &&
+            font_info->weight == weight && font_info->style == style) {
             return font_info->imgui_font;
         }
     }
@@ -271,15 +294,27 @@ b8 ui_fonts_load_system_defaults() {
     b8 success = true;
 
     // Add default font at various sizes using constexpr values
-    success &= ui_fonts_register_embedded(
-        "default_small", "Default", UI_Font_Weight::REGULAR, UI_Font_Style::NORMAL,
-        default_font_data, default_font_data_size, UI_FONT_SIZE_SMALL);
-    success &= ui_fonts_register_embedded(
-        "default_normal", "Default", UI_Font_Weight::REGULAR, UI_Font_Style::NORMAL,
-        default_font_data, default_font_data_size, UI_FONT_SIZE_NORMAL);
-    success &= ui_fonts_register_embedded(
-        "default_large", "Default", UI_Font_Weight::REGULAR, UI_Font_Style::NORMAL,
-        default_font_data, default_font_data_size, UI_FONT_SIZE_LARGE);
+    success &= ui_fonts_register_embedded("default_small",
+        "Default",
+        UI_Font_Weight::REGULAR,
+        UI_Font_Style::NORMAL,
+        default_font_data,
+        default_font_data_size,
+        UI_FONT_SIZE_SMALL);
+    success &= ui_fonts_register_embedded("default_normal",
+        "Default",
+        UI_Font_Weight::REGULAR,
+        UI_Font_Style::NORMAL,
+        default_font_data,
+        default_font_data_size,
+        UI_FONT_SIZE_NORMAL);
+    success &= ui_fonts_register_embedded("default_large",
+        "Default",
+        UI_Font_Weight::REGULAR,
+        UI_Font_Style::NORMAL,
+        default_font_data,
+        default_font_data_size,
+        UI_FONT_SIZE_LARGE);
 
     if (success) {
         CORE_DEBUG("System default fonts loaded successfully");
@@ -290,126 +325,259 @@ b8 ui_fonts_load_system_defaults() {
     return success;
 }
 
+// Helper function to load a single font variant at a specific size
+INTERNAL_FUNC b8 load_font_variant(const char* asset_name,
+    const char* family_name,
+    UI_Font_Weight weight,
+    UI_Font_Style style,
+    f32 size) {
+
+    u64 font_data_size;
+    const u8* font_data = binary_loader_get_data(asset_name, &font_data_size);
+
+    if (!font_data) {
+        CORE_ERROR("Failed to load font asset: %s", asset_name);
+        return false;
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImFontConfig config = {};
+    config.FontDataOwnedByAtlas = false;
+
+    // Allocate font name from pool
+    if (font_name_pool_index >= MAX_FONT_NAME_COUNT) {
+        CORE_ERROR("Font name pool exhausted");
+        return false;
+    }
+
+    char* font_name = font_name_pool[font_name_pool_index++];
+    snprintf(font_name, FONT_NAME_LENGTH, "%s_%.1fpt", asset_name, size);
+    strncpy(config.Name, font_name, sizeof(config.Name) - 1);
+
+    ImFont* imgui_font = io.Fonts->AddFontFromMemoryTTF((void*)font_data,
+        font_data_size,
+        size,
+        &config);
+
+    if (!imgui_font) {
+        CORE_ERROR("Failed to load font: %s at %.1fpt", asset_name, size);
+        return false;
+    }
+
+    // Register font in registry
+    UI_Font_Info font_info = {};
+    font_info.name = font_name;
+    font_info.family = family_name;
+    font_info.weight = weight;
+    font_info.style = style;
+    font_info.size = size;
+    font_info.data = font_data;
+    font_info.data_size = font_data_size;
+    font_info.imgui_font = imgui_font;
+    font_info.is_loaded = true;
+    font_info.is_default = false;
+
+    font_registry.fonts.push_back(font_info);
+
+    CORE_DEBUG("Loaded font: %s at %.1fpt", asset_name, size);
+    return true;
+}
+
 b8 ui_fonts_register_defaults() {
-    CORE_DEBUG("Registering default embedded fonts...");
+    CORE_INFO("Registering default embedded fonts...");
+
+    // Define common sizes to load
+    const f32 common_sizes[] = {
+        UI_FONT_SIZE_SMALL,  // 14.0f
+        UI_FONT_SIZE_NORMAL, // 17.5f
+        UI_FONT_SIZE_MEDIUM, // 19.0f
+        UI_FONT_SIZE_LARGE,  // 21.0f
+        UI_FONT_SIZE_XLARGE  // 27.0f
+    };
+    const u32 size_count = sizeof(common_sizes) / sizeof(common_sizes[0]);
 
     b8 success = true;
 
-    // Get font data from assets and register with ImGui directly
-    ImGuiIO& io = ImGui::GetIO();
+    // Load Roboto family at all sizes
+    for (u32 i = 0; i < size_count; ++i) {
+        f32 size = common_sizes[i];
 
-    // Load Roboto Regular
-    u64 roboto_regular_size;
-    const u8* roboto_regular_data = binary_loader_get_data("roboto_regular", &roboto_regular_size);
-    if (roboto_regular_data) {
-        ImFontConfig config = {};
-        config.FontDataOwnedByAtlas = false;
-        strncpy(config.Name, "roboto_regular", sizeof(config.Name) - 1);
+        success &= load_font_variant("roboto_regular",
+            "Roboto",
+            UI_Font_Weight::REGULAR,
+            UI_Font_Style::NORMAL,
+            size);
 
-        ImFont* roboto_regular = io.Fonts->AddFontFromMemoryTTF(
-            (void*)roboto_regular_data,
-            roboto_regular_size,
-            UI_FONT_SIZE_NORMAL,
-            &config);
+        success &= load_font_variant("roboto_bold",
+            "Roboto",
+            UI_Font_Weight::BOLD,
+            UI_Font_Style::NORMAL,
+            size);
 
-        if (roboto_regular) {
-            UI_Font_Info font_info = {};
-            font_info.name = "roboto_regular";
-            font_info.family = "Roboto";
-            font_info.weight = UI_Font_Weight::REGULAR;
-            font_info.style = UI_Font_Style::NORMAL;
-            font_info.size = UI_FONT_SIZE_NORMAL;
-            font_info.data = roboto_regular_data;
-            font_info.data_size = roboto_regular_size;
-            font_info.imgui_font = roboto_regular;
-            font_info.is_loaded = true;
-            font_info.is_default = false;
-
-            font_registry.fonts.push_back(font_info);
-        } else {
-            success = false;
-        }
-    } else {
-        success = false;
+        success &= load_font_variant("roboto_italic",
+            "Roboto",
+            UI_Font_Weight::REGULAR,
+            UI_Font_Style::ITALIC,
+            size);
     }
 
-    // Load Roboto Bold
-    u64 roboto_bold_size;
-    const u8* roboto_bold_data = binary_loader_get_data("roboto_bold", &roboto_bold_size);
-    if (roboto_bold_data) {
-        ImFontConfig config = {};
-        config.FontDataOwnedByAtlas = false;
-        strncpy(config.Name, "roboto_bold", sizeof(config.Name) - 1);
+    // Load JetBrains Mono family at all sizes
+    for (u32 i = 0; i < size_count; ++i) {
+        f32 size = common_sizes[i];
 
-        ImFont* roboto_bold = io.Fonts->AddFontFromMemoryTTF(
-            (void*)roboto_bold_data,
-            roboto_bold_size,
-            UI_FONT_SIZE_NORMAL,
-            &config);
+        success &= load_font_variant("jetbrains_regular",
+            "JetBrains Mono",
+            UI_Font_Weight::REGULAR,
+            UI_Font_Style::NORMAL,
+            size);
 
-        if (roboto_bold) {
-            UI_Font_Info font_info = {};
-            font_info.name = "roboto_bold";
-            font_info.family = "Roboto";
-            font_info.weight = UI_Font_Weight::BOLD;
-            font_info.style = UI_Font_Style::NORMAL;
-            font_info.size = UI_FONT_SIZE_NORMAL;
-            font_info.data = roboto_bold_data;
-            font_info.data_size = roboto_bold_size;
-            font_info.imgui_font = roboto_bold;
-            font_info.is_loaded = true;
-            font_info.is_default = false;
+        success &= load_font_variant("jetbrains_bold",
+            "JetBrains Mono",
+            UI_Font_Weight::BOLD,
+            UI_Font_Style::NORMAL,
+            size);
 
-            font_registry.fonts.push_back(font_info);
-        } else {
-            success = false;
-        }
-    } else {
-        success = false;
-    }
-
-    // Load Roboto Italic
-    u64 roboto_italic_size;
-    const u8* roboto_italic_data = binary_loader_get_data("roboto_italic", &roboto_italic_size);
-    if (roboto_italic_data) {
-        ImFontConfig config = {};
-        config.FontDataOwnedByAtlas = false;
-        strncpy(config.Name, "roboto_italic", sizeof(config.Name) - 1);
-
-        ImFont* roboto_italic = io.Fonts->AddFontFromMemoryTTF(
-            (void*)roboto_italic_data,
-            roboto_italic_size,
-            UI_FONT_SIZE_NORMAL,
-            &config);
-
-        if (roboto_italic) {
-            UI_Font_Info font_info = {};
-            font_info.name = "roboto_italic";
-            font_info.family = "Roboto";
-            font_info.weight = UI_Font_Weight::REGULAR;
-            font_info.style = UI_Font_Style::ITALIC;
-            font_info.size = UI_FONT_SIZE_NORMAL;
-            font_info.data = roboto_italic_data;
-            font_info.data_size = roboto_italic_size;
-            font_info.imgui_font = roboto_italic;
-            font_info.is_loaded = true;
-            font_info.is_default = false;
-
-            font_registry.fonts.push_back(font_info);
-        } else {
-            success = false;
-        }
-    } else {
-        success = false;
+        success &= load_font_variant("jetbrains_italic",
+            "JetBrains Mono",
+            UI_Font_Weight::REGULAR,
+            UI_Font_Style::ITALIC,
+            size);
     }
 
     if (success) {
-        CORE_DEBUG("Default embedded fonts registered successfully");
+        CORE_INFO("Successfully loaded %d font variants",
+            font_registry.fonts.size());
+
+        // Set default font to JetBrains Mono Regular at normal size
+        b8 default_set =
+            ui_fonts_set_default(ui_font_config(UI_Font_Family::JETBRAINS_MONO,
+                UI_Font_Weight::REGULAR,
+                UI_Font_Style::NORMAL,
+                UI_FONT_SIZE_MEDIUM));
+
+        if (!default_set) {
+            CORE_WARN("Failed to set default font, using ImGui default");
+        }
     } else {
-        CORE_WARN("Failed to register some embedded fonts, using ImGui default");
+        CORE_WARN("Failed to load some embedded fonts");
     }
 
     return success;
+}
+
+// Helper function to create font config
+UI_Font_Config ui_font_config(UI_Font_Family family,
+    UI_Font_Weight weight,
+    UI_Font_Style style,
+    f32 size) {
+    UI_Font_Config config;
+    config.family = family;
+    config.weight = weight;
+    config.style = style;
+    config.size = size;
+    return config;
+}
+
+// Get font by name (implements declared but missing function)
+ImFont* ui_fonts_get(const char* name) {
+    UI_Font_Info* font_info = find_font_by_name(name);
+    if (!font_info) {
+        return nullptr;
+    }
+
+    if (!font_info->is_loaded) {
+        CORE_WARN("Font '%s' not loaded", name);
+        return nullptr;
+    }
+
+    return font_info->imgui_font;
+}
+
+// Get default font (implements declared but missing function)
+ImFont* ui_fonts_get_default() { return font_registry.default_font; }
+
+// Get font by configuration
+ImFont* ui_fonts_get(UI_Font_Config config) {
+    return ui_fonts_get(config.family,
+        config.weight,
+        config.style,
+        config.size);
+}
+
+// Get font by family, weight, style, and size
+ImFont* ui_fonts_get(UI_Font_Family family,
+    UI_Font_Weight weight,
+    UI_Font_Style style,
+    f32 size) {
+
+    // Convert family enum to string
+    const char* family_str = nullptr;
+    switch (family) {
+    case UI_Font_Family::ROBOTO:
+        family_str = "Roboto";
+        break;
+    case UI_Font_Family::JETBRAINS_MONO:
+        family_str = "JetBrains Mono";
+        break;
+    default:
+        CORE_ERROR("Unknown font family");
+        return nullptr;
+    }
+
+    // Search for matching font
+    for (u32 i = 0; i < font_registry.fonts.size(); ++i) {
+        const UI_Font_Info* font_info = &font_registry.fonts[i];
+
+        if (font_info->is_loaded &&
+            strcmp(font_info->family, family_str) == 0 &&
+            font_info->weight == weight && font_info->style == style &&
+            font_info->size == size) {
+            return font_info->imgui_font;
+        }
+    }
+
+    // Font not found
+    CORE_DEBUG("Font not found: %s weight=%d style=%d size=%.1f",
+        family_str,
+        (int)weight,
+        (int)style,
+        size);
+    return nullptr;
+}
+
+// Set default font by configuration
+b8 ui_fonts_set_default(UI_Font_Config config) {
+    ImFont* font = ui_fonts_get(config);
+    if (!font) {
+        CORE_ERROR("Cannot set default font: font not found");
+        return false;
+    }
+
+    // Update registry
+    font_registry.default_font = font;
+
+    // Update all font infos to clear default flag
+    for (u32 i = 0; i < font_registry.fonts.size(); ++i) {
+        font_registry.fonts[i].is_default = false;
+    }
+
+    // Set the matching font as default
+    for (u32 i = 0; i < font_registry.fonts.size(); ++i) {
+        UI_Font_Info* font_info = &font_registry.fonts[i];
+        if (font_info->imgui_font == font) {
+            font_info->is_default = true;
+            break;
+        }
+    }
+
+    // Set ImGui default font
+    ImGuiIO& io = ImGui::GetIO();
+    io.FontDefault = font;
+
+    CORE_INFO("Set default font to: %s %.1fpt",
+        config.family == UI_Font_Family::ROBOTO ? "Roboto" : "JetBrains Mono",
+        config.size);
+    return true;
 }
 
 // Internal function implementations

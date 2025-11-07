@@ -1,11 +1,16 @@
 #include "binary_loader.hpp"
-#include "core/logger.hpp"
 #include "core/asserts.hpp"
+#include "core/logger.hpp"
 
 // Include embedded font data
+#include "fonts/jetbrains_bold.embed"
+#include "fonts/jetbrains_italic.embed"
+#include "fonts/jetbrains_regular.embed"
+
 #include "fonts/roboto_bold.embed"
 #include "fonts/roboto_italic.embed"
 #include "fonts/roboto_regular.embed"
+
 #include <cstring>
 
 // Embedded asset structure
@@ -20,9 +25,14 @@ internal_variable const Embedded_Binary_Asset binary_assets[] = {
     {"roboto_regular", roboto_regular, sizeof(roboto_regular)},
     {"roboto_bold", roboto_bold, sizeof(roboto_bold)},
     {"roboto_italic", roboto_italic, sizeof(roboto_italic)},
+
+    {"jetbrains_regular", jetbrains_regular, sizeof(jetbrains_regular)},
+    {"jetbrains_bold", jetbrains_bold, sizeof(jetbrains_bold)},
+    {"jetbrains_italic", jetbrains_italic, sizeof(jetbrains_italic)},
 };
 
-constexpr u32 binary_asset_count = sizeof(binary_assets) / sizeof(binary_assets[0]);
+constexpr u32 binary_asset_count =
+    sizeof(binary_assets) / sizeof(binary_assets[0]);
 
 // Find binary asset by name
 INTERNAL_FUNC const Embedded_Binary_Asset* find_binary_asset(const char* name) {
@@ -33,7 +43,6 @@ INTERNAL_FUNC const Embedded_Binary_Asset* find_binary_asset(const char* name) {
     }
     return nullptr;
 }
-
 
 const u8* binary_loader_get_data(const char* asset_name, u64* out_size) {
     RUNTIME_ASSERT_MSG(asset_name, "Asset name cannot be null");
@@ -47,6 +56,8 @@ const u8* binary_loader_get_data(const char* asset_name, u64* out_size) {
     }
 
     *out_size = asset->size;
-    CORE_DEBUG("Retrieved binary data: %s (%llu bytes)", asset_name, asset->size);
+    CORE_DEBUG("Retrieved binary data: %s (%llu bytes)",
+        asset_name,
+        asset->size);
     return asset->data;
 }

@@ -18,3 +18,8 @@ VOLTRUM_API s32 string_format_v(
 
 VOLTRUM_API u64 string_length(
     const char* string);
+
+VOLTRUM_API void string_copy(
+    char* dest,
+    const char* source,
+    u64 max_length);
