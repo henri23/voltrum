@@ -1,5 +1,4 @@
 #include "app_viewport_layer.hpp"
-#include "imgui.h"
 #include "ui/client_ui.hpp"
 
 // Interfaces from core library
@@ -91,8 +90,8 @@ void client_shutdown(Client* client_state) {
 b8 create_client(Client* client_state) {
     // Set up client configuration
     client_state->config.name = "Voltrum EDA";
-    client_state->config.width = 1280;
-    client_state->config.height = 720;
+    client_state->config.width = 1600;
+    client_state->config.height = 900;
     client_state->config.theme = UI_Theme::CATPPUCCIN_MOCHA;
 
     // Set up lifecycle callbacks
