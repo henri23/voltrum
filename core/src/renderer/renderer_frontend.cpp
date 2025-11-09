@@ -9,6 +9,10 @@
 // Renderer frontend will manage the backend interface state
 struct Renderer_System_State {
     Renderer_Backend backend;
+    mat4 projection;
+    mat4 view;
+    f32 near_clip = 0.1f;
+    f32 far_clip = 1000.0f;
 };
 
 internal_variable Renderer_System_State state;
@@ -24,6 +28,15 @@ b8 renderer_startup(const char* application_name) {
 
     state.backend.initialize(&state.backend, application_name);
 
+    state.projection = mat4_project_perspective(deg_to_rad(45.0f),
+        1280 / 720.0f,
+        state.near_clip,
+        state.far_clip);
+
+    vec3 vec = {0, 0, 30.0f};
+    state.view = mat4_translation(vec);
+    state.view = mat4_inv(state.view);
+
     CORE_DEBUG("Renderer subsystem initialized");
     return true;
 }
@@ -36,7 +49,14 @@ void renderer_shutdown() {
     CORE_DEBUG("Renderer subsystem shutting down...");
 }
 
+// TODO: Add a method only for the viewport resize event because this captures
+// the window resize, we need to update the aspect ratio on the viewport resize
 void renderer_on_resize(u16 width, u16 height) {
+
+    state.projection = mat4_project_perspective(deg_to_rad(45.0f),
+        width / (f32)height,
+        state.near_clip,
+        state.far_clip);
 
     state.backend.resized(&state.backend, width, height);
 }
@@ -55,16 +75,8 @@ b8 renderer_end_frame(f32 delta_t) {
 b8 renderer_draw_frame(Render_Packet* packet) {
     if (renderer_begin_frame(packet->delta_time)) {
 
-        // TODO: test temp
-        mat4 projection =
-            mat4_project_perspective(deg_to_rad(45.0f), 1.0f, 0.1f, 1000.0f);
-        // local_persist f32 z = 1.0f;
-        // z -= 0.01f;
-        vec3 vec = {0, 0, -30.0f};
-        mat4 view = mat4_translation(vec);
-
-        state.backend.update_global_state(projection,
-            view,
+        state.backend.update_global_state(state.projection,
+            state.view,
             vec3_zero(),
             vec4_one(),
             0);
