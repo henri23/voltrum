@@ -7,6 +7,7 @@
 #include "renderer/vulkan/vulkan_shader_utils.hpp"
 
 #include "math/math_types.hpp"
+#include <vulkan/vulkan_core.h>
 
 #define BUILTIN_SHADER_NAME_OBJECT "Builtin.ObjectShader"
 
@@ -264,4 +265,24 @@ void vulkan_object_shader_update_global_state(Vulkan_Context* context,
         &global_descriptor,
         0,
         0);
+}
+
+void vulkan_object_shader_update_object(Vulkan_Context* context,
+    Vulkan_Object_Shader* shader,
+    mat4 model) {
+
+    u32 image_index = context->image_index;
+    VkCommandBuffer command_buffer =
+        context->main_command_buffers[image_index].handle;
+
+    // Push constants work similar to unfiroms but they can work
+    // without descriptor sets. It can be executed at any point
+    // not necessarily inside a renderpass. Vulkan "has a limitation"
+    // of 128 bytes for push constants
+    vkCmdPushConstants(command_buffer,
+        shader->pipeline.pipeline_layout,
+        VK_SHADER_STAGE_VERTEX_BIT,
+        0,
+        sizeof(mat4),
+        &model);
 }

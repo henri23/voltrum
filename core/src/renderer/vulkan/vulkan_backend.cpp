@@ -339,13 +339,13 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
 
     constexpr f32 f = 10.0f;
 
-    verts[0].position.x = 0.0 * f;
+    verts[0].position.x = -1 * f;
     verts[0].position.y = -1 * f;
 
     verts[1].position.x = 1 * f;
     verts[1].position.y = 1 * f;
 
-    verts[2].position.x = 0 * f;
+    verts[2].position.x = -1 * f;
     verts[2].position.y = 1 * f;
 
     verts[3].position.x = 1 * f;
@@ -759,21 +759,6 @@ void vulkan_update_global_state(mat4 projection,
     // Bind descriptor sets
     vulkan_object_shader_update_global_state(&context, &context.object_shader);
 
-    // Bind vertex and index buffers
-    VkDeviceSize offsets[1] = {0};
-    vkCmdBindVertexBuffers(cmd_buffer->handle,
-        0,
-        1,
-        &context.object_vertex_buffer.handle,
-        offsets);
-
-    vkCmdBindIndexBuffer(cmd_buffer->handle,
-        context.object_index_buffer.handle,
-        0,
-        VK_INDEX_TYPE_UINT32);
-
-    // Draw the quad
-    vkCmdDrawIndexed(cmd_buffer->handle, 6, 1, 0, 0, 0);
 }
 
 b8 vulkan_end_frame(Renderer_Backend* backend, f32 delta_t) {
@@ -884,6 +869,29 @@ b8 vulkan_end_frame(Renderer_Backend* backend, f32 delta_t) {
         return false;
 
     return true;
+}
+
+void vulkan_update_object(mat4 model) {
+    Vulkan_Command_Buffer* cmd_buffer =
+        &context.main_command_buffers[context.image_index];
+
+    vulkan_object_shader_update_object(&context, &context.object_shader, model);
+
+    // Bind vertex and index buffers
+    VkDeviceSize offsets[1] = {0};
+    vkCmdBindVertexBuffers(cmd_buffer->handle,
+        0,
+        1,
+        &context.object_vertex_buffer.handle,
+        offsets);
+
+    vkCmdBindIndexBuffer(cmd_buffer->handle,
+        context.object_index_buffer.handle,
+        0,
+        VK_INDEX_TYPE_UINT32);
+
+    // Draw the quad
+    vkCmdDrawIndexed(cmd_buffer->handle, 6, 1, 0, 0, 0);
 }
 
 // (TODO) move the check of availability of the required layers outside

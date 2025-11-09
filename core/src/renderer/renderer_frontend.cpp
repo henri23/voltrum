@@ -58,8 +58,8 @@ b8 renderer_draw_frame(Render_Packet* packet) {
         // TODO: test temp
         mat4 projection =
             mat4_project_perspective(deg_to_rad(45.0f), 1.0f, 0.1f, 1000.0f);
-        local_persist f32 z = -1.0f;
-        z -= 0.01f;
+        // local_persist f32 z = 1.0f;
+        // z -= 0.01f;
         vec3 vec = {0, 0, -30.0f};
         mat4 view = mat4_translation(vec);
 
@@ -68,6 +68,13 @@ b8 renderer_draw_frame(Render_Packet* packet) {
             vec3_zero(),
             vec4_one(),
             0);
+
+        local_persist f32 angle = 0.01f;
+        angle += 0.01f;
+        quaternion rotation =
+            quat_from_axis_angle(vec3_forward(), angle, false);
+        mat4 model = quat_to_rotation_matrix(rotation, vec3_zero());
+        state.backend.update_object(model);
 
         b8 result = renderer_end_frame(packet->delta_time);
 

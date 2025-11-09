@@ -16,6 +16,7 @@ b8 renderer_backend_initialize(Renderer_Backend_Type type,
         out_backend->create_ui_image = vulkan_create_ui_image;
         out_backend->destroy_ui_image = vulkan_destroy_ui_image;
         out_backend->update_global_state = vulkan_update_global_state;
+        out_backend->update_object = vulkan_update_object;
 
         return true;
     }
@@ -36,4 +37,5 @@ void renderer_backend_shutdown(Renderer_Backend* backend) {
     backend->update_global_state = nullptr;
     backend->create_ui_image = nullptr;
     backend->destroy_ui_image = nullptr;
+    backend->update_object = nullptr;
 }

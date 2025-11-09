@@ -33,6 +33,8 @@ struct Renderer_Backend {
         vec3 view_position,
         vec4 ambient_colour,
         s32 mode);
+    
+    void (*update_object)(mat4 model);
 
     // UI Image Management
     b8 (*create_ui_image)(Renderer_Backend* backend,
@@ -41,6 +43,7 @@ struct Renderer_Backend {
         const void* pixel_data,
         u32 pixel_data_size,
         struct UI_Image_Resource* out_image_resource);
+
     void (*destroy_ui_image)(Renderer_Backend* backend,
         struct UI_Image_Resource* resource);
 };

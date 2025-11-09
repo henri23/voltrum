@@ -3,9 +3,6 @@
 #include "renderer/renderer_types.hpp"
 #include <vulkan/vulkan.h>
 
-// Forward declaration
-struct Vulkan_Context;
-
 b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name);
 
 void vulkan_shutdown(Renderer_Backend* backend);
@@ -21,6 +18,8 @@ void vulkan_update_global_state(mat4 projection,
     vec3 view_position,
     vec4 ambient_colour,
     s32 mode);
+
+void vulkan_update_object(mat4 model);
 
 // Get main renderer texture for ImGui display
 VkDescriptorSet vulkan_get_main_texture();

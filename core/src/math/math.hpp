@@ -172,6 +172,16 @@ FORCE_INLINE vec3 vec3_right() {
     return result;
 }
 
+FORCE_INLINE vec3 vec3_forward() {
+    vec3 result = {0.0f, 0.0f, 1.0f};
+    return result;
+}
+
+FORCE_INLINE vec3 vec3_back() {
+    vec3 result = {0.0f, 0.0f, -1.0f};
+    return result;
+}
+
 // Component-wise operations
 INLINE_OPERATOR vec3 operator+(vec3 a, vec3 b) {
     vec3 result = {a.x + b.x, a.y + b.y, a.z + b.z};
