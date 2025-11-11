@@ -6,4 +6,5 @@ build/
 obj/
 out/
 bin-vs/
+.vscode/
 .envrc

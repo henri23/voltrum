@@ -10,7 +10,7 @@
 struct Renderer_System_State {
     Renderer_Backend backend;
     mat4 projection;
-    mat4 view;
+    mat4 view; // cached value of the camera transformation managed in the client
     f32 near_clip = 0.1f;
     f32 far_clip = 1000.0f;
 };
@@ -32,10 +32,6 @@ b8 renderer_startup(const char* application_name) {
         1280 / 720.0f,
         state.near_clip,
         state.far_clip);
-
-    vec3 vec = {0, 0, 30.0f};
-    state.view = mat4_translation(vec);
-    state.view = mat4_inv(state.view);
 
     CORE_DEBUG("Renderer subsystem initialized");
     return true;
@@ -115,4 +111,8 @@ b8 renderer_create_ui_image(u32 width,
 
 void renderer_destroy_ui_image(UI_Image_Resource* resource) {
     state.backend.destroy_ui_image(&state.backend, resource);
+}
+
+void renderer_set_view(mat4 view) {
+    state.view = view;
 }

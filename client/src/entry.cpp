@@ -1,14 +1,21 @@
 #include "app_viewport_layer.hpp"
+#include "defines.hpp"
 #include "ui/client_ui.hpp"
 
 // Interfaces from core library
 #include <core/logger.hpp>
 #include <entry.hpp>
 #include <events/events.hpp>
+#include <input/input.hpp>
 #include <input/input_codes.hpp>
+#include <math/math.hpp>
 #include <memory/memory.hpp>
 #include <ui/ui.hpp>
 #include <ui/ui_types.hpp>
+
+// WARN: This is temporary, the renderer subsystem should not be
+// exposed outside the engine
+#include <renderer/renderer_frontend.hpp>
 
 #if defined(PLATFORM_WINDOWS) && !defined(VOLTRUM_STATIC_LINKING)
 #    include <imgui.h>
@@ -18,7 +25,28 @@
 struct Frontend_State {
     // Add any client-specific state here later
     b8 initialized;
+    // The viewport specific values should be inside the state of the viewport
+    // layer but placing them here for simplicity
+    mat4 view;
+    vec3 camera_position;
+    vec3 camera_euler;
+    b8 camera_view_dirty;
 };
+
+INTERNAL_FUNC void recalculate_view_matrix(Frontend_State* state) {
+    if (state->camera_view_dirty) {
+        mat4 rotation = mat4_euler_xyz(state->camera_euler.x,
+            state->camera_euler.y,
+            state->camera_euler.z);
+
+        mat4 translation = mat4_translation(state->camera_position);
+
+        state->view = rotation * translation;
+        state->view = mat4_inv(state->view);
+
+        state->camera_view_dirty = false;
+    }
+}
 
 // Memory debug callback function
 b8 client_memory_debug_callback(const Event* event) {
@@ -49,6 +77,16 @@ b8 client_initialize(Client* client_state) {
         client_memory_debug_callback,
         Event_Priority::LOW);
 
+    Frontend_State* state = (Frontend_State*)client_state->state;
+
+    state->camera_position = {0, 0, 30.0f};
+    state->camera_euler = vec3_zero();
+
+    state->view = mat4_translation(state->camera_position);
+    state->view = mat4_inv(state->view);
+
+    state->camera_view_dirty = true;
+
     // Initialize viewport layer
     if (!app_viewport_layer_initialize()) {
         CLIENT_ERROR("Failed to initialize viewport layer");
@@ -61,6 +99,17 @@ b8 client_initialize(Client* client_state) {
 }
 
 b8 client_update(Client* client_state, f32 delta_time) {
+    static u64 alloc_count = 0;
+    u64 prev_alloc_count = alloc_count;
+    alloc_count = memory_get_allocations_count();
+    if (input_is_key_down(Key_Code::M) && input_was_key_pressed(Key_Code::M)) {
+        CORE_DEBUG("Allocations: %llu (%llu this frame)",
+            alloc_count,
+            alloc_count - prev_alloc_count);
+    }
+
+    renderer_set_view(
+        ((Frontend_State*)client_state->state)->view);
     // Client update logic can go here
     return true;
 }

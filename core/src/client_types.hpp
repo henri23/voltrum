@@ -27,7 +27,8 @@ struct Client {
     // Client-specific state
 	Auto_Array<UI_Layer> layers;
 	PFN_menu_callback menu_callback;
-    void* state;
+    
+    void* state; // Client state
 
     // Internal engine state (opaque pointer managed by core)
     // Client cannot access this directly - only core can use this
