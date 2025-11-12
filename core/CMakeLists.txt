@@ -14,7 +14,26 @@ else()
     message(STATUS "Voltrum Core: Dynamic linking enabled")
 endif()
 
-add_compile_definitions(DEBUG_BUILD)
+# Set compiler flags based on build type
+if(CMAKE_BUILD_TYPE MATCHES Debug)
+    add_compile_definitions(DEBUG_BUILD)
+    if(MSVC)
+        # MSVC Debug flags
+        add_compile_options(/Od /Zi /RTC1)
+    else()
+        # GCC/Clang Debug flags
+        add_compile_options(-O0 -g -fno-omit-frame-pointer)
+    endif()
+elseif(CMAKE_BUILD_TYPE MATCHES Release)
+    add_compile_definitions(RELEASE_BUILD)
+    if(MSVC)
+        # MSVC Release flags
+        add_compile_options(/O2)
+    else()
+        # GCC/Clang Release flags
+        add_compile_options(-O2)
+    endif()
+endif()
 
 # Windows/MSVC specific settings
 if(WIN32)

@@ -97,15 +97,15 @@ Input_State* input_get_state() {
 }
 
 // Utility functions for common input checks
-b8 input_is_key_down(Key_Code key_code) {
+b8 input_is_key_pressed(Key_Code key_code) {
     if (!input_state.is_initialized || (u32)key_code >= 512) {
         return false;
     }
     return input_state.keys[(u32)key_code];
 }
 
-b8 input_is_key_up(Key_Code key_code) {
-    return !input_is_key_down(key_code);
+b8 input_is_key_released(Key_Code key_code) {
+    return !input_is_key_pressed(key_code);
 }
 
 b8 input_was_key_pressed(Key_Code key_code) {
@@ -122,15 +122,15 @@ b8 input_was_key_released(Key_Code key_code) {
     return !input_state.keys[(u32)key_code] && input_state.keys_prev[(u32)key_code];
 }
 
-b8 input_is_mouse_button_down(Mouse_Button button) {
+b8 input_is_mouse_button_pressed(Mouse_Button button) {
     if (!input_state.is_initialized || (u8)button >= 8) {
         return false;
     }
     return input_state.mouse_buttons[(u8)button];
 }
 
-b8 input_is_mouse_button_up(Mouse_Button button) {
-    return !input_is_mouse_button_down(button);
+b8 input_is_mouse_button_released(Mouse_Button button) {
+    return !input_is_mouse_button_pressed(button);
 }
 
 b8 input_was_mouse_button_pressed(Mouse_Button button) {

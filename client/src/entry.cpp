@@ -48,6 +48,22 @@ INTERNAL_FUNC void recalculate_view_matrix(Frontend_State* state) {
     }
 }
 
+INTERNAL_FUNC void camera_yaw(Frontend_State* state, f32 yaw_amount) {
+    state->camera_euler.y += yaw_amount;
+    state->camera_view_dirty = true;
+}
+
+INTERNAL_FUNC void camera_pitch(Frontend_State* state, f32 pitch_amount) {
+    state->camera_euler.x += pitch_amount;
+
+    // When working with eurler angles for rotations we can suffer from
+    // gimbal lock
+    f32 limit = deg_to_rad(89.0f);
+
+    state->camera_euler.x = CLAMP(state->camera_euler.x, -limit, limit);
+    state->camera_view_dirty = true;
+}
+
 // Memory debug callback function
 b8 client_memory_debug_callback(const Event* event) {
     if (event->key.key_code == Key_Code::M && !event->key.repeat) {
@@ -79,7 +95,7 @@ b8 client_initialize(Client* client_state) {
 
     Frontend_State* state = (Frontend_State*)client_state->state;
 
-    state->camera_position = {0, 0, 30.0f};
+    state->camera_position = {0, 0, 40.0f};
     state->camera_euler = vec3_zero();
 
     state->view = mat4_translation(state->camera_position);
@@ -99,17 +115,85 @@ b8 client_initialize(Client* client_state) {
 }
 
 b8 client_update(Client* client_state, f32 delta_time) {
+    Frontend_State* state = (Frontend_State*)client_state->state;
     static u64 alloc_count = 0;
     u64 prev_alloc_count = alloc_count;
+
     alloc_count = memory_get_allocations_count();
-    if (input_is_key_down(Key_Code::M) && input_was_key_pressed(Key_Code::M)) {
+    if (input_is_key_pressed(Key_Code::M) &&
+        input_was_key_pressed(Key_Code::M)) {
         CORE_DEBUG("Allocations: %llu (%llu this frame)",
             alloc_count,
             alloc_count - prev_alloc_count);
     }
 
-    renderer_set_view(
-        ((Frontend_State*)client_state->state)->view);
+    if (input_is_key_pressed(Key_Code::A) ||
+        input_is_key_pressed(Key_Code::LEFT)) {
+        camera_yaw(state, 1000.0f * delta_time);
+    }
+
+    if (input_is_key_pressed(Key_Code::D) ||
+        input_is_key_pressed(Key_Code::RIGHT)) {
+        camera_yaw(state, -1000.0f * delta_time);
+    }
+
+    if (input_is_key_pressed(Key_Code::UP)) {
+        camera_pitch(state, 1000.0f * delta_time);
+    }
+
+    if (input_is_key_pressed(Key_Code::DOWN)) {
+        camera_pitch(state, -1000.0f * delta_time);
+    }
+
+    f32 movement_speed = 10.0f;
+    vec3 velocity = vec3_zero();
+    CORE_DEBUG("Velocity vector is [%.3f, %.3f, %.3f]",
+        velocity.x,
+        velocity.y,
+        velocity.z);
+
+    if (input_is_key_pressed(Key_Code::W)) {
+        vec3 forward = mat4_forward(state->view);
+        velocity = velocity + forward;
+    }
+
+    if (input_is_key_pressed(Key_Code::S)) {
+        vec3 forward = mat4_backward(state->view);
+        velocity = velocity + forward;
+    }
+
+    // Straifing
+    if (input_is_key_pressed(Key_Code::Q)) {
+        vec3 forward = mat4_left(state->view);
+        velocity = velocity + forward;
+    }
+
+    if (input_is_key_pressed(Key_Code::E)) {
+        vec3 forward = mat4_right(state->view);
+        velocity = velocity + forward;
+    }
+
+    if (input_is_key_pressed(Key_Code::SPACE)) {
+        velocity.y += 1.0f;
+    }
+
+    if (input_is_key_pressed(Key_Code::X)) {
+        velocity.y -= 1.0f;
+    }
+
+    vec3 z = vec3_zero();
+    if (!vec3_are_equal(z, velocity, 0.0002f)) {
+        vec3_norm(&velocity);
+        state->camera_position.x += velocity.x;
+        state->camera_position.y += velocity.y;
+        state->camera_position.z += velocity.z;
+
+        state->camera_view_dirty = true;
+    }
+
+    recalculate_view_matrix(state);
+
+    renderer_set_view(state->view);
     // Client update logic can go here
     return true;
 }

@@ -349,4 +349,4 @@ echo -e "${CYAN}${BOLD}║              ${WHITE}APPLICATION OUTPUT${CYAN}       
 echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
 echo
 
-./client/voltrum_client
+# ./client/voltrum_client
