@@ -35,11 +35,23 @@ else()
     set(SPDLOG_BUILD_SHARED ON CACHE BOOL "" FORCE)
 endif()
 
-# SDL3 configuration
+# SDL3 configuration - Disable unused subsystems to speed up CMake configuration
+set(SDL_AUDIO OFF CACHE BOOL "" FORCE) # disable audio subsystem
+set(SDL_CAMERA OFF CACHE BOOL "" FORCE) # disable camera subsystem
+set(SDL_JOYSTICK OFF CACHE BOOL "" FORCE) # disable joystick subsystem
+set(SDL_HAPTIC OFF CACHE BOOL "" FORCE) # disable haptic subsystem
+set(SDL_SENSOR OFF CACHE BOOL "" FORCE) # disable sensor subsystem
+set(SDL_DIALOG OFF CACHE BOOL "" FORCE) # disable file dialog subsystem
+set(SDL_TRAY OFF CACHE BOOL "" FORCE) # disable system tray subsystem
 set(SDL_HIDAPI_LIBUSB OFF CACHE BOOL "" FORCE)
-set(SDL_HIDAPI OFF CACHE BOOL "" FORCE) # if you don't need joystick HID
+set(SDL_HIDAPI OFF CACHE BOOL "" FORCE)
 set(SDL_LIBUSB OFF CACHE BOOL "" FORCE)
+set(SDL_OPENGL OFF CACHE BOOL "" FORCE) # disable OpenGL (using Vulkan)
+set(SDL_OPENGLES OFF CACHE BOOL "" FORCE) # disable OpenGL ES (using Vulkan)
+set(SDL_RENDER OFF CACHE BOOL "" FORCE) # disable SDL render API (using Vulkan directly)
 set(SDL_INSTALL OFF CACHE BOOL "" FORCE) # don't install SDL system-wide
+set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE) # don't build SDL test library
+set(SDL_TESTS OFF CACHE BOOL "" FORCE) # don't build SDL tests
 
 option(VOLTRUM_BUILD_TESTS "Build Voltrum unit tests" ON)
 if(VOLTRUM_BUILD_TESTS)

@@ -147,10 +147,6 @@ b8 client_update(Client* client_state, f32 delta_time) {
 
     f32 movement_speed = 10.0f;
     vec3 velocity = vec3_zero();
-    CORE_DEBUG("Velocity vector is [%.3f, %.3f, %.3f]",
-        velocity.x,
-        velocity.y,
-        velocity.z);
 
     if (input_is_key_pressed(Key_Code::W)) {
         vec3 forward = mat4_forward(state->view);

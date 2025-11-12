@@ -205,7 +205,7 @@ print_status "step" "Building voltrum client..."
 echo -e "${BLUE}${ARROW} Target:${NC} voltrum_client"
 echo
 
-if time ninja voltrum_client; then
+if time ninja -j12 voltrum_client; then
     print_status "success" "Build completed successfully"
 
     echo
