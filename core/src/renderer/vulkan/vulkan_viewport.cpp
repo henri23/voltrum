@@ -1,7 +1,6 @@
 #include "vulkan_viewport.hpp"
 #include "core/logger.hpp"
 #include "imgui_impl_vulkan.h"
-#include "renderer/vulkan/shaders/vulkan_object_shader.hpp"
 #include "vulkan_command_buffer.hpp"
 #include "vulkan_framebuffer.hpp"
 #include "vulkan_image.hpp"
@@ -39,9 +38,9 @@ void vulkan_viewport_shutdown(Vulkan_Context* context) {
 }
 
 void vulkan_viewport_render(Vulkan_Context* context) {
-    // Use image_index to synchronize with swapchain, matching UI renderpass behavior
-    // Both the off-screen renderer and UI use the same image_index for their
-    // respective framebuffers and command buffers
+    // Use image_index to synchronize with swapchain, matching UI renderpass
+    // behavior Both the off-screen renderer and UI use the same image_index for
+    // their respective framebuffers and command buffers
     Vulkan_Command_Buffer* main_command_buffer =
         &context->main_command_buffers[context->image_index];
 
@@ -49,18 +48,14 @@ void vulkan_viewport_render(Vulkan_Context* context) {
     vulkan_command_buffer_reset(main_command_buffer);
 
     // Begin recording main renderer commands
-    vulkan_command_buffer_begin(
-        main_command_buffer,
-        false,
-        false,
-        false);
+    vulkan_command_buffer_begin(main_command_buffer, false, false, false);
 
     // Begin rendering to the main render target (use image_index's framebuffer)
-    // The renderpass will automatically transition from SHADER_READ_ONLY_OPTIMAL
-    // to COLOR_ATTACHMENT_OPTIMAL at the beginning, and back to SHADER_READ_ONLY_OPTIMAL
-    // at the end (configured in renderpass creation)
-    vulkan_renderpass_begin(
-        main_command_buffer,
+    // The renderpass will automatically transition from
+    // SHADER_READ_ONLY_OPTIMAL to COLOR_ATTACHMENT_OPTIMAL at the beginning,
+    // and back to SHADER_READ_ONLY_OPTIMAL at the end (configured in renderpass
+    // creation)
+    vulkan_renderpass_begin(main_command_buffer,
         &context->main_renderpass,
         context->main_target.framebuffers[context->image_index].handle);
 
@@ -73,32 +68,22 @@ void vulkan_viewport_render(Vulkan_Context* context) {
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
-    // CORE_DEBUG("Setting viewport: %ux%u", context->main_target.width, context->main_target.height);
-    vkCmdSetViewport(
-        main_command_buffer->handle,
-        0,
-        1,
-        &viewport);
+    // CORE_DEBUG("Setting viewport: %ux%u", context->main_target.width,
+    // context->main_target.height);
+    vkCmdSetViewport(main_command_buffer->handle, 0, 1, &viewport);
 
     // Set scissor for main render target
     VkRect2D scissor = {};
     scissor.offset = {0, 0};
     scissor.extent = {context->main_target.width, context->main_target.height};
-    vkCmdSetScissor(
-        main_command_buffer->handle,
-        0,
-        1,
-        &scissor);
+    vkCmdSetScissor(main_command_buffer->handle, 0, 1, &scissor);
 
     // Command buffer remains in recording state
-    // Drawing will be done in vulkan_update_global_state() after descriptor sets are bound
-    // Submission will be done in vulkan_end_frame()
+    // Drawing will be done in vulkan_update_global_state() after descriptor
+    // sets are bound Submission will be done in vulkan_end_frame()
 }
 
-void vulkan_viewport_resize(
-    Vulkan_Context* context,
-    u32 width,
-    u32 height) {
+void vulkan_viewport_resize(Vulkan_Context* context, u32 width, u32 height) {
 
     // Apply size tolerance to avoid constant resizing during window dragging
     u32 current_width = context->main_target.width;
@@ -135,32 +120,28 @@ void vulkan_viewport_resize(
     for (u32 i = 0; i < context->main_target.framebuffer_count; ++i) {
         // Destroy existing resources
         if (context->main_target.descriptor_sets[i] != VK_NULL_HANDLE) {
-            ImGui_ImplVulkan_RemoveTexture(context->main_target.descriptor_sets[i]);
+            ImGui_ImplVulkan_RemoveTexture(
+                context->main_target.descriptor_sets[i]);
             context->main_target.descriptor_sets[i] = VK_NULL_HANDLE;
         }
 
         // Destroy sampler
         if (context->main_target.samplers[i] != VK_NULL_HANDLE) {
-            vkDestroySampler(
-                context->device.logical_device,
+            vkDestroySampler(context->device.logical_device,
                 context->main_target.samplers[i],
                 context->allocator);
             context->main_target.samplers[i] = VK_NULL_HANDLE;
         }
 
-        vulkan_framebuffer_destroy(
-            context,
+        vulkan_framebuffer_destroy(context,
             &context->main_target.framebuffers[i]);
-        vulkan_image_destroy(
-            context,
+        vulkan_image_destroy(context,
             &context->main_target.color_attachments[i]);
-        vulkan_image_destroy(
-            context,
+        vulkan_image_destroy(context,
             &context->main_target.depth_attachments[i]);
 
         // Recreate with new size
-        vulkan_image_create(
-            context,
+        vulkan_image_create(context,
             VK_IMAGE_TYPE_2D,
             width,
             height,
@@ -172,8 +153,7 @@ void vulkan_viewport_resize(
             VK_IMAGE_ASPECT_COLOR_BIT,
             &context->main_target.color_attachments[i]);
 
-        vulkan_image_create(
-            context,
+        vulkan_image_create(context,
             VK_IMAGE_TYPE_2D,
             width,
             height,
@@ -189,8 +169,7 @@ void vulkan_viewport_resize(
             context->main_target.color_attachments[i].view,
             context->main_target.depth_attachments[i].view};
 
-        vulkan_framebuffer_create(
-            context,
+        vulkan_framebuffer_create(context,
             &context->main_renderpass,
             width,
             height,
@@ -199,22 +178,32 @@ void vulkan_viewport_resize(
             &context->main_target.framebuffers[i]);
 
         // Create sampler
-        VK_CHECK(vkCreateSampler(
-            context->device.logical_device,
+        VK_CHECK(vkCreateSampler(context->device.logical_device,
             &sampler_info,
             context->allocator,
             &context->main_target.samplers[i]));
 
+        Vulkan_Command_Buffer command_buffer;
+        vulkan_command_buffer_startup_single_use(context,
+            context->device.graphics_command_pool,
+            &command_buffer);
+
         // Transition color attachment to shader read-only layout
-        vulkan_image_transition_layout(
-            context,
-            context->main_target.color_attachments[i].handle,
+        vulkan_image_transition_layout(context,
+            &command_buffer,
+            &context->main_target.color_attachments[i],
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        vulkan_command_buffer_end_single_use(context,
+            context->device.graphics_command_pool,
+            &command_buffer,
+            context->device.graphics_queue);
     }
 
-    CORE_DEBUG("Offscreen render targets resized successfully (count=%u)", context->main_target.framebuffer_count);
+    CORE_DEBUG("Offscreen render targets resized successfully (count=%u)",
+        context->main_target.framebuffer_count);
 
     context->main_target.width = width;
     context->main_target.height = height;
@@ -228,7 +217,8 @@ VkDescriptorSet vulkan_viewport_get_texture(Vulkan_Context* context) {
     // This handles the case where ImGui Vulkan backend wasn't ready during
     // initialization
     // Use image_index to synchronize with swapchain
-    if (context->main_target.descriptor_sets[context->image_index] == VK_NULL_HANDLE) {
+    if (context->main_target.descriptor_sets[context->image_index] ==
+        VK_NULL_HANDLE) {
         vulkan_viewport_update_descriptor(context);
     }
     return context->main_target.descriptor_sets[context->image_index];
@@ -239,19 +229,22 @@ void vulkan_viewport_update_descriptor(Vulkan_Context* context) {
     for (u32 i = 0; i < context->main_target.framebuffer_count; ++i) {
         // Remove existing descriptor set if it exists
         if (context->main_target.descriptor_sets[i] != VK_NULL_HANDLE) {
-            ImGui_ImplVulkan_RemoveTexture(context->main_target.descriptor_sets[i]);
+            ImGui_ImplVulkan_RemoveTexture(
+                context->main_target.descriptor_sets[i]);
             context->main_target.descriptor_sets[i] = VK_NULL_HANDLE;
         }
 
         // Create ImGui descriptor set for displaying as texture
         context->main_target.descriptor_sets[i] =
-            ImGui_ImplVulkan_AddTexture(
-                context->main_target.samplers[i],
+            ImGui_ImplVulkan_AddTexture(context->main_target.samplers[i],
                 context->main_target.color_attachments[i].view,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
         if (context->main_target.descriptor_sets[i] == VK_NULL_HANDLE) {
-            CORE_ERROR("Failed to create ImGui descriptor set for viewport texture (frame %u)!", i);
+            CORE_ERROR(
+                "Failed to create ImGui descriptor set for viewport texture "
+                "(frame %u)!",
+                i);
         } else {
             CORE_DEBUG("Viewport descriptor set updated (frame %u): %p",
                 i,

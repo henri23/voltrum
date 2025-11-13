@@ -256,6 +256,11 @@ struct Vulkan_Context {
     s32 (*find_memory_index)(u32 type_filter, u32 property_flags);
 };
 
+struct Vulkan_Texture_Data {
+    Vulkan_Image image;
+    VkSampler sampler;
+};
+
 struct Vulkan_Physical_Device_Requirements {
     b8 graphics;
     b8 present;

@@ -1,7 +1,8 @@
 #include "core/logger.hpp"
 
+#include "memory/memory.hpp"
 #include "platform/platform.hpp"
-#include "renderer/renderer_types.hpp"
+#include "vulkan_backend.hpp"
 #include "vulkan_buffer.hpp"
 #include "vulkan_command_buffer.hpp"
 #include "vulkan_device.hpp"
@@ -23,6 +24,7 @@
 
 #include "core/string.hpp"
 #include "math/math_types.hpp"
+#include <vulkan/vulkan_core.h>
 
 internal_variable Vulkan_Context context;
 internal_variable u32 cached_framebuffer_width = 0;
@@ -466,12 +468,23 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
         // Initialize descriptor set to null (will be created lazily)
         context.main_target.descriptor_sets[i] = VK_NULL_HANDLE;
 
+        Vulkan_Command_Buffer command_buffer;
+        vulkan_command_buffer_startup_single_use(&context,
+            context.device.graphics_command_pool,
+            &command_buffer);
+
         // Transition color attachment to shader read-only layout
         vulkan_image_transition_layout(&context,
-            context.main_target.color_attachments[i].handle,
+            &command_buffer,
+            &context.main_target.color_attachments[i],
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        vulkan_command_buffer_end_single_use(&context,
+            context.device.graphics_command_pool,
+            &command_buffer,
+            context.device.graphics_queue);
     }
 
     CORE_DEBUG("Offscreen render targets created (count=%u)",
@@ -758,7 +771,6 @@ void vulkan_update_global_state(mat4 projection,
 
     // Bind descriptor sets
     vulkan_object_shader_update_global_state(&context, &context.object_shader);
-
 }
 
 b8 vulkan_end_frame(Renderer_Backend* backend, f32 delta_t) {
@@ -1475,4 +1487,137 @@ void vulkan_destroy_ui_image(Renderer_Backend* backend,
 
     CORE_DEBUG("Destroyed UI image resource (handle=%u)",
         public_resource->handle);
+}
+
+void vulkan_create_texture(const char* name,
+    b8 auto_release,
+    s32 width,
+    s32 height,
+    s32 channel_count,
+    const u8* pixels,
+    b8 has_transparency,
+    Texture* out_texture) {
+
+    out_texture->width = width;
+    out_texture->height = height;
+    out_texture->channel_count = channel_count;
+    out_texture->generation = 0;
+
+    // Internal data creation
+    // TODO: Use a custom allocator for this
+    out_texture->internal_data =
+        memory_allocate(sizeof(Vulkan_Texture_Data), Memory_Tag::TEXTURE);
+
+    Vulkan_Texture_Data* data =
+        static_cast<Vulkan_Texture_Data*>(out_texture->internal_data);
+
+    VkDeviceSize image_size = width * height * channel_count;
+
+    // NOTE: Assume 8 bits per channel
+    VkFormat image_format = VK_FORMAT_R8G8B8A8_UNORM;
+
+    // Create a staging buffer and load data into it
+    VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    VkMemoryPropertyFlags memory_prop_flags =
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+        VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+    Vulkan_Buffer staging;
+    vulkan_buffer_create(&context,
+        image_size,
+        usage,
+        memory_prop_flags,
+        true,
+        &staging);
+
+    vulkan_buffer_load_data(&context, &staging, 0, image_size, 0, pixels);
+
+    // Assume the image type is 2D
+    vulkan_image_create(&context,
+        VK_IMAGE_TYPE_2D,
+        width,
+        height,
+        image_format,
+        VK_IMAGE_TILING_OPTIMAL,
+        VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+            VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        true,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        &data->image);
+
+    // Load the data of the buffer into the image. To load data into the image
+    // from the buffer we need to use a command buffer
+    Vulkan_Command_Buffer temp_buffer;
+    VkCommandPool pool = context.device.graphics_command_pool;
+    VkQueue queue = context.device.graphics_queue;
+    vulkan_command_buffer_startup_single_use(&context, pool, &temp_buffer);
+
+    vulkan_image_transition_layout(&context,
+        &temp_buffer,
+        &data->image,
+        image_format,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+    vulkan_image_copy_from_buffer(&context,
+        &data->image,
+        staging.handle,
+        &temp_buffer);
+
+    vulkan_image_transition_layout(&context,
+        &temp_buffer,
+        &data->image,
+        image_format,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+    vulkan_command_buffer_end_single_use(&context, pool, &temp_buffer, queue);
+
+    VkSamplerCreateInfo sampler_info = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
+    sampler_info.magFilter = VK_FILTER_LINEAR;
+    sampler_info.minFilter = VK_FILTER_LINEAR;
+    sampler_info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    sampler_info.anisotropyEnable = VK_TRUE;
+    sampler_info.maxAnisotropy = 16;
+    sampler_info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    sampler_info.unnormalizedCoordinates = VK_FALSE;
+    sampler_info.compareEnable = VK_FALSE;
+    sampler_info.compareOp = VK_COMPARE_OP_ALWAYS;
+    sampler_info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    sampler_info.mipLodBias = 0.0f;
+    sampler_info.minLod = 0.0f;
+    sampler_info.maxLod = 0.0f;
+
+    VkResult result = vkCreateSampler(context.device.logical_device,
+        &sampler_info,
+        context.allocator,
+        &data->sampler);
+    if (!vulkan_result_is_success(VK_SUCCESS)) {
+        CORE_ERROR("Error creating texture sampler: '%s'",
+            vulkan_result_string(result, true));
+        return;
+    }
+
+    out_texture->has_transparency = has_transparency;
+    out_texture->generation++;
+}
+
+void vulkan_destroy_texture(Texture* texture) {
+    Vulkan_Texture_Data* data =
+        static_cast<Vulkan_Texture_Data*>(texture->internal_data);
+
+    vulkan_image_destroy(&context, &data->image);
+    memory_zero(&data->image, sizeof(Vulkan_Image));
+    vkDestroySampler(context.device.logical_device,
+        data->sampler,
+        context.allocator);
+    data->sampler = nullptr;
+
+    memory_deallocate(texture->internal_data,
+        sizeof(Vulkan_Texture_Data),
+        Memory_Tag::TEXTURE);
+    memory_zero(texture, sizeof(struct Texture));
 }

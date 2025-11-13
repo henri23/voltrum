@@ -10,7 +10,10 @@
 struct Renderer_System_State {
     Renderer_Backend backend;
     mat4 projection;
-    mat4 view; // cached value of the camera transformation managed in the client
+
+    // Cached value of the camera transformation managed in the client
+    mat4 view;
+
     f32 near_clip = 0.1f;
     f32 far_clip = 1000.0f;
 };
@@ -113,6 +116,27 @@ void renderer_destroy_ui_image(UI_Image_Resource* resource) {
     state.backend.destroy_ui_image(&state.backend, resource);
 }
 
-void renderer_set_view(mat4 view) {
-    state.view = view;
+void renderer_set_view(mat4 view) { state.view = view; }
+
+void renderer_create_texture(const char* name,
+    b8 auto_release,
+    s32 width,
+    s32 height,
+    s32 channel_count,
+    const u8* pixels,
+    b8 has_transparency,
+    struct Texture* out_texture) {
+
+    state.backend.create_texture(name,
+        auto_release,
+        width,
+        height,
+        channel_count,
+        pixels,
+        has_transparency,
+        out_texture);
+}
+
+void renderer_destroy_texture(struct Texture* texture) {
+    state.backend.destroy_texture(texture);
 }

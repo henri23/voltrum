@@ -1,6 +1,8 @@
 #pragma once
 
 #include "renderer/renderer_types.hpp"
+#include "resources/resource_types.hpp"
+
 #include <vulkan/vulkan.h>
 
 b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name);
@@ -40,3 +42,14 @@ b8 vulkan_create_ui_image(Renderer_Backend* backend,
 
 void vulkan_destroy_ui_image(Renderer_Backend* backend,
     UI_Image_Resource* resource);
+
+void vulkan_create_texture(const char* name,
+    b8 auto_release,
+    s32 width,
+    s32 height,
+    s32 channel_count,
+    const u8* pixels,
+    b8 has_transparency,
+    Texture* out_texture);
+
+void vulkan_destroy_texture(Texture* texture);

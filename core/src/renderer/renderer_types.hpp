@@ -33,8 +33,19 @@ struct Renderer_Backend {
         vec3 view_position,
         vec4 ambient_colour,
         s32 mode);
-    
+
     void (*update_object)(mat4 model);
+
+    void (*create_texture)(const char* name,
+        b8 auto_release,
+        s32 width,
+        s32 height,
+        s32 channel_count,
+        const u8* pixels,
+        b8 has_transparency,
+        struct Texture* out_texture);
+
+    void (*destroy_texture)(struct Texture* texture);
 
     // UI Image Management
     b8 (*create_ui_image)(Renderer_Backend* backend,

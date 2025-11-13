@@ -1,14 +1,18 @@
 #include "vulkan_image.hpp"
-#include "renderer/vulkan/vulkan_types.hpp"
 #include "renderer/vulkan/vulkan_command_buffer.hpp"
+#include "renderer/vulkan/vulkan_types.hpp"
 
 #include "core/logger.hpp"
-#include "imgui_impl_vulkan.h"
+#include <vulkan/vulkan_core.h>
+
+// Vulkan images in general are textures but not only, in the sense that they
+// are inclusive of the equivalent OpenGL texture, but can be used for other
+// things too. When we want to access a Vulkan image we typically use an image
+// view however to access an image in a shader we need a sampler.
 
 // Images are memory blocks allocated in the device that include information
 // about the content too. Contrary to buffers which are just chunks of data
-void vulkan_image_create(
-    Vulkan_Context* context,
+void vulkan_image_create(Vulkan_Context* context,
     VkImageType image_type,
     u32 width,
     u32 height,
@@ -29,8 +33,7 @@ void vulkan_image_create(
     out_image->width = width;
     out_image->height = height;
 
-    VkImageCreateInfo image_create_info =
-        {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+    VkImageCreateInfo image_create_info = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
 
     image_create_info.imageType = VK_IMAGE_TYPE_2D;
     image_create_info.extent.width = width;
@@ -78,7 +81,8 @@ void vulkan_image_create(
     // - VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT: We want to draw into this image
     // - VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT: Used for depth or stencil
     //   buffer (z-buffer)
-    // - VK_IMAGE_USAGE_TRANSFER_SRC_BIT: We will copy from this image to another
+    // - VK_IMAGE_USAGE_TRANSFER_SRC_BIT: We will copy from this image to
+    // another
     // - VK_IMAGE_USAGE_TRANSFER_DST_BIT: We will copy to this image i.e. upload
     //	 texture from CPU
     image_create_info.usage = usage;
@@ -93,74 +97,63 @@ void vulkan_image_create(
     // one queue
     image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VK_CHECK(
-        vkCreateImage(
-            context->device.logical_device,
-            &image_create_info,
-            context->allocator,
-            &out_image->handle));
+    VK_CHECK(vkCreateImage(context->device.logical_device,
+        &image_create_info,
+        context->allocator,
+        &out_image->handle));
 
     // Query the memory requirements for the created image.
     VkMemoryRequirements memory_requirements;
 
-    // vkGetImageMemoryRequirements tells us how much GPU memory an images needs.
-    // It also says how this image should be aligned and which memory types are
-    // valid. This information is given before we bing the memory to the image.
-    vkGetImageMemoryRequirements(
-        context->device.logical_device,
+    // vkGetImageMemoryRequirements tells us how much GPU memory an images
+    // needs. It also says how this image should be aligned and which memory
+    // types are valid. This information is given before we bing the memory to
+    // the image.
+    vkGetImageMemoryRequirements(context->device.logical_device,
         out_image->handle,
         &memory_requirements);
 
     // Since we get the memory types from the query above, we must query the
     // device in order to get the device's memory index for that specific type
-    s32 memory_type = context->find_memory_index(
-        memory_requirements.memoryTypeBits,
-        memory_flags);
+    s32 memory_type =
+        context->find_memory_index(memory_requirements.memoryTypeBits,
+            memory_flags);
 
     if (memory_type == -1) {
         CORE_ERROR("Required memory type not found. Image is not valid");
     }
 
     // Allocate the memory
-    VkMemoryAllocateInfo memory_allocate_info =
-        {VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
+    VkMemoryAllocateInfo memory_allocate_info = {
+        VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO};
     memory_allocate_info.allocationSize = memory_requirements.size;
     memory_allocate_info.memoryTypeIndex = memory_type;
 
-    VK_CHECK(
-        vkAllocateMemory(
-            context->device.logical_device,
-            &memory_allocate_info,
-            context->allocator,
-            &out_image->memory));
+    VK_CHECK(vkAllocateMemory(context->device.logical_device,
+        &memory_allocate_info,
+        context->allocator,
+        &out_image->memory));
 
     // Bind the memory to the image
-    VK_CHECK(
-        vkBindImageMemory(
-            context->device.logical_device,
-            out_image->handle,
-            out_image->memory,
-            0) // TODO: Config. memory offeset, i.e. image pools
+    VK_CHECK(vkBindImageMemory(context->device.logical_device,
+        out_image->handle,
+        out_image->memory,
+        0) // TODO: Config. memory offeset, i.e. image pools
     );
 
     if (create_view) {
         out_image->view = nullptr;
-        vulkan_image_view_create(
-            context,
-            format,
-            out_image,
-            view_aspect_flags);
+        vulkan_image_view_create(context, format, out_image, view_aspect_flags);
     }
 }
 
-void vulkan_image_view_create(
-    Vulkan_Context* context,
+void vulkan_image_view_create(Vulkan_Context* context,
     VkFormat format,
     Vulkan_Image* image,
     VkImageAspectFlags aspect_flags) {
 
-    VkImageViewCreateInfo view_create_info =
-        {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+    VkImageViewCreateInfo view_create_info = {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
     view_create_info.format = format;
     view_create_info.image = image->handle;
     view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D; // TODO: Make config.
@@ -172,72 +165,63 @@ void vulkan_image_view_create(
     view_create_info.subresourceRange.baseArrayLayer = 0;
     view_create_info.subresourceRange.layerCount = 1;
 
-    VK_CHECK(
-        vkCreateImageView(
-            context->device.logical_device,
-            &view_create_info,
-            context->allocator,
-            &image->view));
+    VK_CHECK(vkCreateImageView(context->device.logical_device,
+        &view_create_info,
+        context->allocator,
+        &image->view));
 }
 
-void vulkan_image_destroy(
-    Vulkan_Context* context,
-    Vulkan_Image* image) {
+void vulkan_image_destroy(Vulkan_Context* context, Vulkan_Image* image) {
 
     // Remove this log if the logger gets too crowded
     CORE_DEBUG("Destroying vulkan image...");
 
     if (image->view) {
-        vkDestroyImageView(
-            context->device.logical_device,
+        vkDestroyImageView(context->device.logical_device,
             image->view,
-			context->allocator);
+            context->allocator);
 
-		image->view = nullptr;
+        image->view = nullptr;
     }
 
     if (image->memory) {
-        vkFreeMemory(
-            context->device.logical_device,
+        vkFreeMemory(context->device.logical_device,
             image->memory,
-			context->allocator);
+            context->allocator);
 
-		image->memory = nullptr;
+        image->memory = nullptr;
     }
 
     if (image->handle) {
-        vkDestroyImage(
-            context->device.logical_device,
+        vkDestroyImage(context->device.logical_device,
             image->handle,
-			context->allocator);
+            context->allocator);
 
-		image->handle = nullptr;
+        image->handle = nullptr;
     }
 
     CORE_DEBUG("Vulkan image destroyed");
 }
 
-
-void vulkan_image_transition_layout(
-    Vulkan_Context* context,
-    VkImage image,
+void vulkan_image_transition_layout(Vulkan_Context* context,
+    Vulkan_Command_Buffer* command_buffer,
+    Vulkan_Image* image,
     VkFormat format,
     VkImageLayout old_layout,
     VkImageLayout new_layout) {
 
-    Vulkan_Command_Buffer command_buffer;
-    vulkan_command_buffer_startup_single_use(
-        context,
-        context->device.graphics_command_pool,
-        &command_buffer);
-
+    // The memory barrier basically orchestrates the different command buffers
+    // execution that use this image. Basically the barrier ensures that all the
+    // command that were previously executed will use the old version of the
+    // layout and whever command execute after what this barrier is used for
+    // will use the new layout of the image. It is basically a sync point
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = old_layout;
     barrier.newLayout = new_layout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
+    barrier.srcQueueFamilyIndex = context->device.graphics_queue_index;
+    barrier.dstQueueFamilyIndex = context->device.graphics_queue_index;
+    barrier.image = image->handle;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1;
@@ -247,45 +231,85 @@ void vulkan_image_transition_layout(
     VkPipelineStageFlags source_stage;
     VkPipelineStageFlags destination_stage;
 
+    // If we do not care about the old layout and we want to transfer it to a
+    // destination optimal layout
     if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
         new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
+        // we do not care about what stage the pipeline is in
         source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
         destination_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-               new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    }
+    // Transitioning from a transfer destination layout to a shader readonly
+    // layout. In this case the image is already loaded from disk into a
+    // buffer
+    else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+             new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+        // Transitioning from a transfer destination layout to a shader readonly
+        // layout. In this case the image is already loaded from disk into a
+        // buffer
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
         source_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
         destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    } else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
-               new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        // Direct transition from undefined to shader read-only for render targets
+    }
+    // Direct transition from undefined to shader read-only for render
+    // targets
+    else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
+             new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
         barrier.srcAccessMask = 0;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
         source_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+
         destination_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     } else {
         CORE_ERROR("Unsupported layout transition!");
         return;
     }
 
-    vkCmdPipelineBarrier(
-        command_buffer.handle,
-        source_stage, destination_stage,
+    vkCmdPipelineBarrier(command_buffer->handle,
+        source_stage,
+        destination_stage,
         0,
-        0, nullptr,
-        0, nullptr,
-        1, &barrier
-    );
+        0,
+        nullptr,
+        0,
+        nullptr,
+        1,
+        &barrier);
+}
 
-    vulkan_command_buffer_end_single_use(
-        context,
-        context->device.graphics_command_pool,
-        &command_buffer,
-        context->device.graphics_queue);
+void vulkan_image_copy_from_buffer(Vulkan_Context* context,
+    Vulkan_Image* image,
+    VkBuffer buffer,
+    Vulkan_Command_Buffer* command_buffer) {
+
+    VkBufferImageCopy region;
+    memory_zero(&region, sizeof(VkBufferImageCopy));
+    region.bufferOffset = 0;
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+
+    // Specify that this is a color image
+    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.mipLevel = 0; // Not using mipMapping
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+
+    region.imageExtent.width = image->width;
+    region.imageExtent.height = image->height;
+    region.imageExtent.depth = 1; // Currently support only 2D images
+
+    vkCmdCopyBufferToImage(command_buffer->handle,
+        buffer,
+        image->handle,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        1,
+        &region);
 }

@@ -25,25 +25,23 @@ struct Memory_System_State {
 
 internal_variable Memory_System_State state = {};
 
-internal_variable const char*
-    memory_tag_strings[(u64)Memory_Tag::MAX_ENTRIES] = {
-    "UNKNOWN  	:",
-    "DARRAY   	:",
-    "LINEAR_ALLOC	:",
-    "EVENTS   	:",
-    "STRING   	:",
-    "CLIENT     	:",
-    "INPUT 		:",
-    "RENDERER 	:",
-    "APPLICATION	:",
-    "UI		:",
-	"LAYERS		:"};
+internal_variable const char* memory_tag_strings[(u64)Memory_Tag::MAX_ENTRIES] =
+    {"UNKNOWN  	:",
+        "DARRAY   	:",
+        "LINEAR_ALLOC	:",
+        "EVENTS   	:",
+        "STRING   	:",
+        "CLIENT     	:",
+        "INPUT 		:",
+        "RENDERER 	:",
+        "TEXTURE 	:",
+        "APPLICATION	:",
+        "UI		:",
+        "LAYERS		:"};
 
-void memory_init() {
-}
+void memory_init() {}
 
-void memory_shutdown(void* state) {
-}
+void memory_shutdown(void* state) {}
 
 void* memory_allocate(u64 size, Memory_Tag tag) {
     if (tag == Memory_Tag::UNKNOWN) {
@@ -119,7 +117,8 @@ void* memory_set(void* block, s32 value, u64 size) {
 char* memory_get_current_usage() {
     char utilization_buffer[5000] = "Summary of allocated memory (tagged):\n";
 
-    u64 offset = strlen(utilization_buffer); // The offset is represented in number of bytes
+    u64 offset = strlen(
+        utilization_buffer); // The offset is represented in number of bytes
 
     u64 max_tags = static_cast<u64>(Memory_Tag::MAX_ENTRIES);
     for (u32 i = 0; i < max_tags; ++i) {
@@ -137,29 +136,33 @@ char* memory_get_current_usage() {
             amount = (float)state.stats.tagged_allocations[i] / KIB;
         } else {
             usage_unit[0] = 'B';
-            usage_unit[1] = 0; // Append a null termination character to overwrite the end of the string
+            usage_unit[1] = 0; // Append a null termination character to
+                               // overwrite the end of the string
             amount = (float)state.stats.tagged_allocations[i];
         }
 
-        // snprintf returns the number of writen characters (aka bytes). It returns negative number if there was an error
-        s32 length = snprintf(
-            utilization_buffer + offset,
+        // snprintf returns the number of writen characters (aka bytes). It
+        // returns negative number if there was an error
+        s32 length = snprintf(utilization_buffer + offset,
             sizeof(utilization_buffer) - offset,
-            "%s %.2f %s\n", memory_tag_strings[i], amount, usage_unit);
+            "%s %.2f %s\n",
+            memory_tag_strings[i],
+            amount,
+            usage_unit);
 
         offset += length;
     }
 
-    // In order to use this buffer to another place we need to copy its value into a dynamically allocated memory
-    // This is because the buffer will go out of scope after we return and the value will be jibrish
-    // We need one more byte for the null terminator character as the strlen disregards it
+    // In order to use this buffer to another place we need to copy its value
+    // into a dynamically allocated memory This is because the buffer will go
+    // out of scope after we return and the value will be jibrish We need one
+    // more byte for the null terminator character as the strlen disregards it
     u64 length = strlen(utilization_buffer);
-    char* copy = static_cast<char*>(memory_allocate(length + 1, Memory_Tag::STRING));
+    char* copy =
+        static_cast<char*>(memory_allocate(length + 1, Memory_Tag::STRING));
     memory_copy(copy, utilization_buffer, length + 1);
 
     return copy;
 }
 
-u64 memory_get_allocations_count() {
-    return state.allocations_count;
-}
+u64 memory_get_allocations_count() { return state.allocations_count; }

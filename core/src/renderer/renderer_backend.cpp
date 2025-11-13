@@ -8,15 +8,23 @@ b8 renderer_backend_initialize(Renderer_Backend_Type type,
     // Instantiate specific backend
     switch (type) {
     case Renderer_Backend_Type::VULKAN: {
+        // Renderer logic
         out_backend->initialize = vulkan_initialize;
         out_backend->shutdown = vulkan_shutdown;
         out_backend->resized = vulkan_on_resized;
         out_backend->begin_frame = vulkan_begin_frame;
         out_backend->end_frame = vulkan_end_frame;
+
+        // Old texture methods
         out_backend->create_ui_image = vulkan_create_ui_image;
         out_backend->destroy_ui_image = vulkan_destroy_ui_image;
+
+        // Descriptors
         out_backend->update_global_state = vulkan_update_global_state;
         out_backend->update_object = vulkan_update_object;
+
+        out_backend->create_texture = vulkan_create_texture;
+        out_backend->destroy_texture = vulkan_destroy_texture;
 
         return true;
     }

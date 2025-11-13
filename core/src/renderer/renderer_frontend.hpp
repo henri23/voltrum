@@ -25,6 +25,17 @@ struct UI_Image_Resource {
     b8 is_valid;
 };
 
+void renderer_create_texture(const char* name,
+    b8 auto_release,
+    s32 width,
+    s32 height,
+    s32 channel_count,
+    const u8* pixels,
+    b8 has_transparency,
+    struct Texture* out_texture);
+
+void renderer_destroy_texture(struct Texture* texture);
+
 // UI Image Management
 b8 renderer_create_ui_image(u32 width,
     u32 height,
