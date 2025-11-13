@@ -41,7 +41,7 @@ INTERNAL_FUNC void recalculate_view_matrix(Frontend_State* state) {
 
         mat4 translation = mat4_translation(state->camera_position);
 
-        state->view = rotation * translation;
+        state->view = translation * rotation;
         state->view = mat4_inv(state->view);
 
         state->camera_view_dirty = false;
@@ -88,7 +88,6 @@ b8 client_initialize(Client* client_state) {
     }
 #endif
 
-    // Register memory debug event listener - press 'M' to show allocation count
     events_register_callback(Event_Type::KEY_PRESSED,
         client_memory_debug_callback,
         Event_Priority::LOW);
@@ -145,7 +144,7 @@ b8 client_update(Client* client_state, f32 delta_time) {
         camera_pitch(state, -1000.0f * delta_time);
     }
 
-    f32 movement_speed = 10.0f;
+    f32 movement_speed = 1.0f;
     vec3 velocity = vec3_zero();
 
     if (input_is_key_pressed(Key_Code::W)) {
@@ -180,9 +179,9 @@ b8 client_update(Client* client_state, f32 delta_time) {
     vec3 z = vec3_zero();
     if (!vec3_are_equal(z, velocity, 0.0002f)) {
         vec3_norm(&velocity);
-        state->camera_position.x += velocity.x;
-        state->camera_position.y += velocity.y;
-        state->camera_position.z += velocity.z;
+        state->camera_position.x += velocity.x * movement_speed;
+        state->camera_position.y += velocity.y * movement_speed;
+        state->camera_position.z += velocity.z * movement_speed;
 
         state->camera_view_dirty = true;
     }
