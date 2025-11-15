@@ -37,7 +37,9 @@ void create_swapchain(Vulkan_Context* context,
                 VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             out_swapchain->image_format = swapchain_info->formats[i];
             found = true;
-            CORE_INFO("Selected swapchain format: B8G8R8A8_UNORM with SRGB_NONLINEAR color space");
+            CORE_INFO(
+                "Selected swapchain format: B8G8R8A8_UNORM with SRGB_NONLINEAR "
+                "color space");
             break;
         }
     }
@@ -45,7 +47,9 @@ void create_swapchain(Vulkan_Context* context,
     // If the requested format was not found then pick the first one available
     if (!found) {
         out_swapchain->image_format = swapchain_info->formats[0];
-        CORE_WARN("Preferred format not found, using fallback: format=%d, colorSpace=%d",
+        CORE_WARN(
+            "Preferred format not found, using fallback: format=%d, "
+            "colorSpace=%d",
             out_swapchain->image_format.format,
             out_swapchain->image_format.colorSpace);
     }
@@ -114,10 +118,9 @@ void create_swapchain(Vulkan_Context* context,
     create_info.surface = context->surface;
 
     // Set the minimum image count in the swapchain, but nothing forbids the
-    // swapchain to have more images than this
-    u32 image_count = CLAMP(swapchain_info->capabilities.minImageCount + 1,
-        0,
-        swapchain_info->capabilities.maxImageCount);
+    // swapchain to have more images than this. Prefer 3 swapchain images
+    u32 image_count =
+        CLAMP(swapchain_info->capabilities.minImageCount + 1, 0, 3);
 
     out_swapchain->max_in_flight_frames = 2;
 

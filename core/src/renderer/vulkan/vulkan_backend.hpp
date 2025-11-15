@@ -21,7 +21,7 @@ void vulkan_update_global_state(mat4 projection,
     vec4 ambient_colour,
     s32 mode);
 
-void vulkan_update_object(mat4 model);
+void vulkan_update_object(Geometry_Render_Data data);
 
 // Get main renderer texture for ImGui display
 VkDescriptorSet vulkan_get_main_texture();

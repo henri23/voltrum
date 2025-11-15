@@ -169,7 +169,26 @@ struct Vulkan_Pipeline {
     VkPipelineLayout pipeline_layout;
 };
 
-constexpr u32 OBJECT_SHADER_STAGE_COUNT = 2;
+constexpr const u32 OBJECT_SHADER_STAGE_COUNT = 2;
+
+constexpr const u32 VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT = 2;
+
+// NOTE: Max number of object. Will likelly change later
+constexpr const u32 VULKAN_OBJECT_MAX_OBJECT_COUNT = 1024;
+
+// TODO: I am assuming there will be for sure 3 swapchain images available
+struct Vulkan_Descriptor_State {
+    // One per image
+    u32 generations[3];
+};
+
+struct Vulkan_Object_Shader_Object_State {
+    // One descriptor set per vulkan image per object
+    VkDescriptorSet descriptor_sets[3];
+
+    Vulkan_Descriptor_State
+        descriptor_states[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT];
+};
 
 struct Vulkan_Object_Shader {
     // The shader stage count is for vertex and fragment shaders
@@ -178,19 +197,28 @@ struct Vulkan_Object_Shader {
     Vulkan_Pipeline pipeline;
 
     VkDescriptorPool global_descriptor_pool;
-
     VkDescriptorSetLayout global_descriptor_set_layout;
-
     // One descriptor set per vulkan_image
     // Dynamic arrays because I need 1 for each swapchain image
-    VkDescriptorSet* global_descriptor_sets;
-
+    VkDescriptorSet global_descriptor_sets[3];
     Vulkan_Buffer global_uniform_buffer;
+
+    VkDescriptorPool object_descriptor_pool;
+    VkDescriptorSetLayout object_descriptor_set_layout;
+    // Allocate one large buffer to handle all objects
+    Vulkan_Buffer object_uniform_buffer;
+    // TODO: Manage a free list here
+    u32 object_uniform_buffer_index;
+    // TODO: Make dynamic
+    Vulkan_Object_Shader_Object_State
+        object_states[VULKAN_OBJECT_MAX_OBJECT_COUNT];
 
     Global_Uniform_Object global_ubo;
 };
 
 struct Vulkan_Context {
+    f32 frame_delta_time;
+
     VkInstance instance;
     VkSurfaceKHR surface;
     VkAllocationCallbacks* allocator;

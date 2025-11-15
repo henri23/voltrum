@@ -1,6 +1,5 @@
 #pragma once
 
-#include "math/math_types.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
 b8 vulkan_object_shader_create(Vulkan_Context* context,
@@ -13,8 +12,17 @@ void vulkan_object_shader_use(Vulkan_Context* context,
     Vulkan_Object_Shader* shader);
 
 void vulkan_object_shader_update_global_state(Vulkan_Context* context,
-    Vulkan_Object_Shader* shader);
+    Vulkan_Object_Shader* shader,
+    f32 delta_time);
 
 void vulkan_object_shader_update_object(Vulkan_Context* context,
     Vulkan_Object_Shader* shader,
-    mat4 model);
+    Geometry_Render_Data data);
+
+b8 vulkan_object_shader_acquire_resource(Vulkan_Context* context,
+    Vulkan_Object_Shader* shader,
+    Object_ID* out_object_id);
+
+void vulkan_object_shader_release_resource(Vulkan_Context* context,
+    Vulkan_Object_Shader* shader,
+    Object_ID object_id);

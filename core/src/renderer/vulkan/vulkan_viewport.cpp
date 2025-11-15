@@ -60,11 +60,13 @@ void vulkan_viewport_render(Vulkan_Context* context) {
         context->main_target.framebuffers[context->image_index].handle);
 
     // Set viewport for main render target
+    // Note: Use negative height for Y-axis flip (Vulkan convention)
+    // Y starts at height and goes down to match pipeline configuration
     VkViewport viewport = {};
     viewport.x = 0.0f;
-    viewport.y = 0.0f;
+    viewport.y = (f32)context->main_target.height;
     viewport.width = (f32)context->main_target.width;
-    viewport.height = (f32)context->main_target.height;
+    viewport.height = -(f32)context->main_target.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 

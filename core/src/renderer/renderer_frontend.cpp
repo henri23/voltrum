@@ -6,6 +6,8 @@
 #include "math/math.hpp"
 #include "math/math_types.hpp"
 
+#include "renderer/renderer_types.hpp"
+
 // Renderer frontend will manage the backend interface state
 struct Renderer_System_State {
     Renderer_Backend backend;
@@ -16,6 +18,8 @@ struct Renderer_System_State {
 
     f32 near_clip = 0.1f;
     f32 far_clip = 1000.0f;
+
+    Texture default_texture;
 };
 
 internal_variable Renderer_System_State state;
@@ -36,11 +40,49 @@ b8 renderer_startup(const char* application_name) {
         state.near_clip,
         state.far_clip);
 
+    // NOTE: Create default texture to prevent runtime errors when texture was
+    // not found from disk
+    CORE_TRACE("Creating default texture...");
+    constexpr u32 tex_dimension = 256;
+    constexpr u32 bpp = 4;
+    constexpr u32 pixel_count = tex_dimension * tex_dimension;
+    u8 pixels[pixel_count * bpp];
+    // Initialize all channels (including alpha) to 255 so the texture is opaque
+    memory_set(pixels, 255, sizeof(u8) * pixel_count * bpp);
+
+    for (u64 row = 0; row < tex_dimension; ++row) {
+        for (u64 col = 0; col < tex_dimension; ++col) {
+            u64 index = (row * tex_dimension) + col;
+            u64 index_bpp = index * bpp;
+            if (row % 2) {
+                if (col % 2) {
+                    pixels[index_bpp + 0] = 0;
+                    pixels[index_bpp + 1] = 0;
+                }
+            } else {
+                if (!(col % 2)) {
+                    pixels[index_bpp + 0] = 0;
+                    pixels[index_bpp + 1] = 0;
+                }
+            }
+        }
+    }
+
+    renderer_create_texture("default",
+        false,
+        tex_dimension,
+        tex_dimension,
+        4,
+        pixels,
+        false,
+        &state.default_texture);
+
     CORE_DEBUG("Renderer subsystem initialized");
     return true;
 }
 
 void renderer_shutdown() {
+    renderer_destroy_texture(&state.default_texture);
     state.backend.shutdown(&state.backend);
 
     renderer_backend_shutdown(&state.backend);
@@ -85,7 +127,12 @@ b8 renderer_draw_frame(Render_Packet* packet) {
         quaternion rotation =
             quat_from_axis_angle(vec3_forward(), angle, false);
         mat4 model = quat_to_rotation_matrix(rotation, vec3_zero());
-        state.backend.update_object(model);
+
+        Geometry_Render_Data data;
+        data.object_id = 0; // Change to the actual ID of the object
+        data.model = model;
+        data.textures[0] = &state.default_texture;
+        state.backend.update_object(data);
 
         b8 result = renderer_end_frame(packet->delta_time);
 

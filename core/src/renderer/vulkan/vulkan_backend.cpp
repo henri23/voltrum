@@ -103,7 +103,6 @@ INTERNAL_FUNC void upload_data_range(Vulkan_Context* context,
 }
 
 b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
-
     // Function pointer assignment
     context.find_memory_index = find_memory_index;
 
@@ -341,17 +340,25 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
 
     constexpr f32 f = 10.0f;
 
-    verts[0].position.x = -1 * f;
-    verts[0].position.y = -1 * f;
+    verts[0].position.x = -0.5 * f;
+    verts[0].position.y = -0.5 * f;
+    verts[0].texture_coordinates.x = 0.0f;
+    verts[0].texture_coordinates.y = 0.0f;
 
-    verts[1].position.x = 1 * f;
-    verts[1].position.y = 1 * f;
+    verts[1].position.x = 0.5 * f;
+    verts[1].position.y = 0.5 * f;
+    verts[1].texture_coordinates.x = 1.0f;
+    verts[1].texture_coordinates.y = 1.0f;
 
-    verts[2].position.x = -1 * f;
-    verts[2].position.y = 1 * f;
+    verts[2].position.x = -0.5 * f;
+    verts[2].position.y = 0.5 * f;
+    verts[2].texture_coordinates.x = 0.0f;
+    verts[2].texture_coordinates.y = 1.0f;
 
-    verts[3].position.x = 1 * f;
-    verts[3].position.y = -1 * f;
+    verts[3].position.x = 0.5 * f;
+    verts[3].position.y = -0.5 * f;
+    verts[3].texture_coordinates.x = 1.0f;
+    verts[3].texture_coordinates.y = 0.0f;
 
     constexpr u32 index_count = 6;
     u32 indices[index_count] = {0, 1, 2, 0, 3, 1};
@@ -373,6 +380,16 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
         0,
         sizeof(u32) * index_count,
         indices);
+
+    Object_ID object_id = 0;
+    if (!vulkan_object_shader_acquire_resource(&context,
+            &context.object_shader,
+            &object_id)) {
+        CORE_ERROR("Failed to acquire shader resources.");
+        return false;
+    }
+
+    // TODO: End temp code
 
     // Initialize main render target (off-screen rendering)
     // Match swapchain image_count for synchronization
@@ -641,6 +658,8 @@ void vulkan_on_resized(Renderer_Backend* backend, u16 width, u16 height) {
 
 b8 vulkan_begin_frame(Renderer_Backend* backend, f32 delta_t) {
 
+    context.frame_delta_time = delta_t;
+
     Vulkan_Device* device = &context.device;
 
     if (context.recreating_swapchain) {
@@ -770,7 +789,9 @@ void vulkan_update_global_state(mat4 projection,
     context.object_shader.global_ubo.view = view;
 
     // Bind descriptor sets
-    vulkan_object_shader_update_global_state(&context, &context.object_shader);
+    vulkan_object_shader_update_global_state(&context,
+        &context.object_shader,
+        context.frame_delta_time);
 }
 
 b8 vulkan_end_frame(Renderer_Backend* backend, f32 delta_t) {
@@ -883,11 +904,11 @@ b8 vulkan_end_frame(Renderer_Backend* backend, f32 delta_t) {
     return true;
 }
 
-void vulkan_update_object(mat4 model) {
+void vulkan_update_object(Geometry_Render_Data data) {
     Vulkan_Command_Buffer* cmd_buffer =
         &context.main_command_buffers[context.image_index];
 
-    vulkan_object_shader_update_object(&context, &context.object_shader, model);
+    vulkan_object_shader_update_object(&context, &context.object_shader, data);
 
     // Bind vertex and index buffers
     VkDeviceSize offsets[1] = {0};
@@ -1501,7 +1522,7 @@ void vulkan_create_texture(const char* name,
     out_texture->width = width;
     out_texture->height = height;
     out_texture->channel_count = channel_count;
-    out_texture->generation = 0;
+    out_texture->generation = INVALID_ID;
 
     // Internal data creation
     // TODO: Use a custom allocator for this
@@ -1574,6 +1595,9 @@ void vulkan_create_texture(const char* name,
 
     vulkan_command_buffer_end_single_use(&context, pool, &temp_buffer, queue);
 
+    // Destroy staging buffer AFTER command buffer has been submitted and completed
+    vulkan_buffer_destroy(&context, &staging);
+
     VkSamplerCreateInfo sampler_info = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
     sampler_info.magFilter = VK_FILTER_LINEAR;
     sampler_info.minFilter = VK_FILTER_LINEAR;
@@ -1595,7 +1619,8 @@ void vulkan_create_texture(const char* name,
         &sampler_info,
         context.allocator,
         &data->sampler);
-    if (!vulkan_result_is_success(VK_SUCCESS)) {
+
+    if (!vulkan_result_is_success(result)) {
         CORE_ERROR("Error creating texture sampler: '%s'",
             vulkan_result_string(result, true));
         return;
@@ -1606,6 +1631,8 @@ void vulkan_create_texture(const char* name,
 }
 
 void vulkan_destroy_texture(Texture* texture) {
+    vkDeviceWaitIdle(context.device.logical_device);
+
     Vulkan_Texture_Data* data =
         static_cast<Vulkan_Texture_Data*>(texture->internal_data);
 

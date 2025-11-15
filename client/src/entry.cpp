@@ -94,7 +94,7 @@ b8 client_initialize(Client* client_state) {
 
     Frontend_State* state = (Frontend_State*)client_state->state;
 
-    state->camera_position = {0, 0, 40.0f};
+    state->camera_position = {0, 0, 30.0f};
     state->camera_euler = vec3_zero();
 
     state->view = mat4_translation(state->camera_position);

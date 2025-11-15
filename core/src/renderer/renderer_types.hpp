@@ -4,14 +4,30 @@
 // This file contains declarations that are going to exposed to multiple
 // subsystems Initially it contained the renderer backend defition too
 #include "math/math_types.hpp"
+#include "resources/resource_types.hpp"
 
 // Nvidia graphics cards usually have a requirement that the global uniform
 // objects have a size of 256 bytes, so we add some padding to respect that.
+// Global_Uniform_Object gets uploaded once per frame
 struct Global_Uniform_Object {
     mat4 projection; // 64 bytes
     mat4 view;       // 64 bytes
     mat4 padding_0;  // 64 bytes
     mat4 padding_1;  // 64 bytes
+};
+
+// Local_Uniform_Object gets uploaded one per object per frame
+struct Local_Uniform_Object {
+    vec4 diffuse_color;
+    vec4 padding_0;
+    vec4 padding_1;
+    vec4 padding_2;
+};
+
+struct Geometry_Render_Data {
+    Object_ID object_id;
+    mat4 model;
+    Texture* textures[16];
 };
 
 // Renderer_backend is the interface of the renderer classes
@@ -34,7 +50,7 @@ struct Renderer_Backend {
         vec4 ambient_colour,
         s32 mode);
 
-    void (*update_object)(mat4 model);
+    void (*update_object)(Geometry_Render_Data data);
 
     void (*create_texture)(const char* name,
         b8 auto_release,
