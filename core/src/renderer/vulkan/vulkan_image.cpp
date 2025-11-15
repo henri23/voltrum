@@ -1,5 +1,4 @@
 #include "vulkan_image.hpp"
-#include "renderer/vulkan/vulkan_command_buffer.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
 #include "core/logger.hpp"

@@ -1,4 +1,4 @@
-#include "vulkan_object_shader.hpp"
+#include "vulkan_material_shader.hpp"
 #include "defines.hpp"
 
 #include "renderer/vulkan/vulkan_buffer.hpp"
@@ -12,10 +12,10 @@
 #include "math/math_types.hpp"
 #include <vulkan/vulkan_core.h>
 
-#define BUILTIN_SHADER_NAME_OBJECT "Builtin.ObjectShader"
+#define BUILTIN_SHADER_NAME_MATERIAL "Builtin.MaterialShader"
 
-b8 vulkan_object_shader_create(Vulkan_Context* context,
-    Vulkan_Object_Shader* out_shader) {
+b8 vulkan_material_shader_create(Vulkan_Context* context,
+    Vulkan_Material_Shader* out_shader) {
 
     char stage_type_strs[OBJECT_SHADER_STAGE_COUNT][5] = {"vert", "frag"};
 
@@ -25,7 +25,7 @@ b8 vulkan_object_shader_create(Vulkan_Context* context,
 
     for (u32 i = 0; i < OBJECT_SHADER_STAGE_COUNT; ++i) {
         if (!create_shader_module(context,
-                BUILTIN_SHADER_NAME_OBJECT,
+                BUILTIN_SHADER_NAME_MATERIAL,
                 stage_type_strs[i],
                 state_types[i],
                 i,
@@ -33,7 +33,7 @@ b8 vulkan_object_shader_create(Vulkan_Context* context,
 
             CORE_ERROR("Failed to create %s shader module for '%s'",
                 stage_type_strs[i],
-                BUILTIN_SHADER_NAME_OBJECT);
+                BUILTIN_SHADER_NAME_MATERIAL);
 
             return false;
         }
@@ -248,8 +248,8 @@ b8 vulkan_object_shader_create(Vulkan_Context* context,
     return true;
 }
 
-void vulkan_object_shader_destroy(Vulkan_Context* context,
-    Vulkan_Object_Shader* shader) {
+void vulkan_material_shader_destroy(Vulkan_Context* context,
+    Vulkan_Material_Shader* shader) {
 
     VkDevice logical_device = context->device.logical_device;
 
@@ -287,8 +287,8 @@ void vulkan_object_shader_destroy(Vulkan_Context* context,
     }
 }
 
-void vulkan_object_shader_use(Vulkan_Context* context,
-    Vulkan_Object_Shader* shader) {
+void vulkan_material_shader_use(Vulkan_Context* context,
+    Vulkan_Material_Shader* shader) {
     u32 image_index = context->image_index;
     vulkan_graphics_pipeline_bind(&context->main_command_buffers[image_index],
         VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -298,8 +298,8 @@ void vulkan_object_shader_use(Vulkan_Context* context,
 // Not all GPUs are capable of performing an update operation after a bind
 // operation for the descriptor sets for instead I need to implement the updated
 // pattern, because nertheless I need to just bind once
-void vulkan_object_shader_update_global_state(Vulkan_Context* context,
-    Vulkan_Object_Shader* shader,
+void vulkan_material_shader_update_global_state(Vulkan_Context* context,
+    Vulkan_Material_Shader* shader,
     f32 delta_time) {
 
     u32 image_index = context->image_index;
@@ -355,8 +355,8 @@ void vulkan_object_shader_update_global_state(Vulkan_Context* context,
         0);
 }
 
-void vulkan_object_shader_update_object(Vulkan_Context* context,
-    Vulkan_Object_Shader* shader,
+void vulkan_material_shader_update_object(Vulkan_Context* context,
+    Vulkan_Material_Shader* shader,
     Geometry_Render_Data data) {
 
     u32 image_index = context->image_index;
@@ -491,8 +491,8 @@ void vulkan_object_shader_update_object(Vulkan_Context* context,
         0);
 }
 
-b8 vulkan_object_shader_acquire_resource(Vulkan_Context* context,
-    Vulkan_Object_Shader* shader,
+b8 vulkan_material_shader_acquire_resource(Vulkan_Context* context,
+    Vulkan_Material_Shader* shader,
     Object_ID* out_object_id) {
     // TODO: Change the memory management inside the gpu buffer to freelist
     *out_object_id = shader->object_uniform_buffer_index;
@@ -532,8 +532,8 @@ b8 vulkan_object_shader_acquire_resource(Vulkan_Context* context,
     return true;
 }
 
-void vulkan_object_shader_release_resource(Vulkan_Context* context,
-    Vulkan_Object_Shader* shader,
+void vulkan_material_shader_release_resource(Vulkan_Context* context,
+    Vulkan_Material_Shader* shader,
     Object_ID object_id) {
 
     constexpr u32 descriptor_set_count = 3;

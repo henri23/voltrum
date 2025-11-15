@@ -19,7 +19,7 @@
 
 #include "vulkan_ui.hpp"
 
-#include "shaders/vulkan_object_shader.hpp"
+#include "shaders/vulkan_material_shader.hpp"
 #include "vulkan_viewport.hpp"
 
 #include "core/string.hpp"
@@ -42,7 +42,7 @@ INTERNAL_FUNC b8 vulkan_create_debug_logger(VkInstance* instance);
 INTERNAL_FUNC b8 vulkan_enable_validation_layers(
     Auto_Array<const char*>* required_layers_array);
 
-// Needed for z-buffer image format selection in vulkan_device
+// Needed for z-buffer image format sel/ection in vulkan_device
 INTERNAL_FUNC s32 find_memory_index(u32 type_filter, u32 property_flags);
 INTERNAL_FUNC b8 create_buffers(Vulkan_Context* context);
 
@@ -319,7 +319,7 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
     }
 
     // Create builtin shaders
-    if (!vulkan_object_shader_create(&context, &context.object_shader)) {
+    if (!vulkan_material_shader_create(&context, &context.material_shader)) {
         CORE_ERROR("Error loading built-in object shader");
         return false;
     }
@@ -382,8 +382,8 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
         indices);
 
     Object_ID object_id = 0;
-    if (!vulkan_object_shader_acquire_resource(&context,
-            &context.object_shader,
+    if (!vulkan_material_shader_acquire_resource(&context,
+            &context.material_shader,
             &object_id)) {
         CORE_ERROR("Failed to acquire shader resources.");
         return false;
@@ -577,7 +577,7 @@ void vulkan_shutdown(Renderer_Backend* backend) {
     vulkan_buffer_destroy(&context, &context.object_index_buffer);
 
     // Destroy shader modules
-    vulkan_object_shader_destroy(&context, &context.object_shader);
+    vulkan_material_shader_destroy(&context, &context.material_shader);
 
     // Destroy sync objects
     for (u8 i = 0; i < context.swapchain.max_in_flight_frames; ++i) {
@@ -782,15 +782,15 @@ void vulkan_update_global_state(mat4 projection,
         &context.main_command_buffers[context.image_index];
 
     // Bind pipeline
-    vulkan_object_shader_use(&context, &context.object_shader);
+    vulkan_material_shader_use(&context, &context.material_shader);
 
     // Update uniform buffer data
-    context.object_shader.global_ubo.projection = projection;
-    context.object_shader.global_ubo.view = view;
+    context.material_shader.global_ubo.projection = projection;
+    context.material_shader.global_ubo.view = view;
 
     // Bind descriptor sets
-    vulkan_object_shader_update_global_state(&context,
-        &context.object_shader,
+    vulkan_material_shader_update_global_state(&context,
+        &context.material_shader,
         context.frame_delta_time);
 }
 
@@ -908,7 +908,7 @@ void vulkan_update_object(Geometry_Render_Data data) {
     Vulkan_Command_Buffer* cmd_buffer =
         &context.main_command_buffers[context.image_index];
 
-    vulkan_object_shader_update_object(&context, &context.object_shader, data);
+    vulkan_material_shader_update_object(&context, &context.material_shader, data);
 
     // Bind vertex and index buffers
     VkDeviceSize offsets[1] = {0};
@@ -1595,7 +1595,8 @@ void vulkan_create_texture(const char* name,
 
     vulkan_command_buffer_end_single_use(&context, pool, &temp_buffer, queue);
 
-    // Destroy staging buffer AFTER command buffer has been submitted and completed
+    // Destroy staging buffer AFTER command buffer has been submitted and
+    // completed
     vulkan_buffer_destroy(&context, &staging);
 
     VkSamplerCreateInfo sampler_info = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};

@@ -190,7 +190,7 @@ struct Vulkan_Object_Shader_Object_State {
         descriptor_states[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT];
 };
 
-struct Vulkan_Object_Shader {
+struct Vulkan_Material_Shader {
     // The shader stage count is for vertex and fragment shaders
     Vulkan_Shader_Stage stages[OBJECT_SHADER_STAGE_COUNT];
 
@@ -243,7 +243,7 @@ struct Vulkan_Context {
 
     b8 recreating_swapchain;
 
-    Vulkan_Object_Shader object_shader;
+    Vulkan_Material_Shader material_shader;
 
     Vulkan_Swapchain swapchain;
     Vulkan_Device device;

@@ -21,14 +21,14 @@ if "%VULKAN_SDK%"=="" (
 )
 
 rem Vertex shader
-"%VULKAN_SDK%\Bin\glslc.exe" -fshader-stage=vert "%SCRIPT_DIR%\assets\shaders\Builtin.ObjectShader.vert.glsl" -o "%BIN_SHADERS_DIR%\Builtin.ObjectShader.vert.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" -fshader-stage=vert "%SCRIPT_DIR%\assets\shaders\Builtin.MaterialShader.vert.glsl" -o "%BIN_SHADERS_DIR%\Builtin.MaterialShader.vert.spv"
 if errorlevel 1 (
     echo Error: vertex shader compilation failed
     exit /b 1
 )
 
 rem Fragment shader
-"%VULKAN_SDK%\Bin\glslc.exe" -fshader-stage=frag "%SCRIPT_DIR%\assets\shaders\Builtin.ObjectShader.frag.glsl" -o "%BIN_SHADERS_DIR%\Builtin.ObjectShader.frag.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" -fshader-stage=frag "%SCRIPT_DIR%\assets\shaders\Builtin.MaterialShader.frag.glsl" -o "%BIN_SHADERS_DIR%\Builtin.MaterialShader.frag.spv"
 if errorlevel 1 (
     echo Error: fragment shader compilation failed
     exit /b 1
