@@ -3,6 +3,8 @@
 #include "core/logger.hpp"
 #include "core/asserts.hpp"
 #include "platform/platform.hpp"
+#include "memory/allocator.hpp"
+#include <cstddef>
 
 // ===== Memory Arena Implementation =====
 
@@ -97,6 +99,39 @@ void* arena_alloc_aligned(Memory_Arena* arena, u64 size, u64 alignment) {
 
     arena->position = aligned_pos + size;
     return arena->base + aligned_pos;
+}
+
+// -------- Allocator adapter --------
+internal_variable void* arena_allocator_allocate(void* context, u64 size, u64 alignment) {
+    Memory_Arena* arena = static_cast<Memory_Arena*>(context);
+    return arena_alloc_aligned(arena, size, alignment ? alignment : alignof(std::max_align_t));
+}
+
+internal_variable void arena_allocator_deallocate(void* context, void* ptr, u64 size) {
+    (void)context;
+    (void)ptr;
+    (void)size;
+    // Linear arenas do not support individual frees; user controls lifetime via checkpoints/clear.
+}
+
+internal_variable void* arena_allocator_reallocate(void* context,
+    void* ptr,
+    u64 old_size,
+    u64 new_size,
+    u64 alignment) {
+    (void)ptr;
+    (void)old_size;
+    // Simplest policy: allocate new block; caller copies if needed.
+    return arena_allocator_allocate(context, new_size, alignment);
+}
+
+Allocator arena_allocator(Memory_Arena* arena) {
+    Allocator allocator = {};
+    allocator.context = arena;
+    allocator.allocate = arena_allocator_allocate;
+    allocator.deallocate = arena_allocator_deallocate;
+    allocator.reallocate = arena_allocator_reallocate;
+    return allocator;
 }
 
 void arena_clear(Memory_Arena* arena) {

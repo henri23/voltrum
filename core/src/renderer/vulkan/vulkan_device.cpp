@@ -1,6 +1,6 @@
 #include "vulkan_device.hpp"
 
-#include "containers/auto_array.hpp"
+#include "data_structures/auto_array.hpp"
 #include "core/logger.hpp"
 #include "memory/memory.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"

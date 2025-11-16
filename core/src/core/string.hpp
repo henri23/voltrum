@@ -7,6 +7,10 @@ VOLTRUM_API b8 string_check_equal(
     const char* str1,
     const char* str2);
 
+VOLTRUM_API b8 string_check_equal_insensitive(
+    const char* str1,
+    const char* str2);
+
 VOLTRUM_API s32 string_format(
 	char* dest, 
 	const char* format, ...);

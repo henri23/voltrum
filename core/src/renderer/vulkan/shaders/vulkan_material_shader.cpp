@@ -10,7 +10,6 @@
 
 #include "math/math.hpp"
 #include "math/math_types.hpp"
-#include <vulkan/vulkan_core.h>
 
 #define BUILTIN_SHADER_NAME_MATERIAL "Builtin.MaterialShader"
 

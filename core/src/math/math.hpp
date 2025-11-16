@@ -39,6 +39,21 @@ FORCE_INLINE b8 math_is_power_of_2(u64 value) {
     return (value != 0) && ((value & (value - 1)) == 0);
 };
 
+FORCE_INLINE u64 math_next_power_of_2(u64 value) {
+    // Fast power of two ceiling algorithm
+    // Reference:
+    // https://graphics.stanford.edu/%7Eseander/bithacks.html#RoundUpPowerOf2
+    value--;
+    value |= value >> 1;
+    value |= value >> 2;
+    value |= value >> 4;
+    value |= value >> 8;
+    value |= value >> 16;
+    value |= value >> 32;
+    value++;
+    return value;
+}
+
 VOLTRUM_API s32 math_random_signed();
 VOLTRUM_API f32 math_random_float();
 

@@ -5,6 +5,7 @@
 enum class Memory_Tag {
     UNKNOWN,
     DARRAY,
+    HASHMAP,
     LINEAR_ALLOCATOR,
     EVENTS,
     STRING,

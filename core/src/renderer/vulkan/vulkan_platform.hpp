@@ -1,6 +1,6 @@
 #pragma once
 
-#include "containers/auto_array.hpp"
+#include "data_structures/auto_array.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
 struct Platform_State;

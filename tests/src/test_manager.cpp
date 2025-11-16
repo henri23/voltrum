@@ -1,5 +1,5 @@
 #include "test_manager.hpp"
-#include <containers/auto_array.hpp>
+#include <data_structures/auto_array.hpp>
 #include <core/absolute_clock.hpp>
 #include <core/logger.hpp>
 #include <core/string.hpp>

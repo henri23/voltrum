@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defines.hpp"
+#include "memory/allocator.hpp"
 
 // Memory Arena System
 // Based on Ryan Fleury's arena allocator approach
@@ -17,6 +18,10 @@ struct Memory_Arena {
 Memory_Arena* arena_create(u64 size);
 Memory_Arena* arena_create_virtual(u64 reserve_size, u64 commit_size);
 void arena_destroy(Memory_Arena* arena);
+
+// Create an Allocator view over an existing arena.
+// allocate/deallocate map to arena_alloc_aligned/arena_clear semantics.
+Allocator arena_allocator(Memory_Arena* arena);
 
 // Basic allocation
 void* arena_alloc(Memory_Arena* arena, u64 size);

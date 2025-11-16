@@ -1,6 +1,6 @@
 #include "ui_fonts.hpp"
 
-#include "containers/auto_array.hpp"
+#include "data_structures/auto_array.hpp"
 #include "core/asserts.hpp"
 #include "core/logger.hpp"
 #include "imgui.h"
@@ -54,8 +54,6 @@ INTERNAL_FUNC UI_Font_Info* find_font_by_name(const char* name);
 INTERNAL_FUNC ImFontConfig create_font_config(const UI_Font_Info* font_info);
 
 b8 ui_fonts_initialize() {
-    CORE_DEBUG("Initializing font management system...");
-
     if (font_registry.is_initialized) {
         CORE_WARN("Font system already initialized");
         return true;
@@ -113,7 +111,6 @@ b8 ui_fonts_register_embedded(const char* name,
 
     font_registry.fonts.push_back(font_info);
 
-    CORE_DEBUG("Registered embedded font: %s (%.1fpt)", name, size);
     return true;
 }
 
@@ -152,10 +149,6 @@ b8 ui_fonts_register_system(const char* name,
 
     font_registry.fonts.push_back(font_info);
 
-    CORE_DEBUG("Registered system font: %s -> %s (%.1fpt)",
-        name,
-        filepath,
-        size);
     return true;
 }
 
@@ -164,8 +157,6 @@ b8 ui_fonts_load_all() {
         CORE_ERROR("Font system not initialized");
         return false;
     }
-
-    CORE_DEBUG("Loading all registered fonts into ImGui...");
 
     ImGuiIO& io = ImGui::GetIO();
 
@@ -199,7 +190,13 @@ b8 ui_fonts_load_all() {
 
         if (font_info->imgui_font) {
             font_info->is_loaded = true;
-            CORE_DEBUG("Loaded font: %s", font_info->name);
+            if (font_info->size > 0.0f) {
+                CORE_INFO("Font '%s' loaded (%.1fpt)",
+                    font_info->name,
+                    font_info->size);
+            } else {
+                CORE_INFO("Font '%s' loaded", font_info->name);
+            }
         } else {
             CORE_ERROR("Failed to load font: %s", font_info->name);
         }
@@ -242,7 +239,7 @@ b8 ui_fonts_set_default(const char* name) {
     ImGuiIO& io = ImGui::GetIO();
     io.FontDefault = font_registry.default_font;
 
-    CORE_DEBUG("Set default font to: %s", name);
+    CORE_INFO("Default font set to '%s'", name);
     return true;
 }
 
@@ -268,7 +265,7 @@ b8 ui_fonts_rebuild() {
         return false;
     }
 
-    CORE_DEBUG("Rebuilding fonts...");
+    CORE_DEBUG("Rebuilding fonts..."); // Occurs infrequently; keep for diagnostics
 
     // Mark all fonts as not loaded
     for (u32 i = 0; i < font_registry.fonts.size(); ++i) {
@@ -285,8 +282,6 @@ b8 ui_fonts_rebuild() {
 }
 
 b8 ui_fonts_load_system_defaults() {
-    CORE_DEBUG("Loading system default fonts...");
-
     // Register common system fonts
     // Note: This is platform-specific and would need proper implementation
     // For now, we'll just register placeholders
@@ -317,7 +312,7 @@ b8 ui_fonts_load_system_defaults() {
         UI_FONT_SIZE_LARGE);
 
     if (success) {
-        CORE_DEBUG("System default fonts loaded successfully");
+        CORE_INFO("System default fonts loaded");
     } else {
         CORE_ERROR("Failed to load some system default fonts");
     }
@@ -379,7 +374,7 @@ INTERNAL_FUNC b8 load_font_variant(const char* asset_name,
 
     font_registry.fonts.push_back(font_info);
 
-    CORE_DEBUG("Loaded font: %s at %.1fpt", asset_name, size);
+    CORE_INFO("Font '%s' loaded (%.1fpt)", font_name, size);
     return true;
 }
 

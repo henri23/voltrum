@@ -5,7 +5,7 @@
 
 #include "SDL3/SDL_vulkan.h"
 
-#include "containers/auto_array.hpp"
+#include "data_structures/auto_array.hpp"
 #include "core/logger.hpp"
 #include "events/events.hpp"
 #include "input/input.hpp"
@@ -135,15 +135,12 @@ b8 platform_message_pump() {
 
             case SDL_EVENT_WINDOW_RESIZED:
                 // TODO: Trigger swapchain recreation when window is resized
-                CORE_DEBUG("Window resized - triggered swapchain recreation");
                 break;
 
             case SDL_EVENT_WINDOW_MAXIMIZED:
             case SDL_EVENT_WINDOW_RESTORED:
                 // TODO: Trigger swapchain recreation when window is maximized
                 // or restored
-                CORE_DEBUG(
-                    "Window state changed - triggered swapchain recreation");
                 break;
 
             default:

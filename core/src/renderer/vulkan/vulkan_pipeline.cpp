@@ -3,7 +3,6 @@
 #include "vulkan_utils.hpp"
 
 #include "core/logger.hpp"
-#include <vulkan/vulkan_core.h>
 
 b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
     Vulkan_Renderpass* renderpass,
@@ -43,7 +42,8 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
     rasterizer_create_info.polygonMode =
         is_wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 
-    // Disable backface culling for now to ensure triangle is visible regardless of winding order
+    // Disable backface culling for now to ensure triangle is visible regardless
+    // of winding order
     rasterizer_create_info.cullMode = VK_CULL_MODE_NONE;
 
     // Desines what is considered the front face of a triangle

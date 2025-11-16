@@ -2,7 +2,6 @@
 #include "renderer/vulkan/vulkan_types.hpp"
 
 #include "core/logger.hpp"
-#include <vulkan/vulkan_core.h>
 
 // Vulkan images in general are textures but not only, in the sense that they
 // are inclusive of the equivalent OpenGL texture, but can be used for other

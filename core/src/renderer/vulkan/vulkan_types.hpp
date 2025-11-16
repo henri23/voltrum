@@ -3,7 +3,7 @@
 #include "core/asserts.hpp"
 #include "defines.hpp"
 
-#include "containers/auto_array.hpp"
+#include "data_structures/auto_array.hpp"
 #include "renderer/renderer_types.hpp"
 
 #include <vulkan/vulkan.h>

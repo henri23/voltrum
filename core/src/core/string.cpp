@@ -5,15 +5,23 @@
 #include <stdio.h>
 #include <string.h>
 
-b8 string_check_equal(
-    const char* str1,
-    const char* str2) {
+#if !defined(PLATFORM_WINDOWS)
+#    include <strings.h>
+#endif
+
+b8 string_check_equal(const char* str1, const char* str2) {
     return strcmp(str1, str2) == 0;
 }
 
-s32 string_format(
-    char* dest,
-    const char* format, ...) {
+b8 string_check_equal_insensitive(const char* str1, const char* str2) {
+#if defined(PLATFORM_WINDOWS)
+    return _stricmp(str1, str2) == 0;
+#else
+    return strcasecmp(str1, str2) == 0;
+#endif
+}
+
+s32 string_format(char* dest, const char* format, ...) {
     if (dest) {
 
         va_list arg_ptr; // Pointer to args
@@ -27,10 +35,7 @@ s32 string_format(
     return -1;
 }
 
-s32 string_format_v(
-    char* dest,
-    const char* format,
-    va_list va_list) {
+s32 string_format_v(char* dest, const char* format, va_list va_list) {
     if (dest) {
         char buffer[32000];
         s32 written = vsnprintf(buffer, 32000, format, va_list);
@@ -44,19 +49,16 @@ s32 string_format_v(
 }
 
 u64 string_length(const char* string) {
-	u64 length = 0;
-	// Continue to iterate inside the string until we find the
-	// null terminator /0 whose ASCII value is 0
-	while(string[length] != 0) {
-		length++;
-	}
-	return length;
+    u64 length = 0;
+    // Continue to iterate inside the string until we find the
+    // null terminator /0 whose ASCII value is 0
+    while (string[length] != 0) {
+        length++;
+    }
+    return length;
 }
 
-void string_copy(
-    char* dest,
-    const char* source,
-    u64 max_length) {
+void string_copy(char* dest, const char* source, u64 max_length) {
     if (!dest || !source || max_length == 0) {
         return;
     }
@@ -70,4 +72,3 @@ void string_copy(
     // Always null terminate
     dest[i] = 0;
 }
-

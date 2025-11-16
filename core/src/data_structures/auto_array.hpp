@@ -7,8 +7,10 @@
 #include "core/asserts.hpp"
 #include "memory/memory.hpp"
 
-template <typename T>
-struct Auto_Array {
+// The autoarray is a dynamic array implementation that manages memory elements
+// in a contigous memory layout
+
+template <typename T> struct Auto_Array {
     u32 length;
     u32 capacity;
     T* data;
@@ -59,8 +61,7 @@ struct Auto_Array {
 
     FORCE_INLINE ~Auto_Array() {
         if (data)
-            memory_deallocate(
-                data,
+            memory_deallocate(data,
                 (u32)capacity * sizeof(T),
                 Memory_Tag::DARRAY);
 
@@ -144,10 +145,7 @@ struct Auto_Array {
 
         if (new_size > length)
             for (u32 n = length; n < new_size; n++)
-                memory_copy(
-                    &data[n],
-                    &v,
-                    sizeof(v));
+                memory_copy(&data[n], &v, sizeof(v));
 
         length = new_size;
     }
@@ -161,17 +159,13 @@ struct Auto_Array {
         if (new_capacity <= capacity)
             return;
 
-        T* new_data = (T*)memory_allocate(
-            (u32)new_capacity * sizeof(T),
+        T* new_data = (T*)memory_allocate((u32)new_capacity * sizeof(T),
             Memory_Tag::DARRAY);
 
         if (data) {
-            memory_copy(
-                new_data, data,
-                (u32)length * sizeof(T));
+            memory_copy(new_data, data, (u32)length * sizeof(T));
 
-            memory_deallocate(
-                data,
+            memory_deallocate(data,
                 (u32)capacity * sizeof(T),
                 Memory_Tag::DARRAY);
         }
@@ -184,13 +178,11 @@ struct Auto_Array {
             return;
 
         if (data)
-            memory_deallocate(
-                data,
+            memory_deallocate(data,
                 (u32)capacity * sizeof(T),
                 Memory_Tag::DARRAY);
 
-        data = (T*)memory_allocate(
-            (u32)new_capacity * sizeof(T),
+        data = (T*)memory_allocate((u32)new_capacity * sizeof(T),
             Memory_Tag::DARRAY);
 
         capacity = new_capacity;
@@ -203,10 +195,7 @@ struct Auto_Array {
         if (length == capacity)
             reserve(_grow_capacity(length + 1));
 
-        memory_copy(
-            &data[length],
-            &v,
-            sizeof(v));
+        memory_copy(&data[length], &v, sizeof(v));
 
         length++;
     }
@@ -228,26 +217,20 @@ struct Auto_Array {
 
         const u32 off = (u32)(it - data);
 
-        memory_move(
-            data + off,
-            data + off + 1,
-            (length - off - 1) * sizeof(T));
+        memory_move(data + off, data + off + 1, (length - off - 1) * sizeof(T));
 
         length--;
         return data + off;
     }
 
     FORCE_INLINE T* erase(const T* it, const T* it_last) {
-        RUNTIME_ASSERT(it >= data &&
-                       it < data + length &&
-                       it_last >= it &&
+        RUNTIME_ASSERT(it >= data && it < data + length && it_last >= it &&
                        it_last <= data + length);
 
         const u32 count = (u32)(it_last - it);
         const u32 off = (u32)(it - data);
 
-        memory_move(
-            data + off,
+        memory_move(data + off,
             data + off + count,
             (length - off - count) * sizeof(T));
 
@@ -261,10 +244,7 @@ struct Auto_Array {
         const u32 off = (u32)(it - data);
 
         if (it < data + length - 1)
-            memory_copy(
-                data + off,
-                data + length - 1,
-                sizeof(T));
+            memory_copy(data + off, data + length - 1, sizeof(T));
 
         length--;
         return data + off;
@@ -279,15 +259,9 @@ struct Auto_Array {
             reserve(_grow_capacity(length + 1));
 
         if (off < length)
-            memory_move(
-                data + off + 1,
-                data + off,
-                (length - off) * sizeof(T));
+            memory_move(data + off + 1, data + off, (length - off) * sizeof(T));
 
-        memory_copy(
-            &data[off],
-            &v,
-            sizeof(v));
+        memory_copy(&data[off], &v, sizeof(v));
 
         length++;
         return data + off;

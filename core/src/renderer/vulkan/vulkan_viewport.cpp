@@ -99,12 +99,6 @@ void vulkan_viewport_resize(Vulkan_Context* context, u32 width, u32 height) {
         return; // Skip resize if change is too small
     }
 
-    CORE_DEBUG("Resizing viewport from %ux%u to %ux%u",
-        current_width,
-        current_height,
-        width,
-        height);
-
     // Create sampler info (reused for all frames)
     VkSamplerCreateInfo sampler_info = {};
     sampler_info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -204,9 +198,6 @@ void vulkan_viewport_resize(Vulkan_Context* context, u32 width, u32 height) {
             context->device.graphics_queue);
     }
 
-    CORE_DEBUG("Offscreen render targets resized successfully (count=%u)",
-        context->main_target.framebuffer_count);
-
     context->main_target.width = width;
     context->main_target.height = height;
 
@@ -247,10 +238,6 @@ void vulkan_viewport_update_descriptor(Vulkan_Context* context) {
                 "Failed to create ImGui descriptor set for viewport texture "
                 "(frame %u)!",
                 i);
-        } else {
-            CORE_DEBUG("Viewport descriptor set updated (frame %u): %p",
-                i,
-                (void*)context->main_target.descriptor_sets[i]);
         }
     }
 }

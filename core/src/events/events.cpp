@@ -1,5 +1,5 @@
 #include "events.hpp"
-#include "containers/auto_array.hpp"
+#include "data_structures/auto_array.hpp"
 #include "core/logger.hpp"
 #include "memory/memory.hpp"
 

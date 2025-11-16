@@ -8,7 +8,6 @@
 #include "renderer/vulkan/vulkan_device.hpp"
 #include "renderer/vulkan/vulkan_image.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
-#include <vulkan/vulkan_core.h>
 
 void create_swapchain(Vulkan_Context* context,
     u32 width,

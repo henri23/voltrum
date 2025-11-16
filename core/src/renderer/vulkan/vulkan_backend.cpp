@@ -15,7 +15,7 @@
 #include "vulkan_types.hpp"
 #include "vulkan_utils.hpp"
 
-#include "containers/auto_array.hpp"
+#include "data_structures/auto_array.hpp"
 
 #include "vulkan_ui.hpp"
 
@@ -24,7 +24,6 @@
 
 #include "core/string.hpp"
 #include "math/math_types.hpp"
-#include <vulkan/vulkan_core.h>
 
 internal_variable Vulkan_Context context;
 internal_variable u32 cached_framebuffer_width = 0;
@@ -908,7 +907,9 @@ void vulkan_update_object(Geometry_Render_Data data) {
     Vulkan_Command_Buffer* cmd_buffer =
         &context.main_command_buffers[context.image_index];
 
-    vulkan_material_shader_update_object(&context, &context.material_shader, data);
+    vulkan_material_shader_update_object(&context,
+        &context.material_shader,
+        data);
 
     // Bind vertex and index buffers
     VkDeviceSize offsets[1] = {0};
@@ -1193,11 +1194,9 @@ b8 recreate_swapchain(Renderer_Backend* backend, b8 is_resized_event) {
         return false;
     }
 
-    if (is_resized_event) {
-        CORE_DEBUG("recreate_swapchain triggered due to on_resized event");
-    } else {
-        CORE_DEBUG("recreate_swapchain triggered due to non-optimal result");
-    }
+    const char* reason =
+        is_resized_event ? "resize event" : "non-optimal result";
+    CORE_INFO("Recreating swapchain (%s)", reason);
 
     // Mark as recreating if the dimensions are VALID
     context.recreating_swapchain = true;

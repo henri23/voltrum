@@ -1,6 +1,6 @@
 #pragma once
 
-#include "containers/auto_array.hpp"
+#include "data_structures/auto_array.hpp"
 #include "events/events.hpp"
 #include "ui_themes.hpp"
 #include "ui_types.hpp"

@@ -50,10 +50,6 @@ INTERNAL_FUNC b8 app_on_resized_callback(const Event* event) {
         internal_state->width = event->window_resize.width;
         internal_state->height = event->window_resize.height;
 
-        CORE_DEBUG("Windows resize: %i, %i",
-            internal_state->width,
-            internal_state->height);
-
         // Handle minimization
         if (internal_state->width == 0 || internal_state->height == 0) {
             CORE_INFO("Windows minimized, suspending application.");

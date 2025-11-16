@@ -17,7 +17,7 @@ typedef int b32;
 typedef bool b8;
 
 constexpr u32 INVALID_ID = -1;
-using Object_ID = u32;
+typedef u32 Object_ID;
 
 // Properly define static assertions
 #if defined(__clang__) || defined(__gcc__)

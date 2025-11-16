@@ -3,7 +3,7 @@
 #include "defines.hpp"
 #include "ui/ui_types.hpp"
 #include "ui/ui_themes.hpp"
-#include "containers/auto_array.hpp"
+#include "data_structures/auto_array.hpp"
 
 // Client configuration structure - client controls engine behavior
 struct App_Config {

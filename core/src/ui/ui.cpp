@@ -462,7 +462,6 @@ void ui_cleanup_vulkan_resources(Vulkan_Context* context) {
 void ui_on_vulkan_resize(Vulkan_Context* context, u32 width, u32 height) {
     // UI doesn't need special resize handling for now
     // ImGui automatically adapts to new framebuffer size
-    CORE_DEBUG("UI handling Vulkan resize: %ux%u", width, height);
 }
 
 void ui_begin_vulkan_frame() {

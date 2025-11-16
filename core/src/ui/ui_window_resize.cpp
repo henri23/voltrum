@@ -43,8 +43,6 @@ INTERNAL_FUNC ImGuiMouseCursor get_cursor_for_resize_direction(Resize_Direction 
 INTERNAL_FUNC void perform_window_resize(ImVec2 current_mouse_pos);
 
 b8 ui_window_resize_initialize() {
-    CORE_DEBUG("Initializing window resize handler...");
-
     if (state.is_initialized) {
         CORE_WARN("Window resize handler already initialized");
         return true;
@@ -59,8 +57,6 @@ b8 ui_window_resize_initialize() {
 }
 
 void ui_window_resize_shutdown() {
-    CORE_DEBUG("Shutting down window resize handler...");
-
     if (!state.is_initialized) {
         CORE_WARN("Window resize handler not initialized");
         return;
@@ -70,7 +66,6 @@ void ui_window_resize_shutdown() {
     state.is_resizing = false;
     state.resize_direction = RESIZE_NONE;
 
-    CORE_DEBUG("Window resize handler shut down successfully");
 }
 
 void ui_window_resize_handle() {
@@ -107,8 +102,6 @@ void ui_window_resize_handle() {
 
             platform_get_window_position(&state.initial_window_x, &state.initial_window_y);
             platform_get_window_size(&state.initial_window_width, &state.initial_window_height);
-
-            CORE_DEBUG("Started window resize in direction: %d", direction);
         }
     } else {
         // We are currently resizing
@@ -118,7 +111,6 @@ void ui_window_resize_handle() {
             // Stop resizing when mouse is released
             state.is_resizing = false;
             state.resize_direction = RESIZE_NONE;
-            CORE_DEBUG("Stopped window resize");
         }
     }
 }

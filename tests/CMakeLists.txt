@@ -9,7 +9,7 @@ add_executable(voltrum_tests ${TESTS_SRC})
 
 # Link with engine
 target_link_libraries(voltrum_tests PRIVATE voltrum_core)
+target_include_directories(voltrum_tests PUBLIC "src")
 
 enable_testing()
 add_test(voltrum_unit_tests voltrum_tests)
-
