@@ -14,7 +14,10 @@
 #define BUILTIN_SHADER_NAME_MATERIAL "Builtin.MaterialShader"
 
 b8 vulkan_material_shader_create(Vulkan_Context* context,
+    Texture* default_diffuse,
     Vulkan_Material_Shader* out_shader) {
+
+    out_shader->default_diffuse = default_diffuse;
 
     char stage_type_strs[OBJECT_SHADER_STAGE_COUNT][5] = {"vert", "frag"};
 
@@ -440,6 +443,14 @@ void vulkan_material_shader_update_object(Vulkan_Context* context,
         u32* descriptor_generation =
             &object_state->descriptor_states[descriptor_index]
                  .generations[image_index];
+
+        // If the texture hasn't been loaded yet, use the default texture
+        if (texture->generation == INVALID_ID) {
+            texture = shader->default_diffuse;
+
+            // Reset the descriptor generation ID when using default texture
+            *descriptor_generation = INVALID_ID;
+        }
 
         if (texture && (*descriptor_generation != texture->generation ||
                            *descriptor_generation == INVALID_ID)) {

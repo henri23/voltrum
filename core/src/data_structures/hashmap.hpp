@@ -6,6 +6,8 @@
 #include "defines.hpp"
 #include "math/math.hpp"
 #include "memory/memory.hpp"
+// TODO: Use C++ 20 modules for exporting template data structures to avoid
+// parsing the classes for every translation unit
 
 // Simple hashmap implementation. For non-pointer values the map retains a copy
 // of the value. For pointer types the hashtmap does not take ownership of the
@@ -26,18 +28,16 @@
 // The hashmap will have power of two ceiling capacities, so that we can apply
 // the modulus operation by simple bitmask operations
 
-enum class Hash_Map_Item_State : u8 { EMPTY, OCCUPIED };
+enum class Hashmap_Item_State : u8 { EMPTY, OCCUPIED };
 
 // Implement Robin Hood hashing
-template <typename T> struct Hash_Map_Item {
+template <typename T> struct Hashmap_Item {
     T value;
-    Hash_Map_Item_State state;
+    Hashmap_Item_State state;
     char key[50]; // Cached key for linear probing in the collision tail
     u32 distance; // Will store the probe sequence length for each item
 
-    FORCE_INLINE b8 empty() const {
-        return state == Hash_Map_Item_State::EMPTY;
-    }
+    FORCE_INLINE b8 empty() const { return state == Hashmap_Item_State::EMPTY; }
 };
 
 constexpr u64 HASHMAP_DEFAULT_CAPACITY = 2;
@@ -47,29 +47,29 @@ constexpr u64 HASHMAP_DEFAULT_CAPACITY = 2;
 // should be first cleaned manually before the hashmap goes out of scope
 
 // Currently, the hashmap is not resizable
-template <typename T> struct Hash_Map {
+template <typename T> struct Hashmap {
     u64 capacity; // The largest power of two that accomodates all elements
     u64 count;
-    Hash_Map_Item<T>* memory;
+    Hashmap_Item<T>* memory;
 
     // TODO: Add custom allocator memory management
     // Allocator* allocator;
 
-    FORCE_INLINE Hash_Map(u64 requested_capacity = HASHMAP_DEFAULT_CAPACITY) {
+    FORCE_INLINE Hashmap(u64 requested_capacity = HASHMAP_DEFAULT_CAPACITY) {
         RUNTIME_ASSERT_MSG(requested_capacity >= 2,
             "The capacity of the hashmap must be greater than 2");
 
         // Use the power of 2 ceiling value for hashmap size
         capacity = math_next_power_of_2(requested_capacity);
         count = 0;
-        memory = static_cast<Hash_Map_Item<T>*>(
-            memory_allocate(sizeof(Hash_Map_Item<T>) * capacity,
+        memory = static_cast<Hashmap_Item<T>*>(
+            memory_allocate(sizeof(Hashmap_Item<T>) * capacity,
                 Memory_Tag::HASHMAP));
     }
 
-    FORCE_INLINE ~Hash_Map() {
+    FORCE_INLINE ~Hashmap() {
         memory_deallocate(memory,
-            sizeof(Hash_Map_Item<T>) * capacity,
+            sizeof(Hashmap_Item<T>) * capacity,
             Memory_Tag::HASHMAP);
 
         capacity = 0;
@@ -80,7 +80,7 @@ template <typename T> struct Hash_Map {
     FORCE_INLINE b8 add(const char* key, const T* value) {
 
         if (string_length(key) >= 50) {
-            CORE_WARN("Hashmap key '%s' exceeds 50 characters", key);
+            CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
             return false;
         }
 
@@ -96,13 +96,13 @@ template <typename T> struct Hash_Map {
 
         RUNTIME_ASSERT(address < capacity);
 
-        Hash_Map_Item<T> current_item = {};
+        Hashmap_Item<T> current_item = {};
         current_item.value = *value;
         string_copy(current_item.key, key, 50);
         current_item.distance = 0;
         // Mark already as occupied because if we will use this element, we are
         // adding willingly the element inside the hash map
-        current_item.state = Hash_Map_Item_State::OCCUPIED;
+        current_item.state = Hashmap_Item_State::OCCUPIED;
 
         u64 probe = 0;
 
@@ -142,7 +142,7 @@ template <typename T> struct Hash_Map {
     FORCE_INLINE b8 find(const char* key, T* out_value) {
 
         if (string_length(key) >= 50) {
-            CORE_WARN("Hashmap key '%s' exceeds 50 characters", key);
+            CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
             return false;
         }
 
@@ -174,7 +174,7 @@ template <typename T> struct Hash_Map {
     FORCE_INLINE b8 remove(const char* key) {
 
         if (string_length(key) >= 50) {
-            CORE_WARN("Hashmap key '%s' exceeds 50 characters", key);
+            CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
             return false;
         }
 
@@ -215,7 +215,7 @@ template <typename T> struct Hash_Map {
                 // location we stop
                 auto* next_item = &memory[next_address(address)];
                 if (next_item->distance == 0 || next_item->empty()) {
-                    memory_zero(&memory[address], sizeof(Hash_Map_Item<T>));
+                    memory_zero(&memory[address], sizeof(Hashmap_Item<T>));
                     count--;
                     return true;
                 }
@@ -266,12 +266,12 @@ template <typename T> struct Hash_Map {
         }
     }
 
-    FORCE_INLINE void swap(Hash_Map_Item<T>* item1, Hash_Map_Item<T>* item2) {
+    FORCE_INLINE void swap(Hashmap_Item<T>* item1, Hashmap_Item<T>* item2) {
         T temp_value = item1->value;
         char temp_key[50];
         string_copy(temp_key, item1->key, 50);
         u32 temp_distance = item1->distance;
-        Hash_Map_Item_State temp_state = item1->state;
+        Hashmap_Item_State temp_state = item1->state;
 
         item1->value = item2->value;
         string_copy(item1->key, item2->key, 50);

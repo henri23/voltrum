@@ -126,6 +126,16 @@ b8 client_update(Client* client_state, f32 delta_time) {
             alloc_count - prev_alloc_count);
     }
 
+    // WARN: Temp code for testing texture loading
+    if (input_is_key_pressed(Key_Code::T) &&
+        input_was_key_pressed(Key_Code::T)) {
+        CLIENT_DEBUG("Swapping texture!");
+        Event context = {};
+        context.type = Event_Type::DEBUG0;
+        events_dispatch(&context);
+    }
+    // WARN: Temp code end
+
     if (input_is_key_pressed(Key_Code::A) ||
         input_is_key_pressed(Key_Code::LEFT)) {
         camera_yaw(state, 1000.0f * delta_time);

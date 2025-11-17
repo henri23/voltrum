@@ -3,6 +3,7 @@
 #include "renderer/vulkan/vulkan_types.hpp"
 
 b8 vulkan_material_shader_create(Vulkan_Context* context,
+    Texture* default_diffuse,
     Vulkan_Material_Shader* out_shader);
 
 void vulkan_material_shader_destroy(Vulkan_Context* context,

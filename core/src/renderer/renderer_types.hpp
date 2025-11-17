@@ -34,6 +34,8 @@ struct Geometry_Render_Data {
 struct Renderer_Backend {
     u64 frame_number;
 
+    Texture* default_diffuse;
+
     b8 (*initialize)(Renderer_Backend* backend, const char* app_name);
 
     void (*shutdown)(Renderer_Backend* backend);

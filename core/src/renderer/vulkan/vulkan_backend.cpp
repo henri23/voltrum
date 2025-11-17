@@ -318,7 +318,10 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
     }
 
     // Create builtin shaders
-    if (!vulkan_material_shader_create(&context, &context.material_shader)) {
+    if (!vulkan_material_shader_create(&context,
+            backend->default_diffuse,
+            &context.material_shader)) {
+
         CORE_ERROR("Error loading built-in object shader");
         return false;
     }
@@ -1636,15 +1639,18 @@ void vulkan_destroy_texture(Texture* texture) {
     Vulkan_Texture_Data* data =
         static_cast<Vulkan_Texture_Data*>(texture->internal_data);
 
-    vulkan_image_destroy(&context, &data->image);
-    memory_zero(&data->image, sizeof(Vulkan_Image));
-    vkDestroySampler(context.device.logical_device,
-        data->sampler,
-        context.allocator);
-    data->sampler = nullptr;
+    if (data) {
+        vulkan_image_destroy(&context, &data->image);
+        memory_zero(&data->image, sizeof(Vulkan_Image));
+        vkDestroySampler(context.device.logical_device,
+            data->sampler,
+            context.allocator);
+        data->sampler = nullptr;
 
-    memory_deallocate(texture->internal_data,
-        sizeof(Vulkan_Texture_Data),
-        Memory_Tag::TEXTURE);
+        memory_deallocate(texture->internal_data,
+            sizeof(Vulkan_Texture_Data),
+            Memory_Tag::TEXTURE);
+    }
+
     memory_zero(texture, sizeof(struct Texture));
 }

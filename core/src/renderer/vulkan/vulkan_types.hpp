@@ -213,6 +213,8 @@ struct Vulkan_Material_Shader {
     Vulkan_Object_Shader_Object_State
         object_states[VULKAN_OBJECT_MAX_OBJECT_COUNT];
 
+    Texture* default_diffuse;
+
     Global_Uniform_Object global_ubo;
 };
 

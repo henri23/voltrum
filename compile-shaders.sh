@@ -25,10 +25,16 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Copying non-shader assets..."
-# Copy assets but exclude compiled shader files to prevent overwriting them
-# Use find to copy everything except .spv files
-mkdir -p "$SCRIPT_DIR/bin/assets"
-find "$SCRIPT_DIR/assets" -type f ! -name "*.spv" -exec cp --parents {} "$SCRIPT_DIR/bin/" \;
+mkdir -p "$BIN_ASSETS_DIR"
+# Copy everything except compiled shader blobs, preserving folder layout.
+(
+    cd "$SCRIPT_DIR" || exit 1
+    find assets -type f ! -name "*.spv" | while read -r file; do
+        target_dir="bin/$(dirname "$file")"
+        mkdir -p "$target_dir"
+        cp "$file" "$target_dir/"
+    done
+)
 
 echo "Shader compilation and asset copying completed successfully."
 echo "Compiled shaders are in: $BIN_SHADERS_DIR"

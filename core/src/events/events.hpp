@@ -24,6 +24,12 @@ enum class Event_Type {
     WINDOW_MAXIMIZED,
     WINDOW_RESTORED,
 
+    DEBUG0,
+    DEBUG1,
+    DEBUG2,
+    DEBUG3,
+    DEBUG4,
+
     MAX_EVENTS
 };
 
