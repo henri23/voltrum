@@ -10,6 +10,7 @@
 
 #include "math/math.hpp"
 #include "math/math_types.hpp"
+#include <vulkan/vulkan_core.h>
 
 #define BUILTIN_SHADER_NAME_MATERIAL "Builtin.MaterialShader"
 
@@ -196,12 +197,19 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
         return false;
     }
 
+    // NOTE: Some GPUs do not have the feature to provide a vulkan buffer that
+    // is both DEVICE_LOCAL and HOST_VISIBLE. While we would want to prioritize
+    // the device locality for performance, just leaving HOST_VISIBLE could be a
+    // viable workaround for such GPUs
+    u32 device_local_bits = context->device.supports_device_local_host_visible
+                                ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+                                : 0;
+
     if (!vulkan_buffer_create(context,
             sizeof(Global_Uniform_Object) * context->swapchain.image_count,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            device_local_bits | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             true,
             &out_shader->global_uniform_buffer)) {
@@ -232,13 +240,13 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
         &alloc_info,
         out_shader->global_descriptor_sets));
 
-    // Create the object uniform buffer
+    // Fixed the device local and host visible at the same time bug by querying
+    // the capabilities of the selected GPU and adjusting accordingly
     if (!vulkan_buffer_create(context,
             sizeof(Local_Uniform_Object),
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            device_local_bits | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                 VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
             true,
             &out_shader->object_uniform_buffer)) {

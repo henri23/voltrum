@@ -1,10 +1,11 @@
 #include "vulkan_device.hpp"
 
-#include "data_structures/auto_array.hpp"
 #include "core/logger.hpp"
+#include "core/string.hpp"
+#include "data_structures/auto_array.hpp"
 #include "memory/memory.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
-#include "core/string.hpp"
+#include <vulkan/vulkan_core.h>
 
 struct Device_Queue_Indices {
     u32 graphics_family_index;
@@ -13,7 +14,7 @@ struct Device_Queue_Indices {
     u32 compute_family_index;
 };
 
-b8 is_device_suitable(VkPhysicalDevice device,
+INTERNAL_FUNC b8 is_device_suitable(VkPhysicalDevice device,
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties* properties,
     const VkPhysicalDeviceFeatures* features,
@@ -21,10 +22,10 @@ b8 is_device_suitable(VkPhysicalDevice device,
     Vulkan_Swapchain_Support_Info* out_swapchain_info,
     Device_Queue_Indices* out_indices);
 
-b8 select_physical_device(Vulkan_Context* context,
+INTERNAL_FUNC b8 select_physical_device(Vulkan_Context* context,
     Vulkan_Physical_Device_Requirements* requirements);
 
-b8 create_logical_device(Vulkan_Context* context);
+INTERNAL_FUNC b8 create_logical_device(Vulkan_Context* context);
 
 b8 vulkan_device_initialize(Vulkan_Context* context,
     Vulkan_Physical_Device_Requirements* requirements) {
@@ -170,11 +171,27 @@ b8 select_physical_device(Vulkan_Context* context,
                 }
             }
 
+            b8 support_device_local_host_visible_feature = false;
+            for (u32 i = 0; i < device_memory_properties.memoryTypeCount; ++i) {
+                if (((device_memory_properties.memoryTypes[i].propertyFlags &
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0) &&
+                    ((device_memory_properties.memoryTypes[i].propertyFlags &
+                         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0)) {
+                    support_device_local_host_visible_feature = true;
+                    CORE_DEBUG(
+                        "Selected GPU support the device local host visible "
+                        "flag");
+                    break;
+                }
+            }
+
             // Store device handle in the vulkan context
             context->device.physical_device = physical_devices_array[i];
             context->device.physical_device_properties = device_properties;
             context->device.physical_device_features = device_features;
             context->device.physical_device_memory = device_memory_properties;
+            context->device.supports_device_local_host_visible =
+                support_device_local_host_visible_feature;
 
             // Store indices for queue instantiation later
             context->device.graphics_queue_index =
@@ -287,11 +304,13 @@ b8 create_logical_device(Vulkan_Context* context) {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 #ifdef PLATFORM_APPLE
-	required_extensions.push_back("VK_KHR_portability_subset");
+    required_extensions.push_back("VK_KHR_portability_subset");
 #endif
 
-    logical_device_create_info.ppEnabledExtensionNames = required_extensions.data;
-    logical_device_create_info.enabledExtensionCount = required_extensions.length;
+    logical_device_create_info.ppEnabledExtensionNames =
+        required_extensions.data;
+    logical_device_create_info.enabledExtensionCount =
+        required_extensions.length;
 
     // Depracated, for clarity explicitly set them to uninitialized
     logical_device_create_info.enabledLayerCount = 0;
@@ -522,7 +541,8 @@ b8 is_device_suitable(VkPhysicalDevice device,
                 b8 found = false;
 
                 for (u32 j = 0; j < available_extensions_count; ++j) {
-                    if (string_check_equal(extension_properties[j].extensionName,
+                    if (string_check_equal(
+                            extension_properties[j].extensionName,
                             requirements->device_extension_names->data[i])) {
                         found = true;
                         break;

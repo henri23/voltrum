@@ -44,6 +44,8 @@ struct Vulkan_Device {
     u32 compute_queue_index;
     u32 present_queue_index;
 
+    b8 supports_device_local_host_visible;
+
     // Physical device informations
     VkPhysicalDeviceProperties physical_device_properties;
     VkPhysicalDeviceFeatures physical_device_features;
