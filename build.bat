@@ -128,9 +128,10 @@ if "%RUN_TESTS%"=="true" (
     echo.
 
     echo Running voltrum tests...
-    tests\voltrum_tests.exe
-    if errorlevel 1 (
-        echo ERROR: Tests failed. Aborting build.
+    .\tests\voltrum_tests.exe
+    set TEST_EXIT_CODE=%ERRORLEVEL%
+    if not "%TEST_EXIT_CODE%"=="0" (
+        echo ERROR: Tests failed with exit code %TEST_EXIT_CODE%. Aborting build.
         exit /b 1
     )
     echo All tests passed successfully.

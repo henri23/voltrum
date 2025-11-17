@@ -34,8 +34,11 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo Copying assets...
-xcopy /E /I /Y "%SCRIPT_DIR%\assets" "%SCRIPT_DIR%\bin\assets"
+echo Copying non-shader assets...
+rem Copy everything from assets to bin\assets, preserving structure
+xcopy /E /I /Y "%SCRIPT_DIR%\assets" "%BIN_ASSETS_DIR%" >nul
 
-echo Done.
+echo Shader compilation and asset copying completed successfully.
+echo Compiled shaders are in: %BIN_SHADERS_DIR%
+
 endlocal
