@@ -34,8 +34,6 @@ struct Geometry_Render_Data {
 struct Renderer_Backend {
     u64 frame_number;
 
-    Texture* default_diffuse;
-
     b8 (*initialize)(Renderer_Backend* backend, const char* app_name);
 
     void (*shutdown)(Renderer_Backend* backend);
@@ -55,7 +53,6 @@ struct Renderer_Backend {
     void (*update_object)(Geometry_Render_Data data);
 
     void (*create_texture)(const char* name,
-        b8 auto_release,
         s32 width,
         s32 height,
         s32 channel_count,

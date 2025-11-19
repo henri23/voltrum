@@ -201,6 +201,62 @@ echo
 #     exit 1
 # fi
 
+# Test building and running (BEFORE building the main client)
+if [ "$RUN_TESTS" = true ]; then
+    print_status "step" "Building voltrum tests..."
+    echo -e "${BLUE}${ARROW} Target:${NC} voltrum_tests"
+    echo
+
+    if time ninja voltrum_tests; then
+        print_status "success" "Test build completed successfully"
+    else
+        print_status "error" "Test build failed with exit code $?"
+        exit 1
+    fi
+    echo
+
+    print_status "step" "Running voltrum tests..."
+
+    echo
+    echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
+    echo -e "${CYAN}${BOLD}║               ${YELLOW}RUNNING TESTS...${CYAN}               ║${NC}"
+    echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
+    echo
+
+    test_start_time=$(date +%s%3N)
+
+    if ./tests/voltrum_tests; then
+        test_end_time=$(date +%s%3N)
+        test_time=$(expr $test_end_time - $test_start_time)
+
+        # Convert test time to readable format
+        if [ $test_time -gt 1000 ]; then
+            test_seconds=$((test_time / 1000))
+            test_ms=$((test_time % 1000))
+            test_time_str="${test_seconds}.${test_ms}s"
+        else
+            test_time_str="${test_time}ms"
+        fi
+
+        print_status "success" "All tests passed in $test_time_str"
+
+        echo
+        echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
+        echo -e "${CYAN}${BOLD}║               ${GREEN}TESTS COMPLETED!${CYAN}               ║${NC}"
+        echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
+        echo
+    else
+        TEST_EXIT_CODE=$?
+        print_status "error" "Tests failed with exit code $TEST_EXIT_CODE"
+        print_status "error" "Aborting build - client will NOT be built"
+        exit 1
+    fi
+    echo
+else
+    print_status "warning" "Skipping tests as requested"
+    echo
+fi
+
 print_status "step" "Building voltrum client..."
 echo -e "${BLUE}${ARROW} Target:${NC} voltrum_client"
 echo
@@ -248,62 +304,6 @@ else
     exit 1
 fi
 echo
-
-# Test building and running
-if [ "$RUN_TESTS" = true ]; then
-    print_status "step" "Building voltrum tests..."
-    echo -e "${BLUE}${ARROW} Target:${NC} voltrum_tests"
-    echo
-
-    if time ninja voltrum_tests; then
-        print_status "success" "Test build completed successfully"
-    else
-        print_status "error" "Test build failed with exit code $?"
-        exit 1
-    fi
-    echo
-
-    print_status "step" "Running voltrum tests..."
-
-    echo
-    echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}${BOLD}║               ${YELLOW}RUNNING TESTS...${CYAN}               ║${NC}"
-    echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
-    echo
-
-    test_start_time=$(date +%s%3N)
-
-    if ./tests/voltrum_tests; then
-        test_end_time=$(date +%s%3N)
-        test_time=$(expr $test_end_time - $test_start_time)
-
-        # Convert test time to readable format
-        if [ $test_time -gt 1000 ]; then
-            test_seconds=$((test_time / 1000))
-            test_ms=$((test_time % 1000))
-            test_time_str="${test_seconds}.${test_ms}s"
-        else
-            test_time_str="${test_time}ms"
-        fi
-
-        print_status "success" "All tests passed in $test_time_str"
-
-        echo
-        echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
-        echo -e "${CYAN}${BOLD}║               ${GREEN}TESTS COMPLETED!${CYAN}               ║${NC}"
-        echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
-        echo
-    else
-        TEST_EXIT_CODE=$?
-        print_status "error" "Tests failed with exit code $TEST_EXIT_CODE"
-        print_status "error" "Aborting build due to test failure"
-        exit 1
-    fi
-    echo
-else
-    print_status "warning" "Skipping tests as requested"
-    echo
-fi
 
 # echo "=============================================="
 # echo "[BUILDER]: Compiling shaders..."

@@ -182,6 +182,7 @@ constexpr const u32 VULKAN_OBJECT_MAX_OBJECT_COUNT = 1024;
 struct Vulkan_Descriptor_State {
     // One per image
     u32 generations[3];
+    u32 ids[3];
 };
 
 struct Vulkan_Object_Shader_Object_State {
@@ -214,8 +215,6 @@ struct Vulkan_Material_Shader {
     // TODO: Make dynamic
     Vulkan_Object_Shader_Object_State
         object_states[VULKAN_OBJECT_MAX_OBJECT_COUNT];
-
-    Texture* default_diffuse;
 
     Global_Uniform_Object global_ubo;
 };

@@ -10,15 +10,13 @@
 
 #include "math/math.hpp"
 #include "math/math_types.hpp"
+#include "systems/texture_system.hpp"
 #include <vulkan/vulkan_core.h>
 
 #define BUILTIN_SHADER_NAME_MATERIAL "Builtin.MaterialShader"
 
 b8 vulkan_material_shader_create(Vulkan_Context* context,
-    Texture* default_diffuse,
     Vulkan_Material_Shader* out_shader) {
-
-    out_shader->default_diffuse = default_diffuse;
 
     char stage_type_strs[OBJECT_SHADER_STAGE_COUNT][5] = {"vert", "frag"};
 
@@ -452,15 +450,19 @@ void vulkan_material_shader_update_object(Vulkan_Context* context,
             &object_state->descriptor_states[descriptor_index]
                  .generations[image_index];
 
+        u32* descriptor_id =
+            &object_state->descriptor_states[descriptor_index].ids[image_index];
+
         // If the texture hasn't been loaded yet, use the default texture
         if (texture->generation == INVALID_ID) {
-            texture = shader->default_diffuse;
+            texture = texture_system_get_default_texture();
 
             // Reset the descriptor generation ID when using default texture
             *descriptor_generation = INVALID_ID;
         }
 
-        if (texture && (*descriptor_generation != texture->generation ||
+        if (texture && (*descriptor_id != texture->id ||
+                           *descriptor_generation != texture->generation ||
                            *descriptor_generation == INVALID_ID)) {
 
             Vulkan_Texture_Data* internal_data =
@@ -485,6 +487,7 @@ void vulkan_material_shader_update_object(Vulkan_Context* context,
 
             if (texture->generation != INVALID_ID) {
                 *descriptor_generation = texture->generation;
+                *descriptor_id = texture->id;
             }
         }
         descriptor_index++;
@@ -524,6 +527,7 @@ b8 vulkan_material_shader_acquire_resource(Vulkan_Context* context,
         // Loop over the number of descriptor sets per object per image
         for (u32 j = 0; j < 3; ++j) {
             object_state->descriptor_states[i].generations[j] = INVALID_ID;
+            object_state->descriptor_states[i].ids[j] = INVALID_ID;
         }
     }
 

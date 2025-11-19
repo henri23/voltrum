@@ -8,7 +8,8 @@
 #include <string.h>
 
 INTERNAL_FUNC u8 test_creation_and_deletion() {
-    Hashmap<int> map(3); // capacity should round up to 4
+    Hashmap<int> map;
+    map.init(3); // capacity should round up to 4
 
     expect_should_be(4, map.capacity);
     expect_should_be(0, map.count);
@@ -24,7 +25,8 @@ INTERNAL_FUNC u8 test_creation_and_deletion() {
 }
 
 INTERNAL_FUNC u8 test_add_find_remove() {
-    Hashmap<int> map(4);
+    Hashmap<int> map;
+    map.init(4);
 
     int v1 = 10;
     int v2 = 20;
@@ -33,9 +35,9 @@ INTERNAL_FUNC u8 test_add_find_remove() {
     expect_should_be(true, map.add("b", &v2));
     expect_should_be(2, map.count);
 
-    int out = 0;
+    int* out = nullptr;
     expect_should_be(true, map.find("a", &out));
-    expect_should_be(v1, out);
+    expect_should_be(v1, *out);
 
     expect_should_be(true, map.remove("a"));
     expect_should_be(1, map.count);
@@ -46,13 +48,14 @@ INTERNAL_FUNC u8 test_add_find_remove() {
     expect_should_be(false, map.find("a", &out));
 
     expect_should_be(true, map.find("b", &out));
-    expect_should_be(v2, out);
+    expect_should_be(v2, *out);
 
     return true;
 }
 
 INTERNAL_FUNC u8 test_expected_warnings() {
-    Hashmap<int> map(2);
+    Hashmap<int> map;
+    map.init(2);
     int v = 7;
 
     expect_should_be(true, map.add("dup", &v));
@@ -77,7 +80,8 @@ INTERNAL_FUNC u8 test_expected_warnings() {
 }
 
 INTERNAL_FUNC u8 test_full_hashmap_does_not_change_size() {
-    Hashmap<int> map(4); // Should resolve to capacity 4
+    Hashmap<int> map;
+    map.init(4); // Should resolve to capacity 4
 
     int values[5] = {10, 20, 30, 40, 50};
 
@@ -96,7 +100,8 @@ INTERNAL_FUNC u8 test_full_hashmap_does_not_change_size() {
 }
 
 INTERNAL_FUNC u8 test_debug_log_showcase() {
-    Hashmap<int> map(6);
+    Hashmap<int> map;
+    map.init(6);
 
     int v1 = 1;
     int v2 = 2;
@@ -118,6 +123,70 @@ INTERNAL_FUNC u8 test_debug_log_showcase() {
     return true;
 }
 
+INTERNAL_FUNC u8 test_init_and_shutdown() {
+    Hashmap<int> map;
+
+    // Verify initial state
+    expect_should_be(0, map.capacity);
+    expect_should_be(0, map.count);
+    expect_should_be(nullptr, map.memory);
+
+    // Initialize with capacity 5, should round to 8
+    map.init(5);
+    expect_should_be(8, map.capacity);
+    expect_should_be(0, map.count);
+    expect_should_not_be(nullptr, map.memory);
+
+    // Add some data
+    int value = 100;
+    expect_should_be(true, map.add("test", &value));
+    expect_should_be(1, map.count);
+
+    // Shutdown
+    map.shutdown();
+    expect_should_be(0, map.capacity);
+    expect_should_be(0, map.count);
+    expect_should_be(nullptr, map.memory);
+
+    // Re-initialize with different capacity
+    map.init(3);
+    expect_should_be(4, map.capacity);
+    expect_should_be(0, map.count);
+    expect_should_not_be(nullptr, map.memory);
+
+    return true;
+}
+
+INTERNAL_FUNC u8 test_operations_before_init() {
+    Hashmap<int> map;
+    int value = 42;
+    int* out = nullptr;
+
+    CORE_DEBUG("The next 3 errors about uninitialized hashmap are expected.");
+
+    // Try to add before init
+    expect_should_be(false, map.add("key", &value));
+
+    // Try to find before init
+    expect_should_be(false, map.find("key", &out));
+
+    // Try to remove before init
+    expect_should_be(false, map.remove("key"));
+
+    // Verify map is still in uninitialized state
+    expect_should_be(0, map.capacity);
+    expect_should_be(0, map.count);
+    expect_should_be(nullptr, map.memory);
+
+    // Now properly initialize and verify operations work
+    map.init(4);
+    expect_should_be(true, map.add("key", &value));
+    expect_should_be(true, map.find("key", &out));
+    expect_should_be(value, *out);
+
+    return true;
+}
+
 void hashmap_register_tests() {
     test_manager_register_test(test_creation_and_deletion,
         "Hash_Map: creation and deletion");
@@ -129,4 +198,8 @@ void hashmap_register_tests() {
         "Hash_Map: debug log showcase");
     test_manager_register_test(test_full_hashmap_does_not_change_size,
         "Hash_Map: full hashmap does not change size");
+    test_manager_register_test(test_init_and_shutdown,
+        "Hash_Map: init and shutdown behavior");
+    test_manager_register_test(test_operations_before_init,
+        "Hash_Map: operations before initialization");
 }

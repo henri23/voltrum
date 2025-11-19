@@ -1,8 +1,8 @@
 #include "image_loader.hpp"
-#include "core/logger.hpp"
 #include "core/asserts.hpp"
+#include "core/logger.hpp"
 
-#define STB_IMAGE_IMPLEMENTATION
+// #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 // Include embedded image data
@@ -26,7 +26,8 @@ internal_variable const Embedded_Image_Asset image_assets[] = {
     {"window_close", window_close_icon, sizeof(window_close_icon)},
 };
 
-constexpr u32 image_asset_count = sizeof(image_assets) / sizeof(image_assets[0]);
+constexpr u32 image_asset_count =
+    sizeof(image_assets) / sizeof(image_assets[0]);
 
 // Find image asset by name
 INTERNAL_FUNC const Embedded_Image_Asset* find_image_asset(const char* name) {
@@ -37,7 +38,6 @@ INTERNAL_FUNC const Embedded_Image_Asset* find_image_asset(const char* name) {
     }
     return nullptr;
 }
-
 
 Image_Load_Result image_loader_load(const char* image_name) {
     Image_Load_Result result = {};
@@ -54,8 +54,7 @@ Image_Load_Result image_loader_load(const char* image_name) {
 
     // Decode the image data using stb_image
     s32 width, height, channels;
-    u8* pixel_data = stbi_load_from_memory(
-        asset->data,
+    u8* pixel_data = stbi_load_from_memory(asset->data,
         (s32)asset->size,
         &width,
         &height,
@@ -65,7 +64,9 @@ Image_Load_Result image_loader_load(const char* image_name) {
     if (!pixel_data) {
         result.success = false;
         result.error_message = stbi_failure_reason();
-        CORE_ERROR("Failed to decode image asset '%s': %s", image_name, stbi_failure_reason());
+        CORE_ERROR("Failed to decode image asset '%s': %s",
+            image_name,
+            stbi_failure_reason());
         return result;
     }
 
@@ -80,6 +81,10 @@ Image_Load_Result image_loader_load(const char* image_name) {
     result.pixel_data = pixel_data;
     result.pixel_data_size = pixel_data_size;
 
-    CORE_DEBUG("Loaded image asset: %s (%dx%d, %d channels)", image_name, width, height, channels);
+    CORE_DEBUG("Loaded image asset: %s (%dx%d, %d channels)",
+        image_name,
+        width,
+        height,
+        channels);
     return result;
 }

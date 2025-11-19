@@ -55,9 +55,19 @@ template <typename T> struct Hashmap {
     // TODO: Add custom allocator memory management
     // Allocator* allocator;
 
-    FORCE_INLINE Hashmap(u64 requested_capacity = HASHMAP_DEFAULT_CAPACITY) {
+    FORCE_INLINE Hashmap() {
+        capacity = 0;
+        count = 0;
+        memory = nullptr;
+    }
+
+    FORCE_INLINE void init(u64 requested_capacity = HASHMAP_DEFAULT_CAPACITY) {
         RUNTIME_ASSERT_MSG(requested_capacity >= 2,
             "The capacity of the hashmap must be greater than 2");
+
+        RUNTIME_ASSERT_MSG(memory == nullptr,
+            "Hashmap already initialized. Call shutdown() before "
+            "re-initializing");
 
         // Use the power of 2 ceiling value for hashmap size
         capacity = math_next_power_of_2(requested_capacity);
@@ -67,17 +77,26 @@ template <typename T> struct Hashmap {
                 Memory_Tag::HASHMAP));
     }
 
-    FORCE_INLINE ~Hashmap() {
-        memory_deallocate(memory,
-            sizeof(Hashmap_Item<T>) * capacity,
-            Memory_Tag::HASHMAP);
+    FORCE_INLINE void shutdown() {
+        if (memory != nullptr) {
+            memory_deallocate(memory,
+                sizeof(Hashmap_Item<T>) * capacity,
+                Memory_Tag::HASHMAP);
 
-        capacity = 0;
-        count = 0;
-        memory = nullptr;
+            capacity = 0;
+            count = 0;
+            memory = nullptr;
+        }
     }
 
+    FORCE_INLINE ~Hashmap() { shutdown(); }
+
     FORCE_INLINE b8 add(const char* key, const T* value) {
+        if (memory == nullptr) {
+            CORE_ERROR(
+                "Hashmap not initialized. Call init() before using add()");
+            return false;
+        }
 
         if (string_length(key) >= 50) {
             CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
@@ -139,7 +158,12 @@ template <typename T> struct Hashmap {
         return false;
     }
 
-    FORCE_INLINE b8 find(const char* key, T* out_value) {
+    FORCE_INLINE b8 find(const char* key, T** out_value) {
+        if (memory == nullptr) {
+            CORE_ERROR(
+                "Hashmap not initialized. Call init() before using find()");
+            return false;
+        }
 
         if (string_length(key) >= 50) {
             CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
@@ -160,7 +184,7 @@ template <typename T> struct Hashmap {
             }
 
             if (string_check_equal(memory[address].key, key)) {
-                *out_value = memory[address].value;
+                *out_value = &memory[address].value;
                 return true;
             }
 
@@ -172,6 +196,11 @@ template <typename T> struct Hashmap {
     }
 
     FORCE_INLINE b8 remove(const char* key) {
+        if (memory == nullptr) {
+            CORE_ERROR(
+                "Hashmap not initialized. Call init() before using remove()");
+            return false;
+        }
 
         if (string_length(key) >= 50) {
             CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
@@ -287,6 +316,8 @@ template <typename T> struct Hashmap {
     FORCE_INLINE u64 next_address(u64 current_address) {
         return (current_address + 1) & (capacity - 1);
     }
+
+    FORCE_INLINE b8 full() { return count == capacity - 1; }
 
     FORCE_INLINE u64 hash_function(const char* key) {
         // For the hash function I am using the Fowler-Noll-Vo hash function

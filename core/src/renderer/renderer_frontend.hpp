@@ -26,7 +26,6 @@ struct UI_Image_Resource {
 };
 
 void renderer_create_texture(const char* name,
-    b8 auto_release,
     s32 width,
     s32 height,
     s32 channel_count,

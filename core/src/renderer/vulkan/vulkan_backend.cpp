@@ -318,9 +318,7 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
     }
 
     // Create builtin shaders
-    if (!vulkan_material_shader_create(&context,
-            backend->default_diffuse,
-            &context.material_shader)) {
+    if (!vulkan_material_shader_create(&context, &context.material_shader)) {
 
         CORE_ERROR("Error loading built-in object shader");
         return false;
@@ -1513,7 +1511,6 @@ void vulkan_destroy_ui_image(Renderer_Backend* backend,
 }
 
 void vulkan_create_texture(const char* name,
-    b8 auto_release,
     s32 width,
     s32 height,
     s32 channel_count,

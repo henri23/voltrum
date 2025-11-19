@@ -9,6 +9,7 @@
 #include "memory/memory.hpp"
 #include "platform/platform.hpp"
 #include "renderer/renderer_frontend.hpp"
+#include "systems/texture_system.hpp"
 #include "ui/ui.hpp"
 
 // Application configuration
@@ -108,6 +109,12 @@ b8 application_init(Client* client_state) {
 
     if (!renderer_startup(client_state->config.name)) {
         CORE_FATAL("Failed to initialize renderer");
+        return false;
+    }
+
+    Texture_System_Config config = {10};
+    if (!texture_system_init(config)) {
+        CORE_FATAL("Failed to initialize texture system");
         return false;
     }
 
@@ -242,6 +249,9 @@ void application_shutdown() {
 
     CORE_DEBUG("Shutting down UI subsystem...");
     ui_shutdown();
+
+    CORE_DEBUG("Shutting down texture subsystem...");
+    texture_system_shutdown();
 
     CORE_DEBUG("Shutting down renderer subsystem...");
     renderer_shutdown();
