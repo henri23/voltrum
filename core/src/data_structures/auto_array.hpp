@@ -26,12 +26,6 @@ template <typename T> struct Auto_Array {
         data = nullptr;
     }
 
-    FORCE_INLINE Auto_Array(const Auto_Array<T>& src) {
-        length = capacity = 0;
-        data = nullptr;
-        operator=(src);
-    }
-
     FORCE_INLINE Auto_Array(std::initializer_list<T> init) {
         length = capacity = 0;
         data = nullptr;

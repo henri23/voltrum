@@ -28,16 +28,12 @@
 // The hashmap will have power of two ceiling capacities, so that we can apply
 // the modulus operation by simple bitmask operations
 
-enum class Hashmap_Item_State : u8 { EMPTY, OCCUPIED };
-
 // Implement Robin Hood hashing
 template <typename T> struct Hashmap_Item {
     T value;
-    Hashmap_Item_State state;
+    b8 is_occupied;
     char key[50]; // Cached key for linear probing in the collision tail
     u32 distance; // Will store the probe sequence length for each item
-
-    FORCE_INLINE b8 empty() const { return state == Hashmap_Item_State::EMPTY; }
 };
 
 constexpr u64 HASHMAP_DEFAULT_CAPACITY = 2;
@@ -121,20 +117,20 @@ template <typename T> struct Hashmap {
         current_item.distance = 0;
         // Mark already as occupied because if we will use this element, we are
         // adding willingly the element inside the hash map
-        current_item.state = Hashmap_Item_State::OCCUPIED;
+        current_item.is_occupied = true;
 
         u64 probe = 0;
 
         // Collision detected
         while (probe < capacity) {
             // If the position is empty, write straight away
-            if (memory[address].empty()) {
+            if (!memory[address].is_occupied) {
                 memory[address] = current_item;
                 count++;
                 return true;
             }
 
-            if (!memory[address].empty() &&
+            if (memory[address].is_occupied &&
                 string_check_equal(memory[address].key, current_item.key)) {
                 CORE_WARN("Key '%s' is already present in the hashmap",
                     current_item.key);
@@ -178,7 +174,7 @@ template <typename T> struct Hashmap {
 
         // Collision detected
         while (probe < capacity) {
-            if (memory[address].empty()) {
+            if (!memory[address].is_occupied) {
                 CORE_WARN("Key '%s' is not present inside the hashmap", key);
                 return false;
             }
@@ -217,7 +213,7 @@ template <typename T> struct Hashmap {
 
         // Linear probing after computing hash function
         while (probe < capacity) {
-            if (memory[address].empty()) {
+            if (!memory[address].is_occupied) {
                 CORE_WARN("Key '%s' is not present inside the hashmap", key);
                 return false;
             }
@@ -243,7 +239,7 @@ template <typename T> struct Hashmap {
                 // If the next element in line is already at the optimal
                 // location we stop
                 auto* next_item = &memory[next_address(address)];
-                if (next_item->distance == 0 || next_item->empty()) {
+                if (next_item->distance == 0 || !next_item->is_occupied) {
                     memory_zero(&memory[address], sizeof(Hashmap_Item<T>));
                     count--;
                     return true;
@@ -269,7 +265,7 @@ template <typename T> struct Hashmap {
     // tied or managed by the hashmap elements T
     FORCE_INLINE u64 next_occupied_index(u64 start_index) const {
         for (u64 i = start_index; i < capacity; ++i) {
-            if (!memory[i].empty()) {
+            if (memory[i].is_occupied) {
                 return i;
             }
         }
@@ -300,17 +296,17 @@ template <typename T> struct Hashmap {
         char temp_key[50];
         string_copy(temp_key, item1->key, 50);
         u32 temp_distance = item1->distance;
-        Hashmap_Item_State temp_state = item1->state;
+        b8 temp_is_occupied = item1->is_occupied;
 
         item1->value = item2->value;
         string_copy(item1->key, item2->key, 50);
         item1->distance = item2->distance;
-        item1->state = item2->state;
+        item1->is_occupied = item2->is_occupied;
 
         item2->value = temp_value;
         string_copy(item2->key, temp_key, 50);
         item2->distance = temp_distance;
-        item2->state = temp_state;
+        item2->is_occupied = temp_is_occupied;
     }
 
     FORCE_INLINE u64 next_address(u64 current_address) {
