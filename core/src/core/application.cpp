@@ -112,7 +112,7 @@ b8 application_init(Client* client_state) {
         return false;
     }
 
-    Texture_System_Config config = {10};
+    Texture_System_Config config = {16384};
     if (!texture_system_init(config)) {
         CORE_FATAL("Failed to initialize texture system");
         return false;

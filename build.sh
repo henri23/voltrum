@@ -152,7 +152,7 @@ fi
 # Run CMake with Ninja generator and Clang++
 print_status "step" "Configuring project with CMake..."
 echo -e "${BLUE}${ARROW} Generator:${NC} Ninja"
-echo -e "${BLUE}${ARROW} Compiler:${NC} clang++"
+echo -e "${BLUE}${ARROW} Compiler:${NC} g++"
 echo -e "${BLUE}${ARROW} Build Type:${NC} Debug"
 echo -e "${BLUE}${ARROW} Linking Mode:${NC} $LINKING_DESC"
 echo -e "${BLUE}${ARROW} Libraries:${NC} $LIBRARIES_DESC"
@@ -164,7 +164,7 @@ echo
 
 if time cmake -G Ninja \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=YES \
-    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_CXX_COMPILER=g++ \
     -DCMAKE_BUILD_TYPE=Debug \
 	-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
     $CMAKE_LINKING_FLAG \

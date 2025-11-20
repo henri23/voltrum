@@ -35,20 +35,32 @@ INTERNAL_FUNC u8 test_add_find_remove() {
     expect_should_be(true, map.add("b", &v2));
     expect_should_be(2, map.count);
 
-    int* out = nullptr;
-    expect_should_be(true, map.find("a", &out));
-    expect_should_be(v1, *out);
+    // Test find_ptr
+    int* out_ptr = nullptr;
+    expect_should_be(true, map.find_ptr("a", &out_ptr));
+    expect_should_be(v1, *out_ptr);
+
+    // Test find
+    int out_copy = 0;
+    expect_should_be(true, map.find("a", &out_copy));
+    expect_should_be(v1, out_copy);
 
     expect_should_be(true, map.remove("a"));
     expect_should_be(1, map.count);
 
     CORE_DEBUG(
-        "The next warning about a missing key is expected (lookup after "
+        "The next 2 warnings about a missing key are expected (lookup after "
         "removal).");
-    expect_should_be(false, map.find("a", &out));
+    expect_should_be(false, map.find_ptr("a", &out_ptr));
+    expect_should_be(false, map.find("a", &out_copy));
 
-    expect_should_be(true, map.find("b", &out));
-    expect_should_be(v2, *out);
+    // Test both find methods on remaining element
+    expect_should_be(true, map.find_ptr("b", &out_ptr));
+    expect_should_be(v2, *out_ptr);
+
+    out_copy = 0;
+    expect_should_be(true, map.find("b", &out_copy));
+    expect_should_be(v2, out_copy);
 
     return true;
 }
@@ -143,7 +155,7 @@ INTERNAL_FUNC u8 test_init_and_shutdown() {
     expect_should_be(1, map.count);
 
     // Shutdown
-    map.shutdown();
+    map.free();
     expect_should_be(0, map.capacity);
     expect_should_be(0, map.count);
     expect_should_be(nullptr, map.memory);
@@ -157,18 +169,64 @@ INTERNAL_FUNC u8 test_init_and_shutdown() {
     return true;
 }
 
+INTERNAL_FUNC u8 test_find_ptr_vs_find() {
+    Hashmap<int> map;
+    map.init(4);
+
+    int original_value = 100;
+    expect_should_be(true, map.add("test", &original_value));
+
+    // Test find_ptr returns a pointer to the internal value
+    int* ptr_result = nullptr;
+    expect_should_be(true, map.find_ptr("test", &ptr_result));
+    expect_should_be(100, *ptr_result);
+
+    // Test find returns a copy of the value
+    int copy_result = 0;
+    expect_should_be(true, map.find("test", &copy_result));
+    expect_should_be(100, copy_result);
+
+    // Modify through the pointer should affect the hashmap
+    *ptr_result = 200;
+
+    // Verify the hashmap value changed
+    int* ptr_check = nullptr;
+    expect_should_be(true, map.find_ptr("test", &ptr_check));
+    expect_should_be(200, *ptr_check);
+
+    // Verify the copy_result is still the old value (independent)
+    expect_should_be(100, copy_result);
+
+    // Get a new copy and verify it has the updated value
+    int new_copy = 0;
+    expect_should_be(true, map.find("test", &new_copy));
+    expect_should_be(200, new_copy);
+
+    // Modify the copy should NOT affect the hashmap
+    new_copy = 300;
+    int* final_ptr = nullptr;
+    expect_should_be(true, map.find_ptr("test", &final_ptr));
+    expect_should_be(200, *final_ptr);
+
+    return true;
+}
+
 INTERNAL_FUNC u8 test_operations_before_init() {
     Hashmap<int> map;
     int value = 42;
-    int* out = nullptr;
+    int* out_ptr = nullptr;
+    int out_copy = 0;
 
-    CORE_DEBUG("The next 3 errors about uninitialized hashmap are expected.");
+    CORE_DEBUG("The next 4 errors about uninitialized hashmap are expected.");
 
     // Try to add before init
     expect_should_be(false, map.add("key", &value));
 
+    // Try to find_ptr before init
+    expect_should_be(false, map.find_ptr("key", &out_ptr));
+
     // Try to find before init
-    expect_should_be(false, map.find("key", &out));
+    expect_should_be(false, map.find("key", &out_copy));
 
     // Try to remove before init
     expect_should_be(false, map.remove("key"));
@@ -181,8 +239,12 @@ INTERNAL_FUNC u8 test_operations_before_init() {
     // Now properly initialize and verify operations work
     map.init(4);
     expect_should_be(true, map.add("key", &value));
-    expect_should_be(true, map.find("key", &out));
-    expect_should_be(value, *out);
+    expect_should_be(true, map.find_ptr("key", &out_ptr));
+    expect_should_be(value, *out_ptr);
+
+    out_copy = 0;
+    expect_should_be(true, map.find("key", &out_copy));
+    expect_should_be(value, out_copy);
 
     return true;
 }
@@ -200,6 +262,8 @@ void hashmap_register_tests() {
         "Hash_Map: full hashmap does not change size");
     test_manager_register_test(test_init_and_shutdown,
         "Hash_Map: init and shutdown behavior");
+    test_manager_register_test(test_find_ptr_vs_find,
+        "Hash_Map: find_ptr vs find behavior");
     test_manager_register_test(test_operations_before_init,
         "Hash_Map: operations before initialization");
 }

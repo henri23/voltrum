@@ -1,5 +1,6 @@
 #include "systems/texture_system.hpp"
 
+#include "core/asserts.hpp"
 #include "core/logger.hpp"
 #include "core/string.hpp"
 #include "data_structures/hashmap.hpp"
@@ -10,18 +11,19 @@
 #define STB_IMAGE_IMPLEMENTATION // Already defined in ui_titlebar.cpp
 #include "stb_image.h"
 
+struct Texture_Reference {
+    Texture_ID handle;
+    u64 reference_count;
+    b8 auto_release;
+};
+
 struct Texture_System_State {
     Texture_System_Config config;
     Texture default_texture;
 
-    Hashmap<Texture> registered_textures;
-    u32 next_texture_id; // Counter for unique texture IDs
-};
-
-struct Texture_Reference {
-    u64 reference_count;
-    u32 handle;
-    b8 auto_release;
+    // Texture registry has a combination of hashmap and a static array
+    Hashmap<Texture_Reference> texture_registry;
+    Texture* registered_textures; // static array of textures
 };
 
 internal_variable Texture_System_State state;
@@ -100,8 +102,7 @@ INTERNAL_FUNC b8 load_texture(const char* texture_name, Texture* texture) {
         Texture old_texture = *texture;
         *texture = temp_texture;
 
-        if (old_texture.internal_data)
-            renderer_destroy_texture(&old_texture);
+        renderer_destroy_texture(&old_texture);
 
         if (current_generation == INVALID_ID) {
             texture->generation = 0;
@@ -125,14 +126,22 @@ INTERNAL_FUNC b8 load_texture(const char* texture_name, Texture* texture) {
 
 b8 texture_system_init(Texture_System_Config config) {
 
-    if (config.max_texture_count == 0) {
-        CORE_FATAL(
-            "texture_system_initialize - config.max_texture_count must be > 0");
-    }
+    u32 count = config.max_texture_count;
+    RUNTIME_ASSERT_MSG(count > 0,
+        "texture_system_initialize - config.max_texture_count must be > 0");
 
     state.config = config;
-    state.registered_textures.init(config.max_texture_count);
-    state.next_texture_id = 0; // Initialize ID counter
+    state.texture_registry.init(count);
+
+    // Already zeroed out by the allocate function
+    state.registered_textures = static_cast<Texture*>(
+        memory_allocate(sizeof(Texture) * count, Memory_Tag::TEXTURE));
+
+    // Invalidate all ids present in the texture array
+    for (u32 i = 0; i < count; ++i) {
+        state.registered_textures[i].id = INVALID_ID;
+        state.registered_textures[i].generation = INVALID_ID;
+    }
 
     create_default_textures(&state);
 
@@ -140,17 +149,29 @@ b8 texture_system_init(Texture_System_Config config) {
 }
 
 void texture_system_shutdown() {
-    // Release texture resources
-    Hashmap<Texture>* textures = &state.registered_textures;
-    for (u64 i = textures->next_occupied_index(0); i < textures->capacity;
-        i = textures->next_occupied_index(i + 1)) {
-        Texture* t = &state.registered_textures.memory[i].value;
-        if (t->generation != INVALID_ID) {
-            renderer_destroy_texture(t);
+
+    u32 max_count = state.config.max_texture_count;
+
+    // Destroy all internal renderer-specific resources for texture that are
+    // still valid in the registry
+    for (u64 i = 0; i < max_count; ++i) {
+        Texture* texture = &state.registered_textures[i];
+        if (texture->id != INVALID_ID) {
+            renderer_destroy_texture(texture);
         }
     }
 
+    // Deallocate the memory of the registry
+    memory_deallocate(state.registered_textures,
+        sizeof(Texture) * state.config.max_texture_count,
+        Memory_Tag::TEXTURE);
+
+    // Release default texture resources
     destroy_default_textures(&state);
+
+    // NOTE: The hashmap as a data structure handles its own memory deallocation
+    // automatically, but just for explicity we call it here
+    state.texture_registry.free();
 
     memory_zero(&state, sizeof(Texture_System_State));
 }
@@ -160,64 +181,58 @@ Texture* texture_system_acquire(const char* name, b8 auto_release) {
 
     if (string_check_equal_insensitive(name, DEFAULT_TEXTURE_NAME)) {
         CORE_WARN(
-            "texture_system_acquire called for default texture. Use "
-            "get_default_texture for texture 'default'");
+            "texture_system_acquire - Called for default texture. Use "
+            "get_default_texture_method for this");
         return &state.default_texture;
     }
 
-    // NOTE: With this current implementation I do not implmement the
-    // auto_release feature properly
-    Texture* texture;
-    if (state.registered_textures.find(name, &texture)) {
-        // Safety measure just in case the texture was invalidated somewhere
-        // else
-        if (texture->id == INVALID_ID) {
-            CORE_WARN(
-                "texture_system_acquire - Texture '%s' is registered but its "
-                "ID is marked as invalid!",
-                name);
+    Texture_Reference ref;
+    Texture* texture = nullptr;
+
+    if (state.texture_registry.find(name, &ref)) {
+        CORE_DEBUG("Texture '%s' already present in the registry. Returning...",
+            name);
+        ref.reference_count++;
+        texture = &state.registered_textures[ref.handle];
+    } else {
+        CORE_DEBUG("Texture '%s' not present in the registry. Loading...",
+            name);
+
+        // Find the index for the texture to be stored
+        u32 index = 0;
+        for (u32 i = 0; i < state.config.max_texture_count; ++i) {
+            // If we find a slot in the memory that has a valid id means that
+            // slot is empty and we can use it
+            if (state.registered_textures[i].id == INVALID_ID) {
+                texture = &state.registered_textures[i];
+                index = i;
+                break;
+            }
+        }
+
+        // Handle the case when we loop over and do not find an empty slot
+        if (!texture) {
+            CORE_FATAL(
+                "Texture registry is full and cannot store any additional "
+                "textures");
             return nullptr;
         }
 
-        CORE_TRACE("Texture '%s' already exists. Returning reference", name);
-        return texture;
+        texture->id = index;
+        // NOTE: texture->generation = 0 will be done inside the load_texture
+
+        // Texture not present so we need to load first
+        if (!load_texture(name, texture)) {
+            CORE_ERROR("Failed to load texture '%s'", name);
+            return nullptr;
+        }
+
+        ref.handle = index;
+        ref.auto_release = auto_release;
+        ref.reference_count = 1;
     }
 
-    // If the registry doesn't contain the texture we need to load it from
-    // disk
-    // Make sure that there is space for an additional texture
-    if (state.registered_textures.full()) {
-        CORE_ERROR(
-            "Texture registry is full and cannot contain any more "
-            "textures");
-        return nullptr;
-    }
-
-    // If the texture is not found in the registered textures, it means that
-    // it needs to be loaded first
-    Texture new_texture;
-    create_texture(&new_texture); // Initialize to safe defaults
-    if (!load_texture(name, &new_texture)) {
-        CORE_ERROR("Texture loading failed!");
-        return nullptr;
-    }
-
-    if (!state.registered_textures.add(name, &new_texture)) {
-        CORE_FATAL("Error adding '%s' texture to registry", name);
-        return nullptr;
-    }
-
-    CORE_TRACE("Texture '%s' did not exist. Successfully loaded from disk",
-        name);
-
-    // Return pointer to the newly added texture in the hashmap
-    if (!state.registered_textures.find(name, &texture)) {
-        CORE_FATAL("Error when retrieving texture '%s' after adding to registry", name);
-        return nullptr;
-    }
-
-    // Assign unique ID to the texture
-    texture->id = state.next_texture_id++;
+    state.texture_registry.add(name, &ref, true);
 
     return texture;
 }
@@ -267,9 +282,6 @@ INTERNAL_FUNC b8 create_default_textures(Texture_System_State* state) {
     // Manually set the texture generation to invalid since this is the default
     // texture
     state->default_texture.generation = INVALID_ID;
-
-    // Assign unique ID to default texture
-    state->default_texture.id = state->next_texture_id++;
 
     return true;
 }

@@ -9,9 +9,17 @@
 #include <intrin.h>
 #define debug_break() __debugbreak()
 #else
+// Use the appropriate builtin based on compiler
+#if defined(__clang__)
 // Forward declare the builtin function for template contexts
 extern "C" void __builtin_debugtrap(void);
 #define debug_break() __builtin_debugtrap()  // Stops the applicaiton in a way that the debugger can catch it
+#elif defined(__GNUC__)
+#define debug_break() __builtin_trap()  // GCC's equivalent
+#else
+#include <signal.h>
+#define debug_break() raise(SIGTRAP)  // Fallback for other compilers
+#endif
 #endif
 
 // Need to export even though we are calling the macro

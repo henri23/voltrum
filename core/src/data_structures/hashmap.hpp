@@ -73,7 +73,7 @@ template <typename T> struct Hashmap {
                 Memory_Tag::HASHMAP));
     }
 
-    FORCE_INLINE void shutdown() {
+    FORCE_INLINE void free() {
         if (memory != nullptr) {
             memory_deallocate(memory,
                 sizeof(Hashmap_Item<T>) * capacity,
@@ -85,9 +85,9 @@ template <typename T> struct Hashmap {
         }
     }
 
-    FORCE_INLINE ~Hashmap() { shutdown(); }
+    FORCE_INLINE ~Hashmap() { free(); }
 
-    FORCE_INLINE b8 add(const char* key, const T* value) {
+    FORCE_INLINE b8 add(const char* key, const T* value, b8 overwrite = false) {
         if (memory == nullptr) {
             CORE_ERROR(
                 "Hashmap not initialized. Call init() before using add()");
@@ -132,6 +132,12 @@ template <typename T> struct Hashmap {
 
             if (memory[address].is_occupied &&
                 string_check_equal(memory[address].key, current_item.key)) {
+                if (overwrite) {
+                    memory[address] = current_item;
+                    count++;
+                    return true;
+                }
+
                 CORE_WARN("Key '%s' is already present in the hashmap",
                     current_item.key);
                 return false;
@@ -154,7 +160,7 @@ template <typename T> struct Hashmap {
         return false;
     }
 
-    FORCE_INLINE b8 find(const char* key, T** out_value) {
+    FORCE_INLINE b8 find_ptr(const char* key, T** out_value) {
         if (memory == nullptr) {
             CORE_ERROR(
                 "Hashmap not initialized. Call init() before using find()");
@@ -181,6 +187,43 @@ template <typename T> struct Hashmap {
 
             if (string_check_equal(memory[address].key, key)) {
                 *out_value = &memory[address].value;
+                return true;
+            }
+
+            probe++;
+            address = next_address(address); // Wraparound the address
+        }
+
+        return false;
+    }
+
+    FORCE_INLINE b8 find(const char* key, T* out_value) {
+        if (memory == nullptr) {
+            CORE_ERROR(
+                "Hashmap not initialized. Call init() before using find()");
+            return false;
+        }
+
+        if (string_length(key) >= 50) {
+            CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
+            return false;
+        }
+
+        u64 address = hash_function(key) & (capacity - 1);
+
+        RUNTIME_ASSERT(address < capacity);
+
+        u64 probe = 0;
+
+        // Collision detected
+        while (probe < capacity) {
+            if (!memory[address].is_occupied) {
+                CORE_WARN("Key '%s' is not present inside the hashmap", key);
+                return false;
+            }
+
+            if (string_check_equal(memory[address].key, key)) {
+                memory_copy(out_value, &memory[address].value, sizeof(T));
                 return true;
             }
 
