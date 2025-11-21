@@ -10,16 +10,35 @@ struct Test_Entry {
 };
 
 static Auto_Array<Test_Entry> tests;
+static const char* current_module_name = nullptr;
 
 void test_manager_init() {
 }
 
-void test_manager_register_test(u8 (*PFN_test)(), const char* desc) {
+void test_manager_register_test(
+    u8 (*PFN_test)(),
+    const char* desc
+) {
     Test_Entry e;
     e.func = PFN_test;
     e.desc = desc;
 
     tests.push_back(e);
+}
+
+void test_manager_begin_module(const char* module_name) {
+    current_module_name = module_name;
+    CORE_INFO("");
+    CORE_INFO("########################################");
+    CORE_INFO("##                                    ##");
+    CORE_INFO("##  MODULE: %-25s ##", module_name);
+    CORE_INFO("##                                    ##");
+    CORE_INFO("########################################");
+    CORE_INFO("");
+}
+
+void test_manager_end_module() {
+    current_module_name = nullptr;
 }
 
 void test_manager_run_tests() {
@@ -33,6 +52,11 @@ void test_manager_run_tests() {
     absolute_clock_start(&total_time);
 
     for (u32 i = 0; i < count; ++i) {
+        // Log separator and test name before execution
+        CORE_INFO("========================================");
+        CORE_INFO("Running: %s", tests[i].desc);
+        CORE_INFO("========================================");
+
         // Measure the duration of the singular test execution time
         Absolute_Clock test_time;
         absolute_clock_start(&test_time);
@@ -41,6 +65,7 @@ void test_manager_run_tests() {
 
         if (result == true) {
             ++passed;
+            CORE_INFO("[PASSED]: %s", tests[i].desc);
         } else if (result == BYPASS) {
             CORE_WARN("[SKIPPED]: %s", tests[i].desc);
             ++skipped;
@@ -50,7 +75,11 @@ void test_manager_run_tests() {
         }
 
         char status[20];
-        string_format(status, failed ? "*** %d FAILED ***" : "SUCCESS", failed);
+        string_format(
+            status,
+            failed ? "*** %d FAILED ***" : "SUCCESS",
+            failed
+        );
         absolute_clock_update(&total_time);
 
         CORE_INFO(
@@ -60,15 +89,20 @@ void test_manager_run_tests() {
             skipped,
             status,
             test_time.elapsed_time,
-            total_time.elapsed_time);
+            total_time.elapsed_time
+        );
+        CORE_INFO(""); // Empty line for separation
     }
 
     absolute_clock_stop(&total_time);
 
+    CORE_INFO("========================================");
     CORE_INFO(
         "Results: %d passed, %d failed, %d skipped.",
         passed,
         failed,
-        skipped);
+        skipped
+    );
+    CORE_INFO("========================================");
 }
 

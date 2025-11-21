@@ -33,10 +33,15 @@ INTERNAL_FUNC b8 event_on_debug_event(const Event* event) {
     const char* names[3] = {"metal", "space_parallax", "yellow_track"};
 
     local_persist s8 choice = 2;
+
+    s8 old_choice = choice;
     choice++;
     choice %= 3;
 
-    state.test_diffuse = texture_system_acquire(names[choice]);
+    state.test_diffuse = texture_system_acquire(names[choice], false);
+
+    texture_system_release(names[old_choice]);
+
     return true;
 }
 // WARN: temp block

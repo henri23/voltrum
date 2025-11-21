@@ -249,21 +249,85 @@ INTERNAL_FUNC u8 test_operations_before_init() {
     return true;
 }
 
+INTERNAL_FUNC u8 test_add_with_overwrite() {
+    Hashmap<int> map;
+    map.init(4);
+
+    int original_value = 100;
+    int new_value = 200;
+
+    // Add initial value
+    expect_should_be(true, map.add("key", &original_value));
+    expect_should_be(1, map.count);
+
+    // Verify initial value
+    int* ptr_result = nullptr;
+    expect_should_be(true, map.find_ptr("key", &ptr_result));
+    expect_should_be(100, *ptr_result);
+
+    CORE_DEBUG("The next warning about duplicate key is expected.");
+    // Try to add without overwrite flag (should fail)
+    expect_should_be(false, map.add("key", &new_value, false));
+    expect_should_be(1, map.count);
+
+    // Verify value is still the original
+    expect_should_be(true, map.find_ptr("key", &ptr_result));
+    expect_should_be(100, *ptr_result);
+
+    // Now add with overwrite flag (should succeed)
+    expect_should_be(true, map.add("key", &new_value, true));
+    expect_should_be(1, map.count); // Count should NOT increment on overwrite
+
+    // Verify value has been updated
+    expect_should_be(true, map.find_ptr("key", &ptr_result));
+    expect_should_be(200, *ptr_result);
+
+    // Test overwrite with a different key to ensure normal operation still works
+    int another_value = 300;
+    expect_should_be(true, map.add("another_key", &another_value, true));
+    expect_should_be(2, map.count);
+
+    expect_should_be(true, map.find_ptr("another_key", &ptr_result));
+    expect_should_be(300, *ptr_result);
+
+    return true;
+}
+
 void hashmap_register_tests() {
-    test_manager_register_test(test_creation_and_deletion,
-        "Hash_Map: creation and deletion");
-    test_manager_register_test(test_add_find_remove,
-        "Hash_Map: add, find, remove");
-    test_manager_register_test(test_expected_warnings,
-        "Hash_Map: expected warning scenarios");
-    test_manager_register_test(test_debug_log_showcase,
-        "Hash_Map: debug log showcase");
-    test_manager_register_test(test_full_hashmap_does_not_change_size,
-        "Hash_Map: full hashmap does not change size");
-    test_manager_register_test(test_init_and_shutdown,
-        "Hash_Map: init and shutdown behavior");
-    test_manager_register_test(test_find_ptr_vs_find,
-        "Hash_Map: find_ptr vs find behavior");
-    test_manager_register_test(test_operations_before_init,
-        "Hash_Map: operations before initialization");
+    test_manager_register_test(
+        test_creation_and_deletion,
+        "Hash_Map: creation and deletion"
+    );
+    test_manager_register_test(
+        test_add_find_remove,
+        "Hash_Map: add, find, remove"
+    );
+    test_manager_register_test(
+        test_expected_warnings,
+        "Hash_Map: expected warning scenarios"
+    );
+    test_manager_register_test(
+        test_debug_log_showcase,
+        "Hash_Map: debug log showcase"
+    );
+    test_manager_register_test(
+        test_full_hashmap_does_not_change_size,
+        "Hash_Map: full hashmap does not change size"
+    );
+    test_manager_register_test(
+        test_init_and_shutdown,
+        "Hash_Map: init and shutdown behavior"
+    );
+    test_manager_register_test(
+        test_find_ptr_vs_find,
+        "Hash_Map: find_ptr vs find behavior"
+    );
+    test_manager_register_test(
+        test_operations_before_init,
+        "Hash_Map: operations before initialization"
+    );
+    test_manager_register_test(
+        test_add_with_overwrite,
+        "Hash_Map: add with overwrite flag"
+    );
 }

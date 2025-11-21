@@ -7,9 +7,11 @@ int main() {
     test_manager_init();
 
     CORE_DEBUG("Starting tests...");
-    hashmap_register_tests();
 
+    test_manager_begin_module("Hashmap");
+    hashmap_register_tests();
     test_manager_run_tests();
+    test_manager_end_module();
 
     return 0;
 }

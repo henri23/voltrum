@@ -58,11 +58,6 @@ GEAR="⚙"
 
 start_time=$(date +%s%3N)
 
-echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}${BOLD}║            ${WHITE}VOLTRUM BUILD SYSTEM${CYAN}           ║${NC}"
-echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
-echo
-
 # Function to print colored status messages
 print_status() {
     local status=$1
@@ -217,12 +212,6 @@ if [ "$RUN_TESTS" = true ]; then
 
     print_status "step" "Running voltrum tests..."
 
-    echo
-    echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
-    echo -e "${CYAN}${BOLD}║               ${YELLOW}RUNNING TESTS...${CYAN}               ║${NC}"
-    echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
-    echo
-
     test_start_time=$(date +%s%3N)
 
     if ./tests/voltrum_tests; then
@@ -239,12 +228,6 @@ if [ "$RUN_TESTS" = true ]; then
         fi
 
         print_status "success" "All tests passed in $test_time_str"
-
-        echo
-        echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
-        echo -e "${CYAN}${BOLD}║               ${GREEN}TESTS COMPLETED!${CYAN}               ║${NC}"
-        echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
-        echo
     else
         TEST_EXIT_CODE=$?
         print_status "error" "Tests failed with exit code $TEST_EXIT_CODE"
@@ -334,19 +317,10 @@ else
     time_str="${tottime}ms"
 fi
 
-echo
-echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}${BOLD}║               ${GREEN}BUILD COMPLETED!${CYAN}               ║${NC}"
-echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
-echo
 print_status "success" "All assemblies built successfully"
 print_status "info" "Total build time: $time_str"
 echo
 
 print_status "step" "Launching voltrum client..."
-echo -e "${CYAN}${BOLD}╔══════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}${BOLD}║              ${WHITE}APPLICATION OUTPUT${CYAN}              ║${NC}"
-echo -e "${CYAN}${BOLD}╚══════════════════════════════════════════════╝${NC}"
-echo
 
-./client/voltrum_client
+# ./client/voltrum_client

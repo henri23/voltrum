@@ -218,14 +218,16 @@ Texture* texture_system_acquire(const char* name, b8 auto_release) {
             return nullptr;
         }
 
-        texture->id = index;
-        // NOTE: texture->generation = 0 will be done inside the load_texture
-
         // Texture not present so we need to load first
         if (!load_texture(name, texture)) {
             CORE_ERROR("Failed to load texture '%s'", name);
             return nullptr;
         }
+
+        // NOTE: texture->generation = 0 will be done inside the load_texture
+        // Set the texture ID after the load texture! Because otherwise the
+        // loader will give us an INVALID_ID for texture id
+        texture->id = index;
 
         ref.handle = index;
         ref.auto_release = auto_release;
@@ -237,9 +239,44 @@ Texture* texture_system_acquire(const char* name, b8 auto_release) {
     return texture;
 }
 
-// For the moment I do not need to release the textures since they will be
-// destroyed on shutdown
-void texture_system_release(const char* name) {}
+void texture_system_release(const char* name) {
+
+    if (string_check_equal_insensitive(name, DEFAULT_TEXTURE_NAME)) {
+        CORE_WARN(
+            "texture_system_release - Called for default texture. Skipping...");
+        return;
+    }
+
+    Texture_Reference ref;
+
+    if (state.texture_registry.find(name, &ref)) {
+        ref.reference_count--;
+
+        if (ref.reference_count == 0 && ref.auto_release) {
+            CORE_INFO(
+                "texture_system_release - Texture '%s' has 0 remaining "
+                "references and is marked as 'auto_release'. Releasing from "
+                "registry...",
+                name);
+
+            renderer_destroy_texture(&state.registered_textures[ref.handle]);
+            CORE_DEBUG("Resources of texture destroyed from renderer");
+
+            if (!state.texture_registry.remove(name)) {
+                CORE_FATAL("Error while removing texture from registry");
+            }
+
+            return;
+        }
+
+        // Update texture reference with the new reference count
+        state.texture_registry.add(name, &ref, true);
+
+    } else {
+        CORE_DEBUG("Texture '%s' not present in the registry. Skipping...",
+            name);
+    }
+}
 
 INTERNAL_FUNC b8 create_default_textures(Texture_System_State* state) {
 

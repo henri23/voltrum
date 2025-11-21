@@ -133,8 +133,7 @@ template <typename T> struct Hashmap {
             if (memory[address].is_occupied &&
                 string_check_equal(memory[address].key, current_item.key)) {
                 if (overwrite) {
-                    memory[address] = current_item;
-                    count++;
+                    memory[address].value = current_item.value;
                     return true;
                 }
 
@@ -160,7 +159,7 @@ template <typename T> struct Hashmap {
         return false;
     }
 
-    FORCE_INLINE b8 find_ptr(const char* key, T** out_value) {
+    FORCE_INLINE b8 find_ptr(const char* key, T** out_ptr) {
         if (memory == nullptr) {
             CORE_ERROR(
                 "Hashmap not initialized. Call init() before using find()");
@@ -186,7 +185,7 @@ template <typename T> struct Hashmap {
             }
 
             if (string_check_equal(memory[address].key, key)) {
-                *out_value = &memory[address].value;
+                *out_ptr = &memory[address].value;
                 return true;
             }
 
@@ -197,7 +196,7 @@ template <typename T> struct Hashmap {
         return false;
     }
 
-    FORCE_INLINE b8 find(const char* key, T* out_value) {
+    FORCE_INLINE b8 find(const char* key, T* out_copy) {
         if (memory == nullptr) {
             CORE_ERROR(
                 "Hashmap not initialized. Call init() before using find()");
@@ -223,7 +222,7 @@ template <typename T> struct Hashmap {
             }
 
             if (string_check_equal(memory[address].key, key)) {
-                memory_copy(out_value, &memory[address].value, sizeof(T));
+                memory_copy(out_copy, &memory[address].value, sizeof(T));
                 return true;
             }
 
