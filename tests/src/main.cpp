@@ -1,6 +1,7 @@
 #include "test_manager.hpp"
 
 #include <containers/hashmap_tests.hpp>
+#include <core/string_tests.hpp>
 #include <core/logger.hpp>
 
 int main() {
@@ -10,6 +11,11 @@ int main() {
 
     test_manager_begin_module("Hashmap");
     hashmap_register_tests();
+    test_manager_run_tests();
+    test_manager_end_module();
+
+    test_manager_begin_module("String");
+    string_register_tests();
     test_manager_run_tests();
     test_manager_end_module();
 

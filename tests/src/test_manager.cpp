@@ -29,16 +29,13 @@ void test_manager_register_test(
 void test_manager_begin_module(const char* module_name) {
     current_module_name = module_name;
     CORE_INFO("");
-    CORE_INFO("########################################");
-    CORE_INFO("##                                    ##");
-    CORE_INFO("##  MODULE: %-25s ##", module_name);
-    CORE_INFO("##                                    ##");
-    CORE_INFO("########################################");
+    CORE_INFO("MODULE: %s", module_name);
     CORE_INFO("");
 }
 
 void test_manager_end_module() {
     current_module_name = nullptr;
+    tests.clear();
 }
 
 void test_manager_run_tests() {
@@ -52,16 +49,9 @@ void test_manager_run_tests() {
     absolute_clock_start(&total_time);
 
     for (u32 i = 0; i < count; ++i) {
-        // Log separator and test name before execution
-        CORE_INFO("========================================");
         CORE_INFO("Running: %s", tests[i].desc);
-        CORE_INFO("========================================");
 
-        // Measure the duration of the singular test execution time
-        Absolute_Clock test_time;
-        absolute_clock_start(&test_time);
         u8 result = tests[i].func();
-        absolute_clock_update(&test_time);
 
         if (result == true) {
             ++passed;
@@ -74,35 +64,19 @@ void test_manager_run_tests() {
             ++failed;
         }
 
-        char status[20];
-        string_format(
-            status,
-            failed ? "*** %d FAILED ***" : "SUCCESS",
-            failed
-        );
-        absolute_clock_update(&total_time);
-
-        CORE_INFO(
-            "Executed %d of %d (skipped %d) %s (%.6f sec / %.6f sec total)",
-            i + 1,
-            count,
-            skipped,
-            status,
-            test_time.elapsed_time,
-            total_time.elapsed_time
-        );
-        CORE_INFO(""); // Empty line for separation
+        CORE_INFO("");
     }
 
     absolute_clock_stop(&total_time);
 
-    CORE_INFO("========================================");
+    CORE_INFO("");
     CORE_INFO(
-        "Results: %d passed, %d failed, %d skipped.",
+        "Module Summary: %d passed, %d failed, %d skipped (%.6f sec)",
         passed,
         failed,
-        skipped
+        skipped,
+        total_time.elapsed_time
     );
-    CORE_INFO("========================================");
+    CORE_INFO("");
 }
 

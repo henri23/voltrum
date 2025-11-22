@@ -223,15 +223,12 @@ b8 string_to_bool(char* str, b8* out_bool) {
         return false;
     }
 
-    // Trim whitespace
-    char* trimmed = string_trim(str);
-
-    if (string_check_equal_insensitive(trimmed, "true") ||
-        string_check_equal(trimmed, "1")) {
+    if (string_check_equal_insensitive(str, "true") ||
+        string_check_equal(str, "1")) {
         *out_bool = true;
         return true;
-    } else if (string_check_equal_insensitive(trimmed, "false") ||
-               string_check_equal(trimmed, "0")) {
+    } else if (string_check_equal_insensitive(str, "false") ||
+               string_check_equal(str, "0")) {
         *out_bool = false;
         return true;
     }

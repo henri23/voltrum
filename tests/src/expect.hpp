@@ -1,4 +1,5 @@
 #include <core/logger.hpp>
+#include <math/math.hpp>
 
 #define expect_should_be(expected, actual)                                     \
     {                                                                          \
@@ -27,7 +28,7 @@
 
 #define expect_float_to_be(expected, actual)                                   \
     {                                                                          \
-        if (fabs(actual - expected) > 0.001f) {                                \
+        if (math_abs_value(actual - expected) > 0.001f) {                      \
             CORE_ERROR("--> Expected %f, but fot %f. File: %s:%d",             \
                 expected,                                                      \
                 actual,                                                        \
