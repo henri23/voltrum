@@ -2,9 +2,9 @@
 
 #include "core/asserts.hpp"
 #include "core/logger.hpp"
-#include "utils/string.hpp"
 #include "data_structures/hashmap.hpp"
 #include "memory/memory.hpp"
+#include "utils/string.hpp"
 
 #include "renderer/renderer_frontend.hpp"
 
@@ -267,7 +267,7 @@ void texture_system_release(const char* name) {
                 "registry...",
                 name);
 
-            renderer_destroy_texture(&state.registered_textures[ref.handle]);
+            destroy_texture(&state.registered_textures[ref.handle]);
             CORE_DEBUG("Resources of texture destroyed from renderer");
 
             if (!state.texture_registry.remove(name)) {

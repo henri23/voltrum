@@ -137,15 +137,6 @@ b8 application_init(Client* client_state) {
         app_on_resized_callback,
         Event_Priority::HIGH);
 
-    // Register test callbacks for key and mouse modifiers
-    events_register_callback(Event_Type::KEY_PRESSED,
-        app_key_pressed_test_callback,
-        Event_Priority::LOW);
-
-    events_register_callback(Event_Type::MOUSE_BUTTON_PRESSED,
-        app_mouse_button_pressed_test_callback,
-        Event_Priority::LOW);
-
     internal_state->is_running = false;
     internal_state->is_suspended = false;
 

@@ -2,10 +2,13 @@
 
 # Usage function
 show_usage() {
-    echo "Usage: $0 [--dynamic] [--skip-tests] [--asan]"
+    echo "Usage: $0 [--dynamic] [--skip-tests] [--asan] [--clean] [--compiler <gcc|clang>] [--build-system <ninja|make>]"
     echo "  --dynamic      Build with dynamic linking (DLL)"
     echo "  --skip-tests   Skip building and running tests"
     echo "  --asan         Enable AddressSanitizer for debugging"
+    echo "  --clean        Remove the bin directory before configuring"
+    echo "  --compiler     Choose compiler toolchain (gcc or clang)"
+    echo "  --build-system Select the build tool (ninja or make)"
     echo "  (default)      Build with static linking and run tests"
     exit 1
 }
@@ -14,8 +17,14 @@ show_usage() {
 LINKING_MODE="STATIC"
 RUN_TESTS=true
 USE_ASAN=false
-for arg in "$@"; do
-    case $arg in
+CLEAN_BUILD=false
+C_COMPILER="gcc"
+CXX_COMPILER="g++"
+COMPILER_NAME="gcc"
+BUILD_SYSTEM="ninja"
+
+while [ $# -gt 0 ]; do
+    case "$1" in
         --dynamic)
             LINKING_MODE="DYNAMIC"
             shift
@@ -28,97 +37,123 @@ for arg in "$@"; do
             USE_ASAN=true
             shift
             ;;
+        --clean)
+            CLEAN_BUILD=true
+            shift
+            ;;
+        --compiler)
+            shift
+            if [ -z "$1" ]; then
+                echo "--compiler requires an argument (gcc or clang)"
+                exit 1
+            fi
+            case "$1" in
+                gcc)
+                    C_COMPILER="gcc"
+                    CXX_COMPILER="g++"
+                    COMPILER_NAME="gcc"
+                    ;;
+                clang)
+                    C_COMPILER="clang"
+                    CXX_COMPILER="clang++"
+                    COMPILER_NAME="clang"
+                    ;;
+                *)
+                    echo "Unsupported compiler '$1'. Use gcc or clang."
+                    exit 1
+                    ;;
+            esac
+            shift
+            ;;
+        --compiler=*)
+            value="${1#*=}"
+            case "$value" in
+                gcc)
+                    C_COMPILER="gcc"
+                    CXX_COMPILER="g++"
+                    COMPILER_NAME="gcc"
+                    ;;
+                clang)
+                    C_COMPILER="clang"
+                    CXX_COMPILER="clang++"
+                    COMPILER_NAME="clang"
+                    ;;
+                *)
+                    echo "Unsupported compiler '$value'. Use gcc or clang."
+                    exit 1
+                    ;;
+            esac
+            shift
+            ;;
+        --build-system)
+            shift
+            if [ -z "$1" ]; then
+                echo "--build-system requires an argument (ninja or make)"
+                exit 1
+            fi
+            BUILD_SYSTEM=$(printf "%s" "$1" | tr '[:upper:]' '[:lower:]')
+            shift
+            ;;
+        --build-system=*)
+            value="${1#*=}"
+            BUILD_SYSTEM=$(printf "%s" "$value" | tr '[:upper:]' '[:lower:]')
+            shift
+            ;;
         --help|-h)
             show_usage
             ;;
         *)
-            echo "Unknown option: $arg"
+            echo "Unknown option: $1"
             show_usage
             ;;
     esac
 done
 
-# Colors for modern output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-MAGENTA='\033[0;35m'
-CYAN='\033[0;36m'
-WHITE='\033[1;37m'
-BOLD='\033[1m'
-NC='\033[0m' # No Color
-
-# Unicode symbols
-CHECK_MARK="✓"
-CROSS_MARK="✗"
-ARROW="→"
-STAR="★"
-GEAR="⚙"
+case "$BUILD_SYSTEM" in
+    ninja)
+        CMAKE_GENERATOR="Ninja"
+        BUILD_CMD="ninja"
+        CLIENT_BUILD_ARGS="-j12"
+        BUILD_TOOL_DESC="Ninja"
+        ;;
+    make)
+        CMAKE_GENERATOR="Unix Makefiles"
+        BUILD_CMD="make"
+        if command -v nproc >/dev/null 2>&1; then
+            JOBS=$(nproc)
+        else
+            JOBS=4
+        fi
+        CLIENT_BUILD_ARGS="-j$JOBS"
+        BUILD_TOOL_DESC="Unix Makefiles (make)"
+        ;;
+    *)
+        echo "Unsupported build system '$BUILD_SYSTEM'. Use ninja or make."
+        exit 1
+        ;;
+esac
 
 start_time=$(date +%s%3N)
 
-# Function to print colored status messages
+# Function to print status messages without ANSI colors
 print_status() {
     local status=$1
     local message=$2
+    local prefix="[INFO]"
     case $status in
-        "info")
-            echo -e "${BLUE}${GEAR}${NC} ${WHITE}${message}${NC}"
-            ;;
-        "success")
-            echo -e "${GREEN}${CHECK_MARK}${NC} ${GREEN}${message}${NC}"
-            ;;
-        "error")
-            echo -e "${RED}${CROSS_MARK}${NC} ${RED}${message}${NC}"
-            ;;
-        "warning")
-            echo -e "${YELLOW}${STAR}${NC} ${YELLOW}${message}${NC}"
-            ;;
-        "step")
-            echo -e "${MAGENTA}${ARROW}${NC} ${WHITE}${message}${NC}"
-            ;;
+        "success") prefix="[ OK ]" ;;
+        "error") prefix="[ERR ]" ;;
+        "warning") prefix="[WARN]" ;;
+        "step") prefix="[STEP]" ;;
     esac
+    echo "$prefix $message"
 }
 
-# Function to check if a tool is available
-check_tool() {
-    local tool=$1
-    local package_hint=$2
-
-    if command -v "$tool" >/dev/null 2>&1; then
-        print_status "success" "Found $tool"
-        return 0
-    else
-        print_status "error" "Missing required tool: $tool"
-        if [ -n "$package_hint" ]; then
-            echo -e "   ${YELLOW}${ARROW} Install with: ${WHITE}$package_hint${NC}"
-        fi
-        return 1
-    fi
-}
-
-# Tool checking phase
-print_status "step" "Checking required build tools..."
-echo
-
-tools_ok=true
-
-# Check required tools
-# check_tool "cmake" "sudo apt install cmake" || tools_ok=false
-# check_tool "ninja" "sudo apt install ninja-build" || tools_ok=false
-# check_tool "clang++" "sudo apt install clang" || tools_ok=false
-# check_tool "git" "sudo apt install git" || tools_ok=false
-
-echo
-
-if [ "$tools_ok" = false ]; then
-    print_status "error" "Some required tools are missing. Please install them before continuing."
-    exit 1
+# Clean build directory if requested
+if [ "$CLEAN_BUILD" = true ] && [ -d "bin" ]; then
+    print_status "step" "Removing existing build directory (clean build)..."
+    rm -rf bin
 fi
-
-print_status "success" "All required tools are available!"
-echo
 
 # Ensure the bin directory exists
 print_status "step" "Creating build directory..."
@@ -128,11 +163,11 @@ mkdir -p bin
 if [ "$LINKING_MODE" = "STATIC" ]; then
     CMAKE_LINKING_FLAG="-DVOLTRUM_STATIC_LINKING=ON"
     LINKING_DESC="Static (single self-contained executable)"
-    LIBRARIES_DESC="Core, SDL3, spdlog, ImGui → all static"
+    LIBRARIES_DESC="Core, SDL3, spdlog, ImGui -> all static"
 else
     CMAKE_LINKING_FLAG="-DVOLTRUM_STATIC_LINKING=OFF"
     LINKING_DESC="Dynamic (executable + shared libraries)"
-    LIBRARIES_DESC="Core, SDL3 → shared | spdlog, ImGui → static"
+    LIBRARIES_DESC="Core, SDL3 -> shared | spdlog, ImGui -> static"
 fi
 
 # Set AddressSanitizer flags
@@ -144,22 +179,23 @@ else
     ASAN_DESC="Disabled"
 fi
 
-# Run CMake with Ninja generator and Clang++
 print_status "step" "Configuring project with CMake..."
-echo -e "${BLUE}${ARROW} Generator:${NC} Ninja"
-echo -e "${BLUE}${ARROW} Compiler:${NC} g++"
-echo -e "${BLUE}${ARROW} Build Type:${NC} Debug"
-echo -e "${BLUE}${ARROW} Linking Mode:${NC} $LINKING_DESC"
-echo -e "${BLUE}${ARROW} Libraries:${NC} $LIBRARIES_DESC"
-echo -e "${BLUE}${ARROW} AddressSanitizer:${NC} $ASAN_DESC"
+echo "  Generator: $CMAKE_GENERATOR"
+echo "  Build system: $BUILD_TOOL_DESC"
+echo "  Compiler: $COMPILER_NAME"
+echo "  Build Type: Debug"
+echo "  Linking Mode: $LINKING_DESC"
+echo "  Libraries: $LIBRARIES_DESC"
+echo "  AddressSanitizer: $ASAN_DESC"
 if [ "$USE_ASAN" = true ]; then
-    echo -e "${YELLOW}${ARROW} Warning:${NC} Performance will be significantly reduced"
+    echo "  Warning: Performance will be significantly reduced"
 fi
 echo
 
-if time cmake -G Ninja \
+if time cmake -G "$CMAKE_GENERATOR" \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=YES \
-    -DCMAKE_CXX_COMPILER=g++ \
+    -DCMAKE_C_COMPILER=$C_COMPILER \
+    -DCMAKE_CXX_COMPILER=$CXX_COMPILER \
     -DCMAKE_BUILD_TYPE=Debug \
 	-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
     $CMAKE_LINKING_FLAG \
@@ -182,27 +218,13 @@ ln -sf "$(pwd)/compile_commands.json" ../compile_commands.json
 print_status "success" "Created compile_commands.json symlink"
 echo
 
-# Build with Ninja
-# echo "=============================================="
-# echo "[BUILDER]: Building tests..."
-# time ninja koala_tests
-
-# echo "=============================================="
-# echo "[BUILDER]: Running tests..."
-# ./tests/koala_tests
-# TEST_EXIT_CODE=$?
-# if [ $TEST_EXIT_CODE -ne 0 ]; then
-#     echo "[BUILDER]: Tests failed. Aborting build."
-#     exit 1
-# fi
-
 # Test building and running (BEFORE building the main client)
 if [ "$RUN_TESTS" = true ]; then
     print_status "step" "Building voltrum tests..."
-    echo -e "${BLUE}${ARROW} Target:${NC} voltrum_tests"
+    echo "  Target: voltrum_tests"
     echo
 
-    if time ninja voltrum_tests; then
+    if time $BUILD_CMD voltrum_tests; then
         print_status "success" "Test build completed successfully"
     else
         print_status "error" "Test build failed with exit code $?"
@@ -241,10 +263,10 @@ else
 fi
 
 print_status "step" "Building voltrum client..."
-echo -e "${BLUE}${ARROW} Target:${NC} voltrum_client"
+echo "  Target: voltrum_client"
 echo
 
-if time ninja -j12 voltrum_client; then
+if time $BUILD_CMD $CLIENT_BUILD_ARGS voltrum_client; then
     print_status "success" "Build completed successfully"
 
     echo
@@ -252,7 +274,7 @@ if time ninja -j12 voltrum_client; then
 
     # Show file sizes
     EXECUTABLE_SIZE=$(du -h client/voltrum_client | cut -f1)
-    echo -e "${BLUE}${ARROW} Executable size:${NC} $EXECUTABLE_SIZE"
+    echo "  Executable size: $EXECUTABLE_SIZE"
 
     if [ "$LINKING_MODE" = "STATIC" ]; then
         # Check that no shared libraries are present
@@ -264,22 +286,22 @@ if time ninja -j12 voltrum_client; then
 
         # Show dependency count
         DEPS_COUNT=$(ldd client/voltrum_client 2>/dev/null | wc -l)
-        echo -e "${BLUE}${ARROW} Dynamic dependencies:${NC} $DEPS_COUNT (system libraries only)"
+        echo "  Dynamic dependencies: $DEPS_COUNT (system libraries only)"
 
     else
         # Show shared library sizes
         if [ -f "core/libvoltrum_core.so" ]; then
             CORE_SIZE=$(du -h core/libvoltrum_core.so | cut -f1)
-            echo -e "${BLUE}${ARROW} Core library size:${NC} $CORE_SIZE"
+            echo "  Core library size: $CORE_SIZE"
         fi
 
         if [ -f "external/SDL3/libSDL3.so.0.3.0" ]; then
             SDL_SIZE=$(du -h external/SDL3/libSDL3.so.0.3.0 | cut -f1)
-            echo -e "${BLUE}${ARROW} SDL3 library size:${NC} $SDL_SIZE"
+            echo "  SDL3 library size: $SDL_SIZE"
         fi
 
         DEPS_COUNT=$(ldd client/voltrum_client 2>/dev/null | wc -l)
-        echo -e "${BLUE}${ARROW} Dynamic dependencies:${NC} $DEPS_COUNT (includes project libraries)"
+        echo "  Dynamic dependencies: $DEPS_COUNT (includes project libraries)"
     fi
 
 else
@@ -287,17 +309,6 @@ else
     exit 1
 fi
 echo
-
-# echo "=============================================="
-# echo "[BUILDER]: Compiling shaders..."
-# sh compile-shaders.sh
-
-# Check for errors
-# ERRORLEVEL=$?
-# if [ $ERRORLEVEL -ne 0 ]; then
-#     print_status "error" "Shader compilation failed with exit code $ERRORLEVEL"
-#     exit 1
-# fi
 
 # Record end time and calculate duration
 end_time=$(date +%s%3N)

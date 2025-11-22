@@ -134,6 +134,15 @@ enum class Key_Code : u32 {
     MAX_KEYS = 512
 };
 
+enum class Key_Modifiers : u32 {
+    NONE = 0,
+    SHIFT = 1 << 0,
+    CTRL = 1 << 1,
+    ALT = 1 << 2,
+};
+
+ENABLE_BITMASK(Key_Modifiers);
+
 // Engine mouse button codes
 enum class Mouse_Button : u8 {
     UNKNOWN = 0,
@@ -145,15 +154,6 @@ enum class Mouse_Button : u8 {
 
     MAX_BUTTONS = 8
 };
-
-enum class Key_Modifiers : u32 {
-    NONE = 0,
-    SHIFT = 1 << 0,
-    CTRL = 1 << 1,
-    ALT = 1 << 2,
-};
-
-ENABLE_BITMASK(Key_Modifiers);
 
 // Utility functions to convert between engine codes and platform codes
 u32 key_code_to_platform(Key_Code key);
