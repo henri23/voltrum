@@ -7,22 +7,26 @@
 #include <string.h>
 
 #ifdef PLATFORM_WINDOWS
-#include <io.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+#    include <io.h>
+#    include <sys/stat.h>
+#    include <sys/types.h>
 #else
-#include <sys/stat.h>
+#    include <sys/stat.h>
 #endif
 
-// TODO: 	Refactor this to not use the standart library but instead the native
-// 			filesystems of the platforms
+// TODO: 	Refactor this to not use the standart library but instead the
+// native 			filesystems of the platforms
 b8 filesystem_exists(const char* path) {
+#ifdef PLATFORM_WINDOWS
+    struct _stat buffer;
+    return _stat(path, &buffer);
+#else
     struct stat buffer;
     return stat(path, &buffer) == 0;
+#endif
 }
 
-b8 filesystem_open(
-    const char* path,
+b8 filesystem_open(const char* path,
     File_Modes mode,
     b8 binary,
     File_Handle* out_handle) {
@@ -38,9 +42,7 @@ b8 filesystem_open(
     } else if (mode == File_Modes::WRITE) {
         mode_str = binary ? "wb" : "w";
     } else {
-        CORE_ERROR(
-            "Invalid mode passed while trying to open file: '%s'",
-            path);
+        CORE_ERROR("Invalid mode passed while trying to open file: '%s'", path);
 
         return false;
     }
@@ -68,28 +70,20 @@ void filesystem_close(File_Handle* handle) {
 
 // line_buf char array will be allocated inside the method. No need for external
 // memory management
-b8 filesystem_read_line(
-    File_Handle* handle,
-    char** line_buf) {
+b8 filesystem_read_line(File_Handle* handle,
+    u64 max_length,
+    char** line_buf,
+    u64* out_line_length) {
 
-    if (handle->handle) {
-        char buffer[32000];
+    if (handle->handle && line_buf && out_line_length && max_length > 0) {
+        char* buffer = *line_buf;
         // fgets stops reading when it encounters a /n, EOF or has read num - 1
-        // where in this case num = 32000
+        // where in this case num = max_length
         // fgets returns the same pointer that is passed to it as the first arg
         // in case of success and it returns NULL when it encounters an error or
         // EOF
-        if (fgets(buffer, 32000, (FILE*)handle->handle) != nullptr) {
-            u64 length = strlen(buffer);
-
-            *line_buf = static_cast<char*>(
-                memory_allocate(
-                    (sizeof(char) * length) + 1,
-                    Memory_Tag::STRING));
-
-            // Allocate a copy of the string in the heap so that we can return
-            // it as a result
-            strcpy(*line_buf, buffer);
+        if (fgets(buffer, max_length, (FILE*)handle->handle) != nullptr) {
+            *out_line_length = strlen(*line_buf);
             return true;
         }
     }
@@ -97,9 +91,7 @@ b8 filesystem_read_line(
     return false;
 }
 
-b8 filesystem_write_line(
-    File_Handle* handle,
-    const char* text) {
+b8 filesystem_write_line(File_Handle* handle, const char* text) {
 
     if (handle->handle) {
         s32 result = fputs(text, static_cast<FILE*>(handle->handle));
@@ -120,18 +112,14 @@ b8 filesystem_write_line(
 // Read certain number of bytes from a file
 // out_data is the pointer to a block of memory of the data read from the file
 // out_bytes_read is a pointer to the number of bytes read by this method
-b8 filesystem_read(
-    File_Handle* handle,
+b8 filesystem_read(File_Handle* handle,
     u64 data_size,
     void* out_data,
     u64* out_bytes_read) {
 
     if (handle->handle && out_data) {
-        *out_bytes_read = fread(
-            out_data,
-            1,
-            data_size,
-            static_cast<FILE*>(handle->handle));
+        *out_bytes_read =
+            fread(out_data, 1, data_size, static_cast<FILE*>(handle->handle));
 
         if (*out_bytes_read != data_size) {
             return false;
@@ -146,8 +134,7 @@ b8 filesystem_read(
 // The out_bytes will be pointer to a byte array allocated and populated by this
 // function
 // out_bytes_read is a pointer to the number of bytes read from the file
-b8 filesystem_read_all_bytes(
-    File_Handle* handle,
+b8 filesystem_read_all_bytes(File_Handle* handle,
     u8** out_bytes,
     u64* out_bytes_read) {
 
@@ -165,16 +152,11 @@ b8 filesystem_read_all_bytes(
         // Rewind resset the pointer to the beginning
         rewind(static_cast<FILE*>(handle->handle));
 
-        *out_bytes = static_cast<u8*>(
-            memory_allocate(
-                size,
-                Memory_Tag::STRING));
+        *out_bytes =
+            static_cast<u8*>(memory_allocate(size, Memory_Tag::STRING));
 
-        *out_bytes_read = fread(
-            *out_bytes,
-            1,
-            size,
-            static_cast<FILE*>(handle->handle));
+        *out_bytes_read =
+            fread(*out_bytes, 1, size, static_cast<FILE*>(handle->handle));
 
         if (*out_bytes_read != size)
             return false;
@@ -185,18 +167,14 @@ b8 filesystem_read_all_bytes(
     return false;
 }
 
-b8 filesystem_write(
-    File_Handle* handle,
+b8 filesystem_write(File_Handle* handle,
     u64 data_size,
     const void* data,
     u64* out_bytes_written) {
 
     if (handle->handle) {
-        *out_bytes_written = fwrite(
-            data,
-            1,
-            data_size,
-            static_cast<FILE*>(handle->handle));
+        *out_bytes_written =
+            fwrite(data, 1, data_size, static_cast<FILE*>(handle->handle));
 
         if (*out_bytes_written != data_size) {
             return false;
@@ -206,4 +184,3 @@ b8 filesystem_write(
     }
     return false;
 }
-

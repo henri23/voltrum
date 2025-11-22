@@ -113,7 +113,7 @@ template <typename T> struct Hashmap {
 
         Hashmap_Item<T> current_item = {};
         current_item.value = *value;
-        string_copy(current_item.key, key, 50);
+        string_copy(current_item.key, key);
         current_item.distance = 0;
         // Mark already as occupied because if we will use this element, we are
         // adding willingly the element inside the hash map
@@ -336,17 +336,17 @@ template <typename T> struct Hashmap {
     FORCE_INLINE void swap(Hashmap_Item<T>* item1, Hashmap_Item<T>* item2) {
         T temp_value = item1->value;
         char temp_key[50];
-        string_copy(temp_key, item1->key, 50);
+        string_copy(temp_key, item1->key);
         u32 temp_distance = item1->distance;
         b8 temp_is_occupied = item1->is_occupied;
 
         item1->value = item2->value;
-        string_copy(item1->key, item2->key, 50);
+        string_copy(item1->key, item2->key);
         item1->distance = item2->distance;
         item1->is_occupied = item2->is_occupied;
 
         item2->value = temp_value;
-        string_copy(item2->key, temp_key, 50);
+        string_copy(item2->key, temp_key);
         item2->distance = temp_distance;
         item2->is_occupied = temp_is_occupied;
     }

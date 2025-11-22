@@ -38,9 +38,9 @@ INTERNAL_FUNC b8 event_on_debug_event(const Event* event) {
     choice++;
     choice %= 3;
 
-    state.test_diffuse = texture_system_acquire(names[choice], false);
+    state.test_diffuse = texture_system_acquire(names[choice], true);
 
-    texture_system_release(names[old_choice]);
+    // texture_system_release(names[old_choice]);
 
     return true;
 }

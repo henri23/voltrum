@@ -36,6 +36,8 @@ INTERNAL_FUNC void create_texture(Texture* texture) {
     texture->generation = INVALID_ID;
 }
 
+INTERNAL_FUNC void destroy_texture(Texture* texture);
+
 INTERNAL_FUNC b8 load_texture(const char* texture_name, Texture* texture) {
     const char* format_str = "assets/textures/%s.%s";
     const s32 required_channel_count = 4; // RGBA
@@ -88,6 +90,9 @@ INTERNAL_FUNC b8 load_texture(const char* texture_name, Texture* texture) {
                 "'%s' : %s",
                 full_file_path,
                 stbi_failure_reason());
+
+            stbi__err(0, 0);
+            return false;
         }
 
         renderer_create_texture(texture_name,
@@ -119,6 +124,9 @@ INTERNAL_FUNC b8 load_texture(const char* texture_name, Texture* texture) {
                 "'%s' : %s",
                 full_file_path,
                 stbi_failure_reason());
+
+            stbi__err(0, 0);
+            return false;
         }
         return false;
     }
@@ -327,4 +335,13 @@ Texture* texture_system_get_default_texture() { return &state.default_texture; }
 
 INTERNAL_FUNC void destroy_default_textures(Texture_System_State* state) {
     renderer_destroy_texture(&state->default_texture);
+}
+
+INTERNAL_FUNC void destroy_texture(Texture* texture) {
+    renderer_destroy_texture(texture);
+
+    memory_zero(texture->name, sizeof(char) * TEXTURE_NAME_LENGTH);
+    memory_zero(texture, sizeof(Texture));
+    texture->id = INVALID_ID;
+    texture->generation = INVALID_ID;
 }

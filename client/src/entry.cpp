@@ -129,7 +129,7 @@ b8 client_update(Client* client_state, f32 delta_time) {
     // WARN: Temp code for testing texture loading
     if (input_is_key_pressed(Key_Code::T) &&
         input_was_key_pressed(Key_Code::T)) {
-        CLIENT_DEBUG("Swapping texture!");
+        // CLIENT_DEBUG("Swapping texture!");
         Event context = {};
         context.type = Event_Type::DEBUG0;
         events_dispatch(&context);
