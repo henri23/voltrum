@@ -2,7 +2,7 @@
 
 #include "core/asserts.hpp"
 #include "core/logger.hpp"
-#include "core/string.hpp"
+#include "utils/string.hpp"
 #include "defines.hpp"
 #include "math/math.hpp"
 #include "memory/memory.hpp"

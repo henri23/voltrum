@@ -4,7 +4,7 @@
 #include "input/input_codes.hpp"
 
 // Engine event types - platform agnostic
-enum class Event_Type {
+enum class Event_Type : u32 {
     NONE = 0,
 
     // Keyboard events
@@ -37,11 +37,13 @@ enum class Event_Type {
 struct Key_Event {
     Key_Code key_code;
     b8 repeat;
+    Key_Modifiers modifiers;
 };
 
 struct Mouse_Button_Event {
     Mouse_Button button;
     s32 x, y;
+    Key_Modifiers modifiers;
 };
 
 struct Mouse_Move_Event {
@@ -72,7 +74,7 @@ struct Event {
 };
 
 // Event callback type for consumers
-typedef b8 (*PFN_event_callback)(const Event* event);
+using PFN_event_callback = b8 (*)(const Event*);
 
 // Event callback priority levels (lower numbers = higher priority)
 enum class Event_Priority {

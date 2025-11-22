@@ -37,6 +37,6 @@ VOLTRUM_API void* memory_move(void* destination, const void* source, u64 size);
 
 VOLTRUM_API void* memory_set(void* block, s32 value, u64 size);
 
-VOLTRUM_API char* memory_get_current_usage();
+VOLTRUM_API void memory_get_current_usage(char* out_buf);
 
 VOLTRUM_API u64 memory_get_allocations_count();

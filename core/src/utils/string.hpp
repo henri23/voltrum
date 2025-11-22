@@ -1,9 +1,9 @@
 #pragma once
 
 #include "defines.hpp"
-#include <stdarg.h>
-
 #include "math/math_types.hpp"
+
+#include <stdarg.h>
 
 VOLTRUM_API b8 string_check_equal(const char* str1, const char* str2);
 

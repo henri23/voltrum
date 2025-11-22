@@ -3,7 +3,7 @@
 #include "test_manager.hpp"
 
 #include <core/logger.hpp>
-#include <core/string.hpp>
+#include <utils/string.hpp>
 #include <defines.hpp>
 #include <math/math_types.hpp>
 #include <memory/memory.hpp>

@@ -137,14 +137,24 @@ b8 application_init(Client* client_state) {
         app_on_resized_callback,
         Event_Priority::HIGH);
 
+    // Register test callbacks for key and mouse modifiers
+    events_register_callback(Event_Type::KEY_PRESSED,
+        app_key_pressed_test_callback,
+        Event_Priority::LOW);
+
+    events_register_callback(Event_Type::MOUSE_BUTTON_PRESSED,
+        app_mouse_button_pressed_test_callback,
+        Event_Priority::LOW);
+
     internal_state->is_running = false;
     internal_state->is_suspended = false;
 
     CORE_INFO("All subsystems initialized correctly.");
 
-    CORE_DEBUG(
-        memory_get_current_usage()); // WARN: Memory leak because the heap
-                                     // allocated string must be deallocated
+    char memory_usage_str[5000];
+    memory_get_current_usage(memory_usage_str);
+
+    CORE_DEBUG(memory_usage_str);
 
     return true;
 }

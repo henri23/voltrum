@@ -1,9 +1,10 @@
 #pragma once
 
 #include "math/math_types.hpp"
+#include "utils/enum.hpp"
 
 using Texture_ID = u32;
-constexpr const u32 TEXTURE_NAME_LENGTH = 256;
+constexpr u32 TEXTURE_NAME_LENGTH = 256;
 
 // Interface
 struct Texture {
@@ -16,3 +17,12 @@ struct Texture {
     char name[TEXTURE_NAME_LENGTH];
     void* internal_data; // Graphics API specific data
 };
+
+// Bitmask
+enum class Texture_Type {
+    UNKNOWN = 0x00,
+    MAP_DIFFUSE = 1 << 0,
+    // MAP_DIFFUSE = 1 << 1,
+};
+
+ENABLE_BITMASK(Texture_Type); // Enable c++ enum to be used as bitmask

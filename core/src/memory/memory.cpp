@@ -6,6 +6,7 @@
 #include "core/logger.hpp"
 #include "defines.hpp"
 #include "platform/platform.hpp"
+#include "utils/string.hpp"
 
 struct Memory_Stats {
     u64 total_allocated;
@@ -115,7 +116,7 @@ void* memory_set(void* block, s32 value, u64 size) {
     return platform_set_memory(block, value, size);
 }
 
-char* memory_get_current_usage() {
+void memory_get_current_usage(char* out_buf) {
     char utilization_buffer[5000] = "Summary of allocated memory (tagged):\n";
 
     u64 offset = strlen(
@@ -159,11 +160,8 @@ char* memory_get_current_usage() {
     // out of scope after we return and the value will be jibrish We need one
     // more byte for the null terminator character as the strlen disregards it
     u64 length = strlen(utilization_buffer);
-    char* copy =
-        static_cast<char*>(memory_allocate(length + 1, Memory_Tag::STRING));
-    memory_copy(copy, utilization_buffer, length + 1);
 
-    return copy;
+    string_copy(out_buf, utilization_buffer);
 }
 
 u64 memory_get_allocations_count() { return state.allocations_count; }

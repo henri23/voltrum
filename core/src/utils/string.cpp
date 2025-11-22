@@ -1,4 +1,4 @@
-#include "core/string.hpp"
+#include "utils/string.hpp"
 #include "memory/memory.hpp"
 
 #include <ctype.h>

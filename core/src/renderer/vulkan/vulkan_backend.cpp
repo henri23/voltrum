@@ -22,7 +22,7 @@
 #include "shaders/vulkan_material_shader.hpp"
 #include "vulkan_viewport.hpp"
 
-#include "core/string.hpp"
+#include "utils/string.hpp"
 #include "math/math_types.hpp"
 
 internal_variable Vulkan_Context context;

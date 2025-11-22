@@ -1,6 +1,6 @@
 #include "events.hpp"
-#include "data_structures/auto_array.hpp"
 #include "core/logger.hpp"
+#include "data_structures/auto_array.hpp"
 #include "memory/memory.hpp"
 
 // Internal event state with multiple subscribers per event type

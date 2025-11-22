@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defines.hpp"
+#include "utils/enum.hpp"
 
 // Engine keyboard key codes - based on USB HID standard (same as SDL3)
 enum class Key_Code : u32 {
@@ -117,18 +118,18 @@ enum class Key_Code : u32 {
     LCTRL = 224,
     LSHIFT = 225,
     LALT = 226,
-    LGUI = 227,    // Left Windows/Cmd key
+    LGUI = 227, // Left Windows/Cmd key
     RCTRL = 228,
     RSHIFT = 229,
     RALT = 230,
-    RGUI = 231,    // Right Windows/Cmd key
+    RGUI = 231, // Right Windows/Cmd key
 
     // Common shortcuts for EDA tools
-    CTRL = LCTRL,  // Alias for easier use
+    CTRL = LCTRL, // Alias for easier use
     SHIFT = LSHIFT,
     ALT = LALT,
-    CMD = LGUI,    // macOS Command key
-    SUPER = LGUI,  // Linux Super key
+    CMD = LGUI,   // macOS Command key
+    SUPER = LGUI, // Linux Super key
 
     MAX_KEYS = 512
 };
@@ -139,11 +140,20 @@ enum class Mouse_Button : u8 {
     LEFT = 1,
     MIDDLE = 2,
     RIGHT = 3,
-    X1 = 4,       // Extra button 1 (back)
-    X2 = 5,       // Extra button 2 (forward)
+    X1 = 4, // Extra button 1 (back)
+    X2 = 5, // Extra button 2 (forward)
 
     MAX_BUTTONS = 8
 };
+
+enum class Key_Modifiers : u32 {
+    NONE = 0,
+    SHIFT = 1 << 0,
+    CTRL = 1 << 1,
+    ALT = 1 << 2,
+};
+
+ENABLE_BITMASK(Key_Modifiers);
 
 // Utility functions to convert between engine codes and platform codes
 u32 key_code_to_platform(Key_Code key);

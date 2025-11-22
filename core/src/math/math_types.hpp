@@ -61,7 +61,8 @@ struct vec4 {
     };
 };
 
-typedef vec4 quaternion;
+// typedef vec4 quaternion;
+using quaternion = vec4;
 
 struct mat4 {
     alignas(16) f32 elements[16];

@@ -1,23 +1,23 @@
 #pragma once
 
-typedef unsigned char u8;
-typedef unsigned short u16;
-typedef unsigned int u32;
-typedef unsigned long long u64;
+using u8 = unsigned char;
+using u16 = unsigned short;
+using u32 = unsigned int;
+using u64 = unsigned long long;
 
-typedef signed char s8;
-typedef signed short s16;
-typedef signed int s32;
-typedef signed long long s64;
+using s8 = signed char;
+using s16 = signed short;
+using s32 = signed int;
+using s64 = signed long long;
 
-typedef float f32;
-typedef double f64;
+using f32 = float;
+using f64 = double;
 
-typedef int b32;
-typedef bool b8;
+using b32 = int;
+using b8 = bool;
 
 constexpr u32 INVALID_ID = -1;
-typedef u32 Object_ID;
+using Object_ID = u32;
 
 // Properly define static assertions
 #if defined(__clang__) || defined(__gcc__)

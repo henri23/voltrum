@@ -2,7 +2,7 @@
 #include <data_structures/auto_array.hpp>
 #include <core/absolute_clock.hpp>
 #include <core/logger.hpp>
-#include <core/string.hpp>
+#include <utils/string.hpp>
 
 struct Test_Entry {
     PFN_test func;
@@ -49,33 +49,42 @@ void test_manager_run_tests() {
     absolute_clock_start(&total_time);
 
     for (u32 i = 0; i < count; ++i) {
-        CORE_INFO("Running: %s", tests[i].desc);
+        CORE_INFO("[RUNNING] %s", tests[i].desc);
 
+        Absolute_Clock test_time;
+        absolute_clock_start(&test_time);
         u8 result = tests[i].func();
+        absolute_clock_update(&test_time);
+
+        f64 elapsed_us = test_time.elapsed_time * 1000000.0;
 
         if (result == true) {
             ++passed;
-            CORE_INFO("[PASSED]: %s", tests[i].desc);
+            CORE_INFO("[PASSED] %s (%.2f μs)", tests[i].desc, elapsed_us);
         } else if (result == BYPASS) {
-            CORE_WARN("[SKIPPED]: %s", tests[i].desc);
+            CORE_WARN("[SKIPPED] %s (%.2f μs)", tests[i].desc, elapsed_us);
             ++skipped;
         } else {
-            CORE_WARN("[FAILED]: %s", tests[i].desc);
+            CORE_WARN("[FAILED] %s (%.2f μs)", tests[i].desc, elapsed_us);
             ++failed;
         }
 
         CORE_INFO("");
     }
 
+    absolute_clock_update(&total_time);
+
+    f64 total_ms = total_time.elapsed_time * 1000.0;
+
     absolute_clock_stop(&total_time);
 
     CORE_INFO("");
     CORE_INFO(
-        "Module Summary: %d passed, %d failed, %d skipped (%.6f sec)",
+        "[SUMMARY] %d passed, %d failed, %d skipped (%.2f ms)",
         passed,
         failed,
         skipped,
-        total_time.elapsed_time
+        total_ms
     );
     CORE_INFO("");
 }
