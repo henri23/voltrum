@@ -171,12 +171,12 @@ struct Vulkan_Pipeline {
     VkPipelineLayout pipeline_layout;
 };
 
-constexpr const u32 OBJECT_SHADER_STAGE_COUNT = 2;
-
-constexpr const u32 VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT = 2;
+constexpr const u32 VULKAN_MATERIAL_SHADER_STAGE_COUNT = 2;
+constexpr const u32 VULKAN_MATERIAL_SHADER_DESCRIPTOR_COUNT = 2;
+constexpr const u32 VULKAN_MATERIAL_SHADER_SAMPLER_COUNT = 1;
 
 // NOTE: Max number of object. Will likelly change later
-constexpr const u32 VULKAN_OBJECT_MAX_OBJECT_COUNT = 1024;
+constexpr const u32 VULKAN_MATERIAL_MAX_OBJECT_COUNT = 1024;
 
 // TODO: I am assuming there will be for sure 3 swapchain images available
 struct Vulkan_Descriptor_State {
@@ -185,17 +185,17 @@ struct Vulkan_Descriptor_State {
     u32 ids[3];
 };
 
-struct Vulkan_Object_Shader_Object_State {
+struct Vulkan_Material_Shader_Object_State {
     // One descriptor set per vulkan image per object
     VkDescriptorSet descriptor_sets[3];
 
     Vulkan_Descriptor_State
-        descriptor_states[VULKAN_OBJECT_SHADER_DESCRIPTOR_COUNT];
+        descriptor_states[VULKAN_MATERIAL_SHADER_DESCRIPTOR_COUNT];
 };
 
 struct Vulkan_Material_Shader {
     // The shader stage count is for vertex and fragment shaders
-    Vulkan_Shader_Stage stages[OBJECT_SHADER_STAGE_COUNT];
+    Vulkan_Shader_Stage stages[VULKAN_MATERIAL_SHADER_STAGE_COUNT];
 
     Vulkan_Pipeline pipeline;
 
@@ -208,13 +208,18 @@ struct Vulkan_Material_Shader {
 
     VkDescriptorPool object_descriptor_pool;
     VkDescriptorSetLayout object_descriptor_set_layout;
+
     // Allocate one large buffer to handle all objects
     Vulkan_Buffer object_uniform_buffer;
+
     // TODO: Manage a free list here
     u32 object_uniform_buffer_index;
+
+    Texture_Type sampler_uses[VULKAN_MATERIAL_SHADER_SAMPLER_COUNT];
+
     // TODO: Make dynamic
-    Vulkan_Object_Shader_Object_State
-        object_states[VULKAN_OBJECT_MAX_OBJECT_COUNT];
+    Vulkan_Material_Shader_Object_State
+        object_states[VULKAN_MATERIAL_MAX_OBJECT_COUNT];
 
     Global_Uniform_Object global_ubo;
 };

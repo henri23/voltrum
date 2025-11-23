@@ -9,6 +9,7 @@
 #include "memory/memory.hpp"
 #include "platform/platform.hpp"
 #include "renderer/renderer_frontend.hpp"
+#include "systems/material_system.hpp"
 #include "systems/texture_system.hpp"
 #include "ui/ui.hpp"
 
@@ -115,6 +116,12 @@ b8 application_init(Client* client_state) {
     Texture_System_Config config = {16384};
     if (!texture_system_init(config)) {
         CORE_FATAL("Failed to initialize texture system");
+        return false;
+    }
+
+    Material_System_Config material_config = {4096};
+    if (!material_system_init(material_config)) {
+        CORE_FATAL("Failed to initialize material system");
         return false;
     }
 
@@ -250,6 +257,9 @@ void application_shutdown() {
 
     CORE_DEBUG("Shutting down UI subsystem...");
     ui_shutdown();
+
+    CORE_DEBUG("Shutting down material subsystem...");
+    material_system_shutdown();
 
     CORE_DEBUG("Shutting down texture subsystem...");
     texture_system_shutdown();

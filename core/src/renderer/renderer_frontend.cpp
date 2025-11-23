@@ -9,7 +9,9 @@
 #include "renderer/renderer_types.hpp"
 
 #include "events/events.hpp"
+#include "systems/material_system.hpp"
 #include "systems/texture_system.hpp"
+#include "utils/string.hpp"
 
 // Renderer frontend will manage the backend interface state
 struct Renderer_System_State {
@@ -23,7 +25,7 @@ struct Renderer_System_State {
     f32 far_clip = 1000.0f;
 
     // WARN: Temp
-    Texture* test_diffuse; // The actual texture to load to an object
+    Material* test_material; // The actual texture to load to an object
 };
 
 internal_variable Renderer_System_State state;
@@ -32,15 +34,20 @@ internal_variable Renderer_System_State state;
 INTERNAL_FUNC b8 event_on_debug_event(const Event* event) {
     const char* names[3] = {"metal", "space_parallax", "yellow_track"};
 
-    local_persist s8 choice = 2;
+    local_persist s8 choice = 0;
 
     s8 old_choice = choice;
     choice++;
     choice %= 3;
 
-    state.test_diffuse = texture_system_acquire(names[choice], true);
+    state.test_material->diffuse_map.texture =
+        texture_system_acquire(names[choice], false);
 
-    // texture_system_release(names[old_choice]);
+    if (!state.test_material->diffuse_map.texture) {
+        CORE_WARN("event_on_debug_event no texture!! using default");
+    }
+
+    texture_system_release(names[old_choice]);
 
     return true;
 }
@@ -63,6 +70,8 @@ b8 renderer_startup(const char* application_name) {
         1280 / 720.0f,
         state.near_clip,
         state.far_clip);
+
+    state.test_material = nullptr;
 
     CORE_DEBUG("Renderer subsystem initialized");
     return true;
@@ -117,15 +126,33 @@ b8 renderer_draw_frame(Render_Packet* packet) {
         mat4 model = quat_to_rotation_matrix(rotation, vec3_zero());
 
         Geometry_Render_Data data;
-        data.object_id = 0; // Change to the actual ID of the object
         data.model = model;
 
-        if (state.test_diffuse == nullptr) {
-            state.test_diffuse = texture_system_get_default_texture();
+        if (!state.test_material) {
+            state.test_material = material_system_acquire("test_material");
+
+            if (!state.test_material) {
+                CORE_WARN(
+                    "Automatic material load failed, falling back to manual "
+                    "default material.");
+
+                Material_Config config;
+                string_ncopy(config.name,
+                    "test_material",
+                    MATERIAL_NAME_MAX_LENGTH);
+                config.auto_release = false;
+                config.diffuse_color = vec4_one();
+
+                string_ncopy(config.diffuse_map_name,
+                    DEFAULT_TEXTURE_NAME,
+                    TEXTURE_NAME_MAX_LENGTH);
+
+                state.test_material =
+                    material_system_acquire_from_config(config);
+            }
         }
 
-        data.textures[0] = state.test_diffuse;
-
+        data.material = state.test_material;
         state.backend.update_object(data);
 
         b8 result = renderer_end_frame(packet->delta_time);
@@ -159,23 +186,19 @@ void renderer_destroy_ui_image(UI_Image_Resource* resource) {
 
 void renderer_set_view(mat4 view) { state.view = view; }
 
-void renderer_create_texture(const char* name,
-    s32 width,
-    s32 height,
-    s32 channel_count,
-    const u8* pixels,
-    b8 has_transparency,
-    struct Texture* out_texture) {
+void renderer_create_texture(const u8* pixels, struct Texture* texture) {
 
-    state.backend.create_texture(name,
-        width,
-        height,
-        channel_count,
-        pixels,
-        has_transparency,
-        out_texture);
+    state.backend.create_texture(pixels, texture);
 }
 
 void renderer_destroy_texture(struct Texture* texture) {
     state.backend.destroy_texture(texture);
+}
+
+b8 renderer_create_material(struct Material* material) {
+    return state.backend.create_material(material);
+}
+
+void renderer_destroy_material(struct Material* material) {
+    return state.backend.destroy_material(material);
 }

@@ -26,20 +26,25 @@ b8 filesystem_exists(const char* path) {
 #endif
 }
 
-b8 filesystem_open(const char* path,
+b8 filesystem_open(
+    const char* path,
     File_Modes mode,
     b8 binary,
-    File_Handle* out_handle) {
+    File_Handle* out_handle
+) {
 
     out_handle->is_valid = false;
     out_handle->handle = nullptr;
     const char* mode_str;
 
-    if (mode == File_Modes::READ_WRITE) {
+    b8 read_mode = static_cast<u8>(mode & File_Modes::READ) != 0;
+    b8 write_mode = static_cast<u8>(mode & File_Modes::WRITE) != 0;
+
+    if (read_mode && write_mode) {
         mode_str = binary ? "w+b" : "w+";
-    } else if (mode == File_Modes::READ) {
+    } else if (read_mode) {
         mode_str = binary ? "rb" : "r";
-    } else if (mode == File_Modes::WRITE) {
+    } else if (write_mode) {
         mode_str = binary ? "wb" : "w";
     } else {
         CORE_ERROR("Invalid mode passed while trying to open file: '%s'", path);

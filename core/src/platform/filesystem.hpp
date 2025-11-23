@@ -1,15 +1,19 @@
 #pragma once
 
 #include "defines.hpp"
+#include "utils/enum.hpp"
 
 struct File_Handle {
     void* handle; // Handle to file can be different depending on the platform
     b8 is_valid;  // Used to check externally whether the file handle is valid
 };
 
-// Use c-style enum as oposed to enum classes to use a bit map for the case of
-// read-write requests of handles
-enum class File_Modes { READ, WRITE, READ_WRITE };
+enum class File_Modes : u8 {
+    READ = 1 << 0,
+    WRITE = 1 << 1
+};
+
+ENABLE_BITMASK(File_Modes)
 
 VOLTRUM_API b8 filesystem_exists(const char* path);
 

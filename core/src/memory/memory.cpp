@@ -29,7 +29,7 @@ internal_variable Memory_System_State state = {};
 internal_variable const char* memory_tag_strings[(u64)Memory_Tag::MAX_ENTRIES] =
     {"UNKNOWN  	:",
         "DARRAY   	:",
-        "HASHMAP	:",
+        "HASHMAP		:",
         "LINEAR_ALLOC	:",
         "EVENTS   	:",
         "STRING   	:",
@@ -37,6 +37,7 @@ internal_variable const char* memory_tag_strings[(u64)Memory_Tag::MAX_ENTRIES] =
         "INPUT 		:",
         "RENDERER 	:",
         "TEXTURE 	:",
+        "MATERIAL 	:",
         "APPLICATION	:",
         "UI		:",
         "LAYERS		:"};

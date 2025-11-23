@@ -21,8 +21,8 @@ void vulkan_material_shader_update_object(Vulkan_Context* context,
 
 b8 vulkan_material_shader_acquire_resource(Vulkan_Context* context,
     Vulkan_Material_Shader* shader,
-    Object_ID* out_object_id);
+    Material* material);
 
 void vulkan_material_shader_release_resource(Vulkan_Context* context,
     Vulkan_Material_Shader* shader,
-    Object_ID object_id);
+    Material* material);

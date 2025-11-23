@@ -13,6 +13,7 @@ enum class Memory_Tag {
     INPUT,
     RENDERER,
     TEXTURE,
+    MATERIAL,
     APPLICATION,
     UI,
     LAYERS,

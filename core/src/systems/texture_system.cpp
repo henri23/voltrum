@@ -95,13 +95,11 @@ INTERNAL_FUNC b8 load_texture(const char* texture_name, Texture* texture) {
             return false;
         }
 
-        renderer_create_texture(texture_name,
-            temp_texture.width,
-            temp_texture.height,
-            temp_texture.channel_count,
-            data,
-            has_transparency,
-            &temp_texture);
+        string_ncopy(temp_texture.name, texture_name, TEXTURE_NAME_MAX_LENGTH);
+        temp_texture.generation = INVALID_ID;
+        temp_texture.has_transparency = has_transparency;
+
+        renderer_create_texture(data, &temp_texture);
 
         // Copy old texture
         Texture old_texture = *texture;
@@ -160,12 +158,17 @@ void texture_system_shutdown() {
 
     u32 max_count = state.config.max_texture_count;
 
+    CORE_INFO("Destroying registered textures...");
     // Destroy all internal renderer-specific resources for texture that are
     // still valid in the registry
     for (u64 i = 0; i < max_count; ++i) {
         Texture* texture = &state.registered_textures[i];
+
         if (texture->id != INVALID_ID) {
+            char name[TEXTURE_NAME_MAX_LENGTH];
+            string_copy(name, texture->name);
             renderer_destroy_texture(texture);
+            CORE_INFO("Texture '%s' destroyed.", name);
         }
     }
 
@@ -260,17 +263,26 @@ void texture_system_release(const char* name) {
     if (state.texture_registry.find(name, &ref)) {
         ref.reference_count--;
 
+        char name_copy[TEXTURE_NAME_MAX_LENGTH];
+        // Since we are going to destroy the texture (including its name)
+        // but we still need the name to clean the registry, we make a copy
+        // of the name, so that the external modules and directly use the
+        // texture name to release it, so texture->name as input will still
+        // work
+        string_copy(name_copy, name);
+
         if (ref.reference_count == 0 && ref.auto_release) {
+
             CORE_INFO(
                 "texture_system_release - Texture '%s' has 0 remaining "
                 "references and is marked as 'auto_release'. Releasing from "
                 "registry...",
-                name);
+                name_copy);
 
             destroy_texture(&state.registered_textures[ref.handle]);
             CORE_DEBUG("Resources of texture destroyed from renderer");
 
-            if (!state.texture_registry.remove(name)) {
+            if (!state.texture_registry.remove(name_copy)) {
                 CORE_FATAL("Error while removing texture from registry");
             }
 
@@ -278,7 +290,7 @@ void texture_system_release(const char* name) {
         }
 
         // Update texture reference with the new reference count
-        state.texture_registry.add(name, &ref, true);
+        state.texture_registry.add(name_copy, &ref, true);
 
     } else {
         CORE_DEBUG("Texture '%s' not present in the registry. Skipping...",
@@ -316,13 +328,17 @@ INTERNAL_FUNC b8 create_default_textures(Texture_System_State* state) {
         }
     }
 
-    renderer_create_texture("default",
-        tex_dimension,
-        tex_dimension,
-        4,
-        pixels,
-        false,
-        &state->default_texture);
+    string_ncopy(state->default_texture.name,
+        DEFAULT_TEXTURE_NAME,
+        TEXTURE_NAME_MAX_LENGTH);
+
+    state->default_texture.width = tex_dimension;
+    state->default_texture.height = tex_dimension;
+    state->default_texture.channel_count = 4;
+    state->default_texture.generation = INVALID_ID;
+    state->default_texture.has_transparency = false;
+
+    renderer_create_texture(pixels, &state->default_texture);
 
     // Manually set the texture generation to invalid since this is the default
     // texture
@@ -334,13 +350,13 @@ INTERNAL_FUNC b8 create_default_textures(Texture_System_State* state) {
 Texture* texture_system_get_default_texture() { return &state.default_texture; }
 
 INTERNAL_FUNC void destroy_default_textures(Texture_System_State* state) {
-    renderer_destroy_texture(&state->default_texture);
+    destroy_texture(&state->default_texture);
 }
 
 INTERNAL_FUNC void destroy_texture(Texture* texture) {
     renderer_destroy_texture(texture);
 
-    memory_zero(texture->name, sizeof(char) * TEXTURE_NAME_LENGTH);
+    memory_zero(texture->name, sizeof(char) * TEXTURE_NAME_MAX_LENGTH);
     memory_zero(texture, sizeof(Texture));
     texture->id = INVALID_ID;
     texture->generation = INVALID_ID;

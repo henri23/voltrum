@@ -17,7 +17,7 @@ struct Global_Uniform_Object {
 };
 
 // Local_Uniform_Object gets uploaded one per object per frame
-struct Local_Uniform_Object {
+struct Material_Uniform_Object {
     vec4 diffuse_color;
     vec4 padding_0;
     vec4 padding_1;
@@ -25,9 +25,8 @@ struct Local_Uniform_Object {
 };
 
 struct Geometry_Render_Data {
-    Object_ID object_id;
     mat4 model;
-    Texture* textures[16];
+    Material* material;
 };
 
 // Renderer_backend is the interface of the renderer classes
@@ -52,15 +51,13 @@ struct Renderer_Backend {
 
     void (*update_object)(Geometry_Render_Data data);
 
-    void (*create_texture)(const char* name,
-        s32 width,
-        s32 height,
-        s32 channel_count,
-        const u8* pixels,
-        b8 has_transparency,
-        struct Texture* out_texture);
+    void (*create_texture)(const u8* pixels, struct Texture* texture);
 
     void (*destroy_texture)(struct Texture* texture);
+
+    b8 (*create_material)(struct Material* material);
+
+    void (*destroy_material)(struct Material* material);
 
     // UI Image Management
     b8 (*create_ui_image)(Renderer_Backend* backend,

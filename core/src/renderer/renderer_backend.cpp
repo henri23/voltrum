@@ -26,6 +26,9 @@ b8 renderer_backend_initialize(Renderer_Backend_Type type,
         out_backend->create_texture = vulkan_create_texture;
         out_backend->destroy_texture = vulkan_destroy_texture;
 
+        out_backend->create_material = vulkan_create_material;
+        out_backend->destroy_material = vulkan_destroy_material;
+
         return true;
     }
     case Renderer_Backend_Type::OPENGL:
@@ -46,4 +49,10 @@ void renderer_backend_shutdown(Renderer_Backend* backend) {
     backend->create_ui_image = nullptr;
     backend->destroy_ui_image = nullptr;
     backend->update_object = nullptr;
+
+    backend->create_texture = nullptr;
+    backend->destroy_texture = nullptr;
+
+    backend->create_material = nullptr;
+    backend->destroy_material = nullptr;
 }

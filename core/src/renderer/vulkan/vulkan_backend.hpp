@@ -43,12 +43,10 @@ b8 vulkan_create_ui_image(Renderer_Backend* backend,
 void vulkan_destroy_ui_image(Renderer_Backend* backend,
     UI_Image_Resource* resource);
 
-void vulkan_create_texture(const char* name,
-    s32 width,
-    s32 height,
-    s32 channel_count,
-    const u8* pixels,
-    b8 has_transparency,
-    Texture* out_texture);
+void vulkan_create_texture(const u8* pixels, Texture* texture);
 
 void vulkan_destroy_texture(Texture* texture);
+
+b8 vulkan_create_material(struct Material* material);
+
+void vulkan_destroy_material(struct Material* material);

@@ -22,8 +22,8 @@
 #include "shaders/vulkan_material_shader.hpp"
 #include "vulkan_viewport.hpp"
 
-#include "utils/string.hpp"
 #include "math/math_types.hpp"
+#include "utils/string.hpp"
 
 internal_variable Vulkan_Context context;
 internal_variable u32 cached_framebuffer_width = 0;
@@ -380,14 +380,6 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
         0,
         sizeof(u32) * index_count,
         indices);
-
-    Object_ID object_id = 0;
-    if (!vulkan_material_shader_acquire_resource(&context,
-            &context.material_shader,
-            &object_id)) {
-        CORE_ERROR("Failed to acquire shader resources.");
-        return false;
-    }
 
     // TODO: End temp code
 
@@ -1510,28 +1502,18 @@ void vulkan_destroy_ui_image(Renderer_Backend* backend,
         public_resource->handle);
 }
 
-void vulkan_create_texture(const char* name,
-    s32 width,
-    s32 height,
-    s32 channel_count,
-    const u8* pixels,
-    b8 has_transparency,
-    Texture* out_texture) {
-
-    out_texture->width = width;
-    out_texture->height = height;
-    out_texture->channel_count = channel_count;
-    out_texture->generation = INVALID_ID;
+void vulkan_create_texture(const u8* pixels, Texture* texture) {
 
     // Internal data creation
     // TODO: Use a custom allocator for this
-    out_texture->internal_data =
+    texture->internal_data =
         memory_allocate(sizeof(Vulkan_Texture_Data), Memory_Tag::TEXTURE);
 
     Vulkan_Texture_Data* data =
-        static_cast<Vulkan_Texture_Data*>(out_texture->internal_data);
+        static_cast<Vulkan_Texture_Data*>(texture->internal_data);
 
-    VkDeviceSize image_size = width * height * channel_count;
+    VkDeviceSize image_size =
+        texture->width * texture->height * texture->channel_count;
 
     // NOTE: Assume 8 bits per channel
     VkFormat image_format = VK_FORMAT_R8G8B8A8_UNORM;
@@ -1555,8 +1537,8 @@ void vulkan_create_texture(const char* name,
     // Assume the image type is 2D
     vulkan_image_create(&context,
         VK_IMAGE_TYPE_2D,
-        width,
-        height,
+        texture->width,
+        texture->height,
         image_format,
         VK_IMAGE_TILING_OPTIMAL,
         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT |
@@ -1626,8 +1608,7 @@ void vulkan_create_texture(const char* name,
         return;
     }
 
-    out_texture->has_transparency = has_transparency;
-    out_texture->generation++;
+    texture->generation++;
 }
 
 void vulkan_destroy_texture(Texture* texture) {
@@ -1650,4 +1631,38 @@ void vulkan_destroy_texture(Texture* texture) {
     }
 
     memory_zero(texture, sizeof(struct Texture));
+}
+
+b8 vulkan_create_material(struct Material* material) {
+    if (material) {
+        if (!vulkan_material_shader_acquire_resource(&context,
+                &context.material_shader,
+                material)) {
+            CORE_ERROR(
+                "vulkan_renderer_create_material - Failed to acquire shader "
+                "resources");
+            return false;
+        }
+
+        CORE_TRACE("Renderer: Material created.");
+        return true;
+    }
+
+    return false;
+}
+
+void vulkan_destroy_material(struct Material* material) {
+    if (material) {
+        if (material->internal_id != INVALID_ID) {
+            vulkan_material_shader_release_resource(&context,
+                &context.material_shader,
+                material);
+        } else {
+            CORE_WARN(
+                "vulkan_destroy_material called with internal_id = INVALID_ID. "
+                "Nothing was done");
+        }
+    } else {
+        CORE_WARN("vulkan_destroy_material called with nullptr");
+    }
 }
