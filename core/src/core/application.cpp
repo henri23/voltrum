@@ -6,9 +6,11 @@
 #include "core/logger.hpp"
 #include "events/events.hpp"
 #include "input/input.hpp"
+#include "math/math.hpp"
 #include "memory/memory.hpp"
 #include "platform/platform.hpp"
 #include "renderer/renderer_frontend.hpp"
+#include "systems/geometry_system.hpp"
 #include "systems/material_system.hpp"
 #include "systems/texture_system.hpp"
 #include "ui/ui.hpp"
@@ -26,6 +28,10 @@ struct Internal_App_State {
 
     Platform_State plat_state;
     Absolute_Clock clock;
+
+    // WARN: Temp
+    Geometry* test_geometry;
+    // WARN: Temp
 };
 
 // Internal pointer to application state for easy access
@@ -37,6 +43,31 @@ INTERNAL_FUNC b8 app_escape_key_callback(const Event* event) {
         internal_state->is_running = false;
     }
     return false; // Don't consume, let other callbacks process
+}
+
+INTERNAL_FUNC b8 app_on_debug_event(const Event* event) {
+    const char* names[3] = {"metal", "space_parallax", "yellow_track"};
+
+    local_persist s8 choice = 2;
+
+    const char* old_name = names[choice];
+
+    choice++;
+    choice %= 3;
+
+    if (internal_state->test_geometry) {
+        internal_state->test_geometry->material->diffuse_map.texture =
+            texture_system_acquire(names[choice], true);
+        if (!internal_state->test_geometry->material->diffuse_map.texture) {
+            CORE_WARN("event_on_debug_event not nexture! using default");
+            internal_state->test_geometry->material->diffuse_map.texture =
+                texture_system_get_default_texture();
+        }
+
+        texture_system_release(old_name);
+    }
+
+    return true;
 }
 
 void application_get_framebuffer_size(u32* width, u32* height) {
@@ -125,6 +156,35 @@ b8 application_init(Client* client_state) {
         return false;
     }
 
+    Geometry_System_Config geometry_config = {4096};
+    if (!geometry_system_init(geometry_config)) {
+        CORE_FATAL("Failed to initialize geometry system");
+        return false;
+    }
+
+    // TODO: Temp
+    // internal_state->test_geometry = geometry_system_get_default();
+    // Load a plane config, and load a geometry from it
+    Geometry_Config g_config = geometry_system_generate_plane_config(10.0f,
+        5.0f,
+        5,
+        5,
+        5.0f,
+        2.0f,
+        "test geometry",
+        "test_material");
+    internal_state->test_geometry =
+        geometry_system_acquire_by_config(g_config, true);
+
+    memory_deallocate(g_config.vertices,
+        sizeof(vertex_3d) * g_config.vertex_count,
+        Memory_Tag::ARRAY);
+
+    memory_deallocate(g_config.indices,
+        sizeof(u32) * g_config.index_count,
+        Memory_Tag::ARRAY);
+    // TODO: Temp
+
     // Initialize UI with configuration from client
     if (!ui_initialize(client_state->config.theme,
             &client_state->layers,
@@ -143,6 +203,8 @@ b8 application_init(Client* client_state) {
     events_register_callback(Event_Type::WINDOW_RESIZED,
         app_on_resized_callback,
         Event_Priority::HIGH);
+
+    events_register_callback(Event_Type::DEBUG0, app_on_debug_event);
 
     internal_state->is_running = false;
     internal_state->is_suspended = false;
@@ -211,6 +273,15 @@ void application_run() {
             Render_Packet packet;
             packet.delta_time = delta_time;
 
+            // TODO: temp
+            Geometry_Render_Data test_render;
+            test_render.geometry = internal_state->test_geometry;
+            test_render.model = mat4_identity();
+
+            packet.geometry_count = 1;
+            packet.geometries = &test_render;
+            // TODO: temp
+
             if (!renderer_draw_frame(&packet)) {
                 internal_state->is_running = false;
             }
@@ -257,6 +328,9 @@ void application_shutdown() {
 
     CORE_DEBUG("Shutting down UI subsystem...");
     ui_shutdown();
+
+    CORE_DEBUG("Shutting down geometry subsystem...");
+    geometry_system_shutdown();
 
     CORE_DEBUG("Shutting down material subsystem...");
     material_system_shutdown();

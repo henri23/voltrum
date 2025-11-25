@@ -49,6 +49,14 @@ s32 string_format_v(char* dest, const char* format, va_list va_list) {
     return -1;
 }
 
+char* string_empty(char* str) {
+    if (str) {
+        str[0] = '\0';
+    }
+
+    return str;
+}
+
 u64 string_length(const char* string) {
     u64 length = 0;
     // Continue to iterate inside the string until we find the

@@ -4,6 +4,7 @@
 
 enum class Memory_Tag {
     UNKNOWN,
+    ARRAY,
     DARRAY,
     HASHMAP,
     LINEAR_ALLOCATOR,
@@ -14,6 +15,7 @@ enum class Memory_Tag {
     RENDERER,
     TEXTURE,
     MATERIAL,
+    GEOMETRY,
     APPLICATION,
     UI,
     LAYERS,

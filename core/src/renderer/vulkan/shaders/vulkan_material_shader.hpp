@@ -15,9 +15,13 @@ void vulkan_material_shader_update_global_state(Vulkan_Context* context,
     Vulkan_Material_Shader* shader,
     f32 delta_time);
 
-void vulkan_material_shader_update_object(Vulkan_Context* context,
+void vulkan_material_shader_set_model(Vulkan_Context* context,
     Vulkan_Material_Shader* shader,
-    Geometry_Render_Data data);
+    mat4 model);
+
+void vulkan_material_shader_apply_material(Vulkan_Context* context,
+    Vulkan_Material_Shader* shader,
+    Material* material);
 
 b8 vulkan_material_shader_acquire_resource(Vulkan_Context* context,
     Vulkan_Material_Shader* shader,

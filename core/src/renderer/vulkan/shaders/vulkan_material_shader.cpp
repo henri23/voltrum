@@ -115,17 +115,17 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
     VkDescriptorPoolSize object_pool_sizes[2];
     // The first section will be used for uniform buffers
     object_pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    object_pool_sizes[0].descriptorCount = VULKAN_MATERIAL_MAX_OBJECT_COUNT;
+    object_pool_sizes[0].descriptorCount = VULKAN_MAX_MATERIAL_COUNT;
 
     object_pool_sizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     object_pool_sizes[1].descriptorCount =
-        VULKAN_MATERIAL_SHADER_SAMPLER_COUNT * VULKAN_MATERIAL_MAX_OBJECT_COUNT;
+        VULKAN_MATERIAL_SHADER_SAMPLER_COUNT * VULKAN_MAX_MATERIAL_COUNT;
 
     VkDescriptorPoolCreateInfo object_pool_info = {
         VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
     object_pool_info.poolSizeCount = 2;
     object_pool_info.pPoolSizes = object_pool_sizes;
-    object_pool_info.maxSets = VULKAN_MATERIAL_MAX_OBJECT_COUNT;
+    object_pool_info.maxSets = VULKAN_MAX_MATERIAL_COUNT;
     object_pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
     // Create object descriptor pool
@@ -247,7 +247,7 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
     // Fixed the device local and host visible at the same time bug by querying
     // the capabilities of the selected GPU and adjusting accordingly
     if (!vulkan_buffer_create(context,
-            sizeof(Material_Uniform_Object) * VULKAN_MATERIAL_MAX_OBJECT_COUNT,
+            sizeof(Material_Uniform_Object) * VULKAN_MAX_MATERIAL_COUNT,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             device_local_bits | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -369,28 +369,42 @@ void vulkan_material_shader_update_global_state(Vulkan_Context* context,
         0);
 }
 
-void vulkan_material_shader_update_object(Vulkan_Context* context,
+void vulkan_material_shader_set_model(Vulkan_Context* context,
     Vulkan_Material_Shader* shader,
-    Geometry_Render_Data data) {
+    mat4 model) {
+
+    if (context && shader) {
+        u32 image_index = context->image_index;
+        VkCommandBuffer command_buffer =
+            context->main_command_buffers[image_index].handle;
+
+        // Push constants work similar to unfiroms but they can work
+        // without descriptor sets. It can be executed at any point
+        // not necessarily inside a renderpass. Vulkan "has a limitation"
+        // of 128 bytes for push constants
+        vkCmdPushConstants(command_buffer,
+            shader->pipeline.pipeline_layout,
+            VK_SHADER_STAGE_VERTEX_BIT,
+            0,
+            sizeof(mat4),
+            &model);
+    }
+}
+
+void vulkan_material_shader_apply_material(Vulkan_Context* context,
+    Vulkan_Material_Shader* shader,
+    Material* material) {
+
+    if (!context || !shader)
+        return;
 
     u32 image_index = context->image_index;
     VkCommandBuffer command_buffer =
         context->main_command_buffers[image_index].handle;
 
-    // Push constants work similar to unfiroms but they can work
-    // without descriptor sets. It can be executed at any point
-    // not necessarily inside a renderpass. Vulkan "has a limitation"
-    // of 128 bytes for push constants
-    vkCmdPushConstants(command_buffer,
-        shader->pipeline.pipeline_layout,
-        VK_SHADER_STAGE_VERTEX_BIT,
-        0,
-        sizeof(mat4),
-        &data.model);
-
     // Obtain material data
     Vulkan_Material_Shader_Object_State* object_state =
-        &shader->object_states[data.material->internal_id];
+        &shader->object_states[material->internal_id];
 
     VkDescriptorSet object_descriptor_set =
         object_state->descriptor_sets[image_index];
@@ -405,10 +419,10 @@ void vulkan_material_shader_update_object(Vulkan_Context* context,
 
     // Descriptor 0 - Uniform buffer
     u32 range = sizeof(Material_Uniform_Object);
-    u32 offset = sizeof(Material_Uniform_Object) * data.material->internal_id;
+    u32 offset = sizeof(Material_Uniform_Object) * material->internal_id;
     Material_Uniform_Object lbo;
 
-    lbo.diffuse_color = data.material->diffuse_color;
+    lbo.diffuse_color = material->diffuse_color;
 
     vulkan_buffer_load_data(context,
         &shader->object_uniform_buffer,
@@ -423,7 +437,7 @@ void vulkan_material_shader_update_object(Vulkan_Context* context,
 
     // Only apply this if the descirptor has not yet been updated
     if (*global_ubo_generation == INVALID_ID ||
-        *global_ubo_generation != data.material->generation) {
+        *global_ubo_generation != material->generation) {
 
         VkDescriptorBufferInfo buffer_info;
         buffer_info.buffer = shader->object_uniform_buffer.handle;
@@ -442,7 +456,7 @@ void vulkan_material_shader_update_object(Vulkan_Context* context,
         descriptor_count++;
 
         // Update the frame generation. In this case it is only needed once
-        *global_ubo_generation = data.material->generation;
+        *global_ubo_generation = material->generation;
     }
 
     descriptor_index++;
@@ -458,7 +472,7 @@ void vulkan_material_shader_update_object(Vulkan_Context* context,
 
         switch (use) {
         case Texture_Type::MAP_DIFFUSE:
-            texture = data.material->diffuse_map.texture;
+            texture = material->diffuse_map.texture;
             break;
         default:
             CORE_FATAL("Unable to bind sampler to unknown use.");
@@ -578,6 +592,8 @@ void vulkan_material_shader_release_resource(Vulkan_Context* context,
     Material* material) {
 
     constexpr u32 descriptor_set_count = 3;
+
+    vkDeviceWaitIdle(context->device.logical_device);
 
     VkResult result = vkFreeDescriptorSets(context->device.logical_device,
         shader->object_descriptor_pool,

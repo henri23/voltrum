@@ -175,8 +175,22 @@ constexpr const u32 VULKAN_MATERIAL_SHADER_STAGE_COUNT = 2;
 constexpr const u32 VULKAN_MATERIAL_SHADER_DESCRIPTOR_COUNT = 2;
 constexpr const u32 VULKAN_MATERIAL_SHADER_SAMPLER_COUNT = 1;
 
-// NOTE: Max number of object. Will likelly change later
-constexpr const u32 VULKAN_MATERIAL_MAX_OBJECT_COUNT = 1024;
+// NOTE: Max number of material instances
+constexpr const u32 VULKAN_MAX_MATERIAL_COUNT = 1024;
+
+// NOTE: Max number of simultaneously uploaded geometries
+constexpr const u32 VULKAN_MAX_GEOMETRY_COUNT = 4096;
+
+struct Vulkan_Geometry_Data {
+    Geometry_ID id;
+    u32 generation;
+    u32 vertex_count;
+    u32 vertex_size;
+    u32 vertex_buffer_offset;
+    u32 index_count;
+    u32 index_size;
+    u32 index_buffer_offset;
+};
 
 // TODO: I am assuming there will be for sure 3 swapchain images available
 struct Vulkan_Descriptor_State {
@@ -219,7 +233,7 @@ struct Vulkan_Material_Shader {
 
     // TODO: Make dynamic
     Vulkan_Material_Shader_Object_State
-        object_states[VULKAN_MATERIAL_MAX_OBJECT_COUNT];
+        object_states[VULKAN_MAX_MATERIAL_COUNT];
 
     Global_Uniform_Object global_ubo;
 };
@@ -288,6 +302,9 @@ struct Vulkan_Context {
 
     u64 geometry_vertex_offset;
     u64 geometry_index_offset;
+
+    // TODO: Make dynamic
+    Vulkan_Geometry_Data registered_geometries[VULKAN_MAX_GEOMETRY_COUNT];
 
     s32 (*find_memory_index)(u32 type_filter, u32 property_flags);
 };

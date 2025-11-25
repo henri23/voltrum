@@ -26,7 +26,7 @@ struct Material_Uniform_Object {
 
 struct Geometry_Render_Data {
     mat4 model;
-    Material* material;
+    Geometry* geometry;
 };
 
 // Renderer_backend is the interface of the renderer classes
@@ -49,7 +49,7 @@ struct Renderer_Backend {
         vec4 ambient_colour,
         s32 mode);
 
-    void (*update_object)(Geometry_Render_Data data);
+    void (*draw_geometry)(Geometry_Render_Data data);
 
     void (*create_texture)(const u8* pixels, struct Texture* texture);
 
@@ -58,6 +58,14 @@ struct Renderer_Backend {
     b8 (*create_material)(struct Material* material);
 
     void (*destroy_material)(struct Material* material);
+
+    b8 (*create_geometry)(Geometry* geometry,
+        u32 vertex_count,
+        const vertex_3d* vertices,
+        u32 index_count,
+        const u32* indices);
+
+    void (*destroy_geometry)(Geometry* geometry);
 
     // UI Image Management
     b8 (*create_ui_image)(Renderer_Backend* backend,
@@ -75,6 +83,9 @@ struct Renderer_Backend {
 // i.e. list of meshes, camera information etc.
 struct Render_Packet {
     f32 delta_time;
+
+    u32 geometry_count;
+    Geometry_Render_Data* geometries;
 };
 
 enum class Renderer_Backend_Type { VULKAN, OPENGL, DIRECTX };

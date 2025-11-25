@@ -33,6 +33,14 @@ b8 renderer_create_material(struct Material* material);
 
 void renderer_destroy_material(struct Material* material);
 
+b8 renderer_create_geometry(Geometry* geometry,
+    u32 vertex_count,
+    const vertex_3d* vertices,
+    u32 index_count,
+    u32* indices);
+
+void renderer_destroy_geometry(Geometry* geometry);
+
 // UI Image Management
 b8 renderer_create_ui_image(u32 width,
     u32 height,

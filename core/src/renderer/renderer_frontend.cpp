@@ -8,11 +8,6 @@
 
 #include "renderer/renderer_types.hpp"
 
-#include "events/events.hpp"
-#include "systems/material_system.hpp"
-#include "systems/texture_system.hpp"
-#include "utils/string.hpp"
-
 // Renderer frontend will manage the backend interface state
 struct Renderer_System_State {
     Renderer_Backend backend;
@@ -23,39 +18,11 @@ struct Renderer_System_State {
 
     f32 near_clip = 0.1f;
     f32 far_clip = 1000.0f;
-
-    // WARN: Temp
-    Material* test_material; // The actual texture to load to an object
 };
 
 internal_variable Renderer_System_State state;
 
-// WARN: temp block
-INTERNAL_FUNC b8 event_on_debug_event(const Event* event) {
-    const char* names[3] = {"metal", "space_parallax", "yellow_track"};
-
-    local_persist s8 choice = 0;
-
-    s8 old_choice = choice;
-    choice++;
-    choice %= 3;
-
-    state.test_material->diffuse_map.texture =
-        texture_system_acquire(names[choice], false);
-
-    if (!state.test_material->diffuse_map.texture) {
-        CORE_WARN("event_on_debug_event no texture!! using default");
-    }
-
-    texture_system_release(names[old_choice]);
-
-    return true;
-}
-// WARN: temp block
-
 b8 renderer_startup(const char* application_name) {
-
-    events_register_callback(Event_Type::DEBUG0, event_on_debug_event);
 
     if (!renderer_backend_initialize(Renderer_Backend_Type::VULKAN,
             &state.backend)) {
@@ -71,15 +38,11 @@ b8 renderer_startup(const char* application_name) {
         state.near_clip,
         state.far_clip);
 
-    state.test_material = nullptr;
-
     CORE_DEBUG("Renderer subsystem initialized");
     return true;
 }
 
 void renderer_shutdown() {
-    events_unregister_callback(Event_Type::DEBUG0, event_on_debug_event);
-
     state.backend.shutdown(&state.backend);
 
     renderer_backend_shutdown(&state.backend);
@@ -119,41 +82,10 @@ b8 renderer_draw_frame(Render_Packet* packet) {
             vec4_one(),
             0);
 
-        local_persist f32 angle = 0.01f;
-        angle += 0.01f;
-        quaternion rotation =
-            quat_from_axis_angle(vec3_forward(), angle, false);
-        mat4 model = quat_to_rotation_matrix(rotation, vec3_zero());
-
-        Geometry_Render_Data data;
-        data.model = model;
-
-        if (!state.test_material) {
-            state.test_material = material_system_acquire("test_material");
-
-            if (!state.test_material) {
-                CORE_WARN(
-                    "Automatic material load failed, falling back to manual "
-                    "default material.");
-
-                Material_Config config;
-                string_ncopy(config.name,
-                    "test_material",
-                    MATERIAL_NAME_MAX_LENGTH);
-                config.auto_release = false;
-                config.diffuse_color = vec4_one();
-
-                string_ncopy(config.diffuse_map_name,
-                    DEFAULT_TEXTURE_NAME,
-                    TEXTURE_NAME_MAX_LENGTH);
-
-                state.test_material =
-                    material_system_acquire_from_config(config);
-            }
+        u32 count = packet->geometry_count;
+        for (u32 i = 0; i < count; ++i) {
+            state.backend.draw_geometry(packet->geometries[i]);
         }
-
-        data.material = state.test_material;
-        state.backend.update_object(data);
 
         b8 result = renderer_end_frame(packet->delta_time);
 
@@ -201,4 +133,21 @@ b8 renderer_create_material(struct Material* material) {
 
 void renderer_destroy_material(struct Material* material) {
     return state.backend.destroy_material(material);
+}
+
+b8 renderer_create_geometry(Geometry* geometry,
+    u32 vertex_count,
+    const vertex_3d* vertices,
+    u32 index_count,
+    u32* indices) {
+
+    return state.backend.create_geometry(geometry,
+        vertex_count,
+        vertices,
+        index_count,
+        indices);
+}
+
+void renderer_destroy_geometry(Geometry* geometry) {
+    state.backend.destroy_geometry(geometry);
 }

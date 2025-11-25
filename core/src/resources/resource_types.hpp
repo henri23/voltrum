@@ -38,8 +38,19 @@ constexpr u32 MATERIAL_NAME_MAX_LENGTH = 256;
 struct Material {
     Material_ID id;
     u32 generation;
-    u32 internal_id;
+    u32 internal_id; // Renderer specific object identifier
     char name[MATERIAL_NAME_MAX_LENGTH];
     vec4 diffuse_color;
     Texture_Map diffuse_map;
+};
+
+using Geometry_ID = u32;
+constexpr u32 GEOMETRY_NAME_MAX_LENGTH = 256;
+
+struct Geometry {
+    Geometry_ID id;
+    u32 internal_id;
+    u32 generation;
+    char name[GEOMETRY_NAME_MAX_LENGTH];
+    Material* material;
 };

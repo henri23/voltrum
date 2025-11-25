@@ -366,3 +366,5 @@ INTERNAL_FUNC b8 load_configuration_file(const char* path,
 
     return true;
 }
+
+Material* material_system_get_default() { return &state.default_material; }

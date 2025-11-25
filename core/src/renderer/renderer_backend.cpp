@@ -21,13 +21,16 @@ b8 renderer_backend_initialize(Renderer_Backend_Type type,
 
         // Descriptors
         out_backend->update_global_state = vulkan_update_global_state;
-        out_backend->update_object = vulkan_update_object;
+        out_backend->draw_geometry = vulkan_draw_geometry;
 
         out_backend->create_texture = vulkan_create_texture;
         out_backend->destroy_texture = vulkan_destroy_texture;
 
         out_backend->create_material = vulkan_create_material;
         out_backend->destroy_material = vulkan_destroy_material;
+
+        out_backend->create_geometry = vulkan_create_geometry;
+        out_backend->destroy_geometry = vulkan_destroy_geometry;
 
         return true;
     }
@@ -46,13 +49,19 @@ void renderer_backend_shutdown(Renderer_Backend* backend) {
     backend->begin_frame = nullptr;
     backend->end_frame = nullptr;
     backend->update_global_state = nullptr;
+
+    // TODO: Delete
     backend->create_ui_image = nullptr;
     backend->destroy_ui_image = nullptr;
-    backend->update_object = nullptr;
+
+    backend->draw_geometry = nullptr;
 
     backend->create_texture = nullptr;
     backend->destroy_texture = nullptr;
 
     backend->create_material = nullptr;
     backend->destroy_material = nullptr;
+
+    backend->create_geometry = nullptr;
+    backend->destroy_geometry = nullptr;
 }
