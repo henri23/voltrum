@@ -26,9 +26,9 @@
 #include "math/math_types.hpp"
 #include "utils/string.hpp"
 
-internal_variable Vulkan_Context context;
-internal_variable u32 cached_framebuffer_width = 0;
-internal_variable u32 cached_framebuffer_height = 0;
+internal_var Vulkan_Context context;
+internal_var u32 cached_framebuffer_width = 0;
+internal_var u32 cached_framebuffer_height = 0;
 
 // Forward declare messenger callback
 VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(
@@ -1343,8 +1343,8 @@ struct Vulkan_UI_Image_Resource {
     Vulkan_UI_Image vulkan_image;      // Internal Vulkan implementation
 };
 
-internal_variable Auto_Array<Vulkan_UI_Image_Resource> ui_image_resources;
-internal_variable u32 next_ui_image_handle = 1;
+internal_var Auto_Array<Vulkan_UI_Image_Resource> ui_image_resources;
+internal_var u32 next_ui_image_handle = 1;
 
 b8 vulkan_create_ui_image(Renderer_Backend* backend,
     u32 width,

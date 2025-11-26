@@ -7,9 +7,7 @@
 #include "utils/string.hpp"
 
 #include "renderer/renderer_frontend.hpp"
-
-#define STB_IMAGE_IMPLEMENTATION // Already defined in ui_titlebar.cpp
-#include "stb_image.h"
+#include "systems/resource_system.hpp"
 
 struct Texture_Reference {
     Texture_ID handle;
@@ -26,7 +24,7 @@ struct Texture_System_State {
     Texture* registered_textures; // static array of textures
 };
 
-internal_variable Texture_System_State state;
+internal_var Texture_System_State state;
 
 INTERNAL_FUNC b8 create_default_textures(Texture_System_State* state);
 INTERNAL_FUNC void destroy_default_textures(Texture_System_State* state);
@@ -39,95 +37,68 @@ INTERNAL_FUNC void create_texture(Texture* texture) {
 INTERNAL_FUNC void destroy_texture(Texture* texture);
 
 INTERNAL_FUNC b8 load_texture(const char* texture_name, Texture* texture) {
-    const char* format_str = "assets/textures/%s.%s";
-    const s32 required_channel_count = 4; // RGBA
 
-    // NOTE: Most images are stored in a format where the data is actually
-    // stored updside-down, so if we load the data from the bottom -> up we
-    // should technically retrieve the original orientation
-    stbi_set_flip_vertically_on_load(true);
-    char full_file_path[512];
+    Resource img_resource;
+    if (!resource_system_load(texture_name,
+            Resource_Type::IMAGE,
+            &img_resource)) {
 
-    // TODO: Loop over different file extensions
-    string_format(full_file_path, format_str, texture_name, "png");
-
-    Texture temp_texture;
-
-    u8* data = stbi_load(full_file_path,
-        (s32*)&temp_texture.width,
-        (s32*)&temp_texture.height,
-        (s32*)&temp_texture.channel_count,
-        required_channel_count);
-
-    temp_texture.channel_count = required_channel_count;
-
-    if (data) {
-        // Copy over the texture generation, because we might want to use
-        // alreaddy loaded texture as target texture in the arguments, so the
-        // code should be able to swap out the generation of the already loaded
-        // texture
-        u32 current_generation = texture->generation;
-        texture->generation = INVALID_ID; // When trying to use this texture
-                                          // while loading, it will not be valid
-
-        u64 total_texture_size = temp_texture.width * temp_texture.height *
-                                 temp_texture.channel_count;
-
-        b8 has_transparency = false;
-
-        // Check for transparency
-        for (u64 i = 0; i < total_texture_size; i += required_channel_count) {
-            u8 alpha = data[i + 3];
-            if (alpha < 255) {
-                has_transparency = true;
-                break;
-            }
-        }
-
-        if (stbi_failure_reason()) {
-            CORE_WARN(
-                "load_texture() in renderer_frontend.cpp failed to load file "
-                "'%s' : %s",
-                full_file_path,
-                stbi_failure_reason());
-
-            stbi__err(0, 0);
-            return false;
-        }
-
-        string_ncopy(temp_texture.name, texture_name, TEXTURE_NAME_MAX_LENGTH);
-        temp_texture.generation = INVALID_ID;
-        temp_texture.has_transparency = has_transparency;
-
-        renderer_create_texture(data, &temp_texture);
-
-        // Copy old texture
-        Texture old_texture = *texture;
-        *texture = temp_texture;
-
-        renderer_destroy_texture(&old_texture);
-
-        if (current_generation == INVALID_ID) {
-            texture->generation = 0;
-        } else {
-            texture->generation = current_generation + 1;
-        }
-
-        stbi_image_free(data);
-        return true;
-    } else {
-        if (stbi_failure_reason()) {
-            CORE_WARN(
-                "load_texture() in renderer_frontend.cpp failed to load file "
-                "'%s' : %s",
-                full_file_path,
-                stbi_failure_reason());
-
-            stbi__err(0, 0);
-            return false;
-        }
+        CORE_ERROR("Failed to load image resource for texture '%s'",
+            texture_name);
         return false;
     }
+
+    Image_Resource_Data* resource_data =
+        static_cast<Image_Resource_Data*>(img_resource.data);
+
+    Texture temp_texture;
+    temp_texture.width = resource_data->width;
+    temp_texture.height = resource_data->height;
+    temp_texture.channel_count = resource_data->channel_count;
+
+    // Copy over the texture generation, because we might want to use
+    // alreaddy loaded texture as target texture in the arguments, so the
+    // code should be able to swap out the generation of the already loaded
+    // texture
+    u32 current_generation = texture->generation;
+    texture->generation = INVALID_ID; // When trying to use this texture
+                                      // while loading, it will not be valid
+
+    u64 total_texture_size =
+        temp_texture.width * temp_texture.height * temp_texture.channel_count;
+
+    b8 has_transparency = false;
+
+    // Check for transparency
+    for (u64 i = 0; i < total_texture_size; i += temp_texture.channel_count) {
+        u8 alpha = resource_data->pixels[i + 3];
+        if (alpha < 255) {
+            has_transparency = true;
+            break;
+        }
+    }
+
+    string_ncopy(temp_texture.name, texture_name, TEXTURE_NAME_MAX_LENGTH);
+    temp_texture.generation = INVALID_ID;
+    temp_texture.has_transparency = has_transparency;
+
+    renderer_create_texture(resource_data->pixels, &temp_texture);
+
+    // Copy old texture
+    Texture old_texture = *texture;
+    *texture = temp_texture;
+
+    renderer_destroy_texture(&old_texture);
+
+    if (current_generation == INVALID_ID) {
+        texture->generation = 0;
+    } else {
+        texture->generation = current_generation + 1;
+    }
+
+    resource_system_unload(&img_resource);
+
+    return true;
 }
 
 b8 texture_system_init(Texture_System_Config config) {

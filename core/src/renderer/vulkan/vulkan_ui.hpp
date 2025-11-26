@@ -6,7 +6,8 @@
  * UI -> Renderer Interface
  *
  * This header defines functions that the UI module provides to the renderer.
- * The UI module owns its Vulkan resource setup and provides draw data to the renderer.
+ * The UI module owns its Vulkan resource setup and provides draw data to the
+ * renderer.
  *
  * Implementation is in ui.cpp
  */

@@ -11,7 +11,7 @@ struct Event_State {
     b8 is_initialized;
 };
 
-internal_variable Event_State event_state;
+internal_var Event_State event_state;
 
 void events_initialize() {
     CORE_DEBUG("Initializing event system...");

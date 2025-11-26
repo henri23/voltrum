@@ -8,7 +8,7 @@
 #include <cmath>
 
 // Global viewport state
-internal_variable Viewport_State viewport_state;
+internal_var Viewport_State viewport_state;
 
 b8 ui_viewport_initialize() {
     CORE_DEBUG("Initializing viewport layer...");

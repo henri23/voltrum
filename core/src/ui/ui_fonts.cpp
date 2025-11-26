@@ -35,19 +35,19 @@ struct UI_Font_Registry {
 };
 
 // Internal font system state
-internal_variable UI_Font_Registry font_registry = {};
+internal_var UI_Font_Registry font_registry = {};
 
 // Default embedded font data (placeholder - in real implementation would be
 // actual font data) For now, we'll use ImGui's default font
-internal_variable const u8 default_font_data[] = {0}; // Placeholder
-internal_variable const u32 default_font_data_size = 0;
+internal_var const u8 default_font_data[] = {0}; // Placeholder
+internal_var const u32 default_font_data_size = 0;
 
 // Font name storage pool (to avoid stack memory issues)
 constexpr u32 MAX_FONT_NAME_COUNT = 128;
 constexpr u32 FONT_NAME_LENGTH = 64;
-internal_variable char font_name_pool[MAX_FONT_NAME_COUNT][FONT_NAME_LENGTH] =
+internal_var char font_name_pool[MAX_FONT_NAME_COUNT][FONT_NAME_LENGTH] =
     {};
-internal_variable u32 font_name_pool_index = 0;
+internal_var u32 font_name_pool_index = 0;
 
 // Internal functions
 INTERNAL_FUNC UI_Font_Info* find_font_by_name(const char* name);

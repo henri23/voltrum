@@ -15,7 +15,7 @@ b8 create_shader_module(Vulkan_Context* context,
 
     char file_name[512];
     // TODO: Change to not hardcoded path
-    sprintf(file_name, "assets/shaders/%s.%s.spv", name, type_str);
+    sprintf(file_name, "../assets/shaders/%s.%s.spv", name, type_str);
 
     memory_zero(&shader_stages[stage_index].create_info,
         sizeof(VkShaderModuleCreateInfo));
@@ -50,13 +50,33 @@ b8 create_shader_module(Vulkan_Context* context,
         context->allocator,
         &shader_stages[stage_index].handle));
 
-    CORE_DEBUG("Shader module created for %s - size: %zu bytes", file_name, size);
+    CORE_DEBUG("Shader module created for %s - size: %zu bytes",
+        file_name,
+        size);
 
-    // Debug: Print first few bytes of shader data to verify it's loading correctly
+    // Debug: Print first few bytes of shader data to verify it's loading
+    // correctly
     u8* bytes = (u8*)file_byte_array;
-    CORE_DEBUG("Shader %s first 16 bytes: %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x",
-        file_name, bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-        bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]);
+    CORE_DEBUG(
+        "Shader %s first 16 bytes: %02x %02x %02x %02x %02x %02x %02x %02x "
+        "%02x %02x %02x %02x %02x %02x %02x %02x",
+        file_name,
+        bytes[0],
+        bytes[1],
+        bytes[2],
+        bytes[3],
+        bytes[4],
+        bytes[5],
+        bytes[6],
+        bytes[7],
+        bytes[8],
+        bytes[9],
+        bytes[10],
+        bytes[11],
+        bytes[12],
+        bytes[13],
+        bytes[14],
+        bytes[15]);
 
     memory_zero(&shader_stages[stage_index].shader_stage_create_info,
         sizeof(VkPipelineShaderStageCreateInfo));

@@ -22,7 +22,7 @@ struct Geometry_System_State {
     Geometry_Reference* registered_geometries;
 };
 
-internal_variable Geometry_System_State state = {};
+internal_var Geometry_System_State state = {};
 
 INTERNAL_FUNC b8 create_default_geometry(Geometry_System_State* state);
 INTERNAL_FUNC b8 create_geometry(Geometry_System_State* state,

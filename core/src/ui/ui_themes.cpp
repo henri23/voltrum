@@ -7,7 +7,7 @@
 #include "themes/light_theme.hpp"
 
 // Theme palette array
-internal_variable const UI_Theme_Palette* theme_palettes[] = {&dark_palette,
+internal_var const UI_Theme_Palette* theme_palettes[] = {&dark_palette,
     &light_palette,
     &catppuccin_mocha_palette};
 

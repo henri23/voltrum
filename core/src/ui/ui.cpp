@@ -34,7 +34,7 @@ struct UI_State {
     b8 window_began; // Track if ImGui::Begin() was called this frame
 };
 
-internal_variable UI_State ui_state;
+internal_var UI_State ui_state;
 
 // Forward declarations for internal functions
 INTERNAL_FUNC b8 setup_imgui_context(f32 main_scale, void* window);

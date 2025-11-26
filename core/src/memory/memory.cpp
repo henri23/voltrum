@@ -24,25 +24,26 @@ struct Memory_System_State {
     u64 allocations_count;
 };
 
-internal_variable Memory_System_State state = {};
+internal_var Memory_System_State state = {};
 
-internal_variable const char* memory_tag_strings[(u64)Memory_Tag::MAX_ENTRIES] =
-    {"UNKNOWN  	:",
-        "ARRAY   	:",
-        "DARRAY   	:",
-        "HASHMAP		:",
-        "LINEAR_ALLOC	:",
-        "EVENTS   	:",
-        "STRING   	:",
-        "CLIENT     	:",
-        "INPUT 		:",
-        "RENDERER 	:",
-        "TEXTURE 	:",
-        "MATERIAL 	:",
-        "GEOMETRY 	:",
-        "APPLICATION	:",
-        "UI		:",
-        "LAYERS		:"};
+internal_var const char* memory_tag_strings[(u64)Memory_Tag::MAX_ENTRIES] = {
+    "UNKNOWN  	:",
+    "ARRAY   	:",
+    "DARRAY   	:",
+    "HASHMAP		:",
+    "LINEAR_ALLOC	:",
+    "EVENTS   	:",
+    "STRING   	:",
+    "CLIENT     	:",
+    "INPUT 		:",
+    "RENDERER 	:",
+    "TEXTURE 	:",
+    "MATERIAL 	:",
+    "GEOMETRY 	:",
+    "LOADERS		:",
+    "APPLICATION	:",
+    "UI		:",
+    "LAYERS		:"};
 
 void memory_init() {}
 

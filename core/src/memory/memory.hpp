@@ -16,6 +16,7 @@ enum class Memory_Tag {
     TEXTURE,
     MATERIAL,
     GEOMETRY,
+    LOADER,
     APPLICATION,
     UI,
     LAYERS,

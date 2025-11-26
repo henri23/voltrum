@@ -13,7 +13,7 @@
 #include "renderer/vulkan/vulkan_types.hpp"
 #include "ui/ui_titlebar.hpp"
 
-internal_variable Platform_State* state_ptr = nullptr;
+internal_var Platform_State* state_ptr = nullptr;
 
 // Hit test callback for native window dragging/resizing
 INTERNAL_FUNC SDL_HitTestResult platform_hit_test_callback(SDL_Window* win,

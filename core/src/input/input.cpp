@@ -3,7 +3,7 @@
 #include "memory/memory.hpp"
 
 // Internal input state
-internal_variable Input_State input_state;
+internal_var Input_State input_state;
 
 void input_initialize() {
     CORE_DEBUG("Initializing input system...");

@@ -8,3 +8,4 @@ out/
 bin-vs/
 .vscode/
 .envrc
+*.spv

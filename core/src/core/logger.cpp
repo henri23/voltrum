@@ -12,12 +12,12 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 // Consistent log format for all loggers
-internal_variable const char* LOG_PATTERN =
+internal_var const char* LOG_PATTERN =
     "%^[%Y-%m-%d %H:%M:%S.%e] [%-12n] [%-7l] %v%$";
 
 // Smart pointer loggers
-internal_variable std::shared_ptr<spdlog::logger> core_logger = nullptr;
-internal_variable std::shared_ptr<spdlog::logger> client_logger = nullptr;
+internal_var std::shared_ptr<spdlog::logger> core_logger = nullptr;
+internal_var std::shared_ptr<spdlog::logger> client_logger = nullptr;
 
 // Helper function to create logger with consistent format and file output
 INTERNAL_FUNC std::shared_ptr<spdlog::logger>

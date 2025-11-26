@@ -4,7 +4,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-internal_variable b8 rand_seeded = false;
+internal_var b8 rand_seeded = false;
 
 f32 math_sin(f32 x) {
     return sinf(x);

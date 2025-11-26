@@ -10,9 +10,12 @@
 #include "memory/memory.hpp"
 #include "platform/platform.hpp"
 #include "renderer/renderer_frontend.hpp"
+
 #include "systems/geometry_system.hpp"
 #include "systems/material_system.hpp"
+#include "systems/resource_system.hpp"
 #include "systems/texture_system.hpp"
+
 #include "ui/ui.hpp"
 
 // Application configuration
@@ -35,7 +38,7 @@ struct Internal_App_State {
 };
 
 // Internal pointer to application state for easy access
-internal_variable Internal_App_State* internal_state = nullptr;
+internal_var Internal_App_State* internal_state = nullptr;
 
 INTERNAL_FUNC b8 app_escape_key_callback(const Event* event) {
     if (event->key.key_code == Key_Code::ESCAPE && !event->key.repeat) {
@@ -48,7 +51,7 @@ INTERNAL_FUNC b8 app_escape_key_callback(const Event* event) {
 INTERNAL_FUNC b8 app_on_debug_event(const Event* event) {
     const char* names[3] = {"metal", "space_parallax", "yellow_track"};
 
-    local_persist s8 choice = 2;
+    local_persist s8 choice = 0;
 
     const char* old_name = names[choice];
 
@@ -139,6 +142,19 @@ b8 application_init(Client* client_state) {
     events_initialize();
     input_initialize();
 
+    Resource_System_Config resource_config = {32};
+
+#ifdef DEBUG_BUILD
+    resource_config.asset_base_path = "../assets";
+#elif RELEASE_BUILD
+    resource_config.asset_base_path = "../assets";
+#endif
+
+    if (!resource_system_init(resource_config)) {
+        CORE_FATAL("Failed to initialize resource system");
+        return false;
+    }
+
     if (!renderer_startup(client_state->config.name)) {
         CORE_FATAL("Failed to initialize renderer");
         return false;
@@ -173,6 +189,7 @@ b8 application_init(Client* client_state) {
         2.0f,
         "test geometry",
         "test_material");
+
     internal_state->test_geometry =
         geometry_system_acquire_by_config(g_config, true);
 
@@ -340,6 +357,9 @@ void application_shutdown() {
 
     CORE_DEBUG("Shutting down renderer subsystem...");
     renderer_shutdown();
+
+    CORE_DEBUG("Shutting down resource subsystem...");
+    resource_system_shutdown();
 
     CORE_DEBUG("Shutting down input and event subsystems...");
     input_shutdown();

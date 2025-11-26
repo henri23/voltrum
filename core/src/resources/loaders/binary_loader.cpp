@@ -21,7 +21,7 @@ struct Embedded_Binary_Asset {
 };
 
 // Binary assets lookup table
-internal_variable const Embedded_Binary_Asset binary_assets[] = {
+internal_var const Embedded_Binary_Asset binary_assets[] = {
     {"roboto_regular", roboto_regular, sizeof(roboto_regular)},
     {"roboto_bold", roboto_bold, sizeof(roboto_bold)},
     {"roboto_italic", roboto_italic, sizeof(roboto_italic)},

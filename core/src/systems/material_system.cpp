@@ -25,7 +25,7 @@ struct Material_System_State {
 };
 
 // TODO: Allocate with allocator
-internal_variable Material_System_State state = {};
+internal_var Material_System_State state = {};
 
 INTERNAL_FUNC b8 create_default_material(Material_System_State* state);
 INTERNAL_FUNC void destroy_material(Material* material);

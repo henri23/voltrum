@@ -6,7 +6,7 @@
 
 #include <imgui.h>
 
-internal_variable b8 show_demo_window;
+internal_var b8 show_demo_window;
 
 // Component implementations (migrated from core/src/ui/ui_components.cpp)
 void client_ui_render_voltrum_window(void* user_data) {

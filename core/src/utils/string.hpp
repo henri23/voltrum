@@ -23,6 +23,10 @@ VOLTRUM_API u64 string_length(const char* string);
 VOLTRUM_API char* string_copy(char* dest, const char* source);
 VOLTRUM_API char* string_ncopy(char* dest, const char* source, u64 max_length);
 
+// Duplicates input string by allocating memory for the return string. Should be
+// deallocated by the caller
+VOLTRUM_API char* string_duplicate(const char* source);
+
 // Trim whitespaces from both ends of the string
 VOLTRUM_API char* string_trim(char* str);
 

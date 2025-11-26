@@ -35,7 +35,7 @@ struct Titlebar_State {
     b8 is_menu_hovered;
 };
 
-internal_variable Titlebar_State state = {};
+internal_var Titlebar_State state = {};
 
 // Titlebar constants
 

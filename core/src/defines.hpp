@@ -44,7 +44,7 @@ constexpr u64 MIB(1 << 20);
 constexpr u64 KIB(1 << 10);
 
 #define local_persist static
-#define internal_variable static
+#define internal_var static
 #define global_variable static
 
 #define INTERNAL_FUNC static

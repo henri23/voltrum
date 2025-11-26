@@ -102,19 +102,19 @@ void* arena_alloc_aligned(Memory_Arena* arena, u64 size, u64 alignment) {
 }
 
 // -------- Allocator adapter --------
-internal_variable void* arena_allocator_allocate(void* context, u64 size, u64 alignment) {
+internal_var void* arena_allocator_allocate(void* context, u64 size, u64 alignment) {
     Memory_Arena* arena = static_cast<Memory_Arena*>(context);
     return arena_alloc_aligned(arena, size, alignment ? alignment : alignof(std::max_align_t));
 }
 
-internal_variable void arena_allocator_deallocate(void* context, void* ptr, u64 size) {
+internal_var void arena_allocator_deallocate(void* context, void* ptr, u64 size) {
     (void)context;
     (void)ptr;
     (void)size;
     // Linear arenas do not support individual frees; user controls lifetime via checkpoints/clear.
 }
 
-internal_variable void* arena_allocator_reallocate(void* context,
+internal_var void* arena_allocator_reallocate(void* context,
     void* ptr,
     u64 old_size,
     u64 new_size,

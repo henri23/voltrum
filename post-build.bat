@@ -4,13 +4,6 @@ setlocal
 rem Resolve script directory (bin is in same directory as script)
 set SCRIPT_DIR=%~dp0
 rem Remove trailing backslash if exists
-if "%SCRIPT_DIR:~-1%"=="\" set SCRIPT_DIR=%SCRIPT_DIR:~0,-1%
-
-set BIN_ASSETS_DIR=%SCRIPT_DIR%\bin\assets
-set BIN_SHADERS_DIR=%BIN_ASSETS_DIR%\shaders
-
-rem Create output directories
-if not exist "%BIN_SHADERS_DIR%" mkdir "%BIN_SHADERS_DIR%"
 
 echo Compiling shaders...
 
@@ -21,24 +14,19 @@ if "%VULKAN_SDK%"=="" (
 )
 
 rem Vertex shader
-"%VULKAN_SDK%\Bin\glslc.exe" -fshader-stage=vert "%SCRIPT_DIR%\assets\shaders\Builtin.MaterialShader.vert.glsl" -o "%BIN_SHADERS_DIR%\Builtin.MaterialShader.vert.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" -fshader-stage=vert "%SCRIPT_DIR%\assets\shaders\Builtin.MaterialShader.vert.glsl" -o "%SCRIPT_DIR%\assets\shaders\Builtin.MaterialShader.vert.spv"
 if errorlevel 1 (
     echo Error: vertex shader compilation failed
     exit /b 1
 )
 
 rem Fragment shader
-"%VULKAN_SDK%\Bin\glslc.exe" -fshader-stage=frag "%SCRIPT_DIR%\assets\shaders\Builtin.MaterialShader.frag.glsl" -o "%BIN_SHADERS_DIR%\Builtin.MaterialShader.frag.spv"
+"%VULKAN_SDK%\Bin\glslc.exe" -fshader-stage=frag "%SCRIPT_DIR%\assets\shaders\Builtin.MaterialShader.frag.glsl" -o "%SCRIPT_DIR%\assets\shaders\Builtin.MaterialShader.frag.spv"
 if errorlevel 1 (
     echo Error: fragment shader compilation failed
     exit /b 1
 )
 
-echo Copying non-shader assets...
-rem Copy everything from assets to bin\assets, preserving structure
-xcopy /E /I /Y "%SCRIPT_DIR%\assets" "%BIN_ASSETS_DIR%" >nul
-
-echo Shader compilation and asset copying completed successfully.
-echo Compiled shaders are in: %BIN_SHADERS_DIR%
+echo Compiled shaders are in: %SCRIPT_DIR%
 
 endlocal

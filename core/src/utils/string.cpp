@@ -75,6 +75,22 @@ char* string_ncopy(char* dest, const char* source, u64 max_length) {
     return strncpy(dest, source, max_length);
 }
 
+char* string_duplicate(const char* source) {
+    if (!source) {
+        return nullptr;
+    }
+
+    u64 length = string_length(source);
+    char* duplicate = static_cast<char*>(
+        memory_allocate((length + 1) * sizeof(char), Memory_Tag::STRING));
+
+    if (duplicate) {
+        string_copy(duplicate, source);
+    }
+
+    return duplicate;
+}
+
 // This method does not allocate memory, but instead it modifies the existing
 // string. If the string provided was dynamically allocated, the original
 // pointer must be kept, and used for memory deallocation.

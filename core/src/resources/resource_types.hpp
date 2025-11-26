@@ -3,6 +3,35 @@
 #include "math/math_types.hpp"
 #include "utils/enum.hpp"
 
+enum class Resource_Type : u32 {
+    TEXT,   // the data will be a char* array
+    BINARY, // the data will be u8* array
+    IMAGE,  // the data will be Image_Resource_Data
+    MATERIAL,
+    STATIC_MESH,
+    FONT,
+    CUSTOM
+};
+
+using Loader_ID = u32;
+
+// The resource loader will be responsible for temporaril allocating the data
+// of the resource and deleting it
+struct Resource {
+    Loader_ID loader_id;
+    const char* name;
+    char* full_path;
+    u64 data_size;
+    void* data;
+};
+
+struct Image_Resource_Data {
+    u8 channel_count;
+    u32 width;
+    u32 height;
+    u8* pixels;
+};
+
 using Texture_ID = u32;
 constexpr u32 TEXTURE_NAME_MAX_LENGTH = 256;
 
@@ -34,6 +63,13 @@ struct Texture_Map {
 
 using Material_ID = u32;
 constexpr u32 MATERIAL_NAME_MAX_LENGTH = 256;
+
+struct Material_Config {
+    char name[MATERIAL_NAME_MAX_LENGTH];
+    b8 auto_release;
+    vec4 diffuse_color;
+    char diffuse_map_name[TEXTURE_NAME_MAX_LENGTH];
+};
 
 struct Material {
     Material_ID id;

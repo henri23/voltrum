@@ -35,7 +35,7 @@ struct Window_Resize_State {
     s32 initial_window_width, initial_window_height;
 };
 
-internal_variable Window_Resize_State state = {};
+internal_var Window_Resize_State state = {};
 
 // Internal functions
 INTERNAL_FUNC Resize_Direction get_resize_direction_from_mouse(ImVec2 mouse_pos, ImVec2 window_pos, ImVec2 window_size);

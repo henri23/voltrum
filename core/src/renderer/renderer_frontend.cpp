@@ -20,7 +20,7 @@ struct Renderer_System_State {
     f32 far_clip = 1000.0f;
 };
 
-internal_variable Renderer_System_State state;
+internal_var Renderer_System_State state;
 
 b8 renderer_startup(const char* application_name) {
 
