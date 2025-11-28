@@ -4,12 +4,12 @@
 #include "utils/enum.hpp"
 
 enum class Resource_Type : u32 {
-    TEXT,   // the data will be a char* array
-    BINARY, // the data will be u8* array
-    IMAGE,  // the data will be Image_Resource_Data
-    MATERIAL,
-    STATIC_MESH,
-    FONT,
+    TEXT,        // the data will be a char* array
+    BINARY,      // the data will be u8* array
+    IMAGE,       // the data will be Image_Resource_Data
+    MATERIAL,    // the data  will be Material_Config
+    STATIC_MESH, // the data will be TBD
+    FONT,        // the data will be u8* array
     CUSTOM
 };
 
@@ -21,7 +21,7 @@ struct Resource {
     Loader_ID loader_id;
     const char* name;
     char* full_path;
-    u64 data_size;
+    u64 data_size; // Size of the data stored in the opaque member void* data
     void* data;
 };
 

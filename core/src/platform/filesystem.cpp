@@ -26,12 +26,10 @@ b8 filesystem_exists(const char* path) {
 #endif
 }
 
-b8 filesystem_open(
-    const char* path,
+b8 filesystem_open(const char* path,
     File_Modes mode,
     b8 binary,
-    File_Handle* out_handle
-) {
+    File_Handle* out_handle) {
 
     out_handle->is_valid = false;
     out_handle->handle = nullptr;
@@ -71,6 +69,23 @@ void filesystem_close(File_Handle* handle) {
         handle->handle = nullptr;
         handle->is_valid = false;
     }
+}
+
+b8 filesystem_size(File_Handle* handle, u64* out_size) {
+    if (handle->handle) {
+        // This method does not preserve the file pointer, which in this case is
+        // ok because I just want to read the whole file in this method
+
+        // fseek moves the file pointer from the current position (in this case
+        // at the beginning of the file because it was just opened) to the
+        // specified position declared in the 3rd argument
+        fseek((FILE*)handle->handle, 0, SEEK_END);
+        *out_size = ftell((FILE*)handle->handle);
+        rewind((FILE*)handle->handle);
+        return true;
+    }
+
+    return false;
 }
 
 // line_buf char array will be allocated inside the method. No need for external
@@ -136,37 +151,38 @@ b8 filesystem_read(File_Handle* handle,
     return false;
 }
 
-// The out_bytes will be pointer to a byte array allocated and populated by this
-// function
-// out_bytes_read is a pointer to the number of bytes read from the file
 b8 filesystem_read_all_bytes(File_Handle* handle,
-    u8** out_bytes,
+    u8* out_bytes,
     u64* out_bytes_read) {
 
     if (handle->handle) {
-        // This method does not preserve the file pointer, which in this case is
-        // ok because I just want to read the whole file in this method
 
-        // fseek moves the file pointer from the current position (in this case
-        // at the beginning of the file because it was just opened) to the
-        // specified position declared in the 3rd argument
-        fseek(static_cast<FILE*>(handle->handle), 0, SEEK_END);
-
-        u64 size = ftell(static_cast<FILE*>(handle->handle));
-
-        // Rewind resset the pointer to the beginning
-        rewind(static_cast<FILE*>(handle->handle));
-
-        *out_bytes =
-            static_cast<u8*>(memory_allocate(size, Memory_Tag::STRING));
-
-        *out_bytes_read =
-            fread(*out_bytes, 1, size, static_cast<FILE*>(handle->handle));
-
-        if (*out_bytes_read != size)
+        u64 size = 0;
+        if (!filesystem_size(handle, &size))
             return false;
 
-        return true;
+        *out_bytes_read =
+            fread(out_bytes, 1, size, static_cast<FILE*>(handle->handle));
+
+        return *out_bytes_read == size;
+    }
+
+    return false;
+}
+
+b8 filesystem_read_all_text(File_Handle* handle,
+    char* out_text,
+    u64* out_bytes_read) {
+
+    if (handle->handle) {
+        u64 size = 0;
+        if (!filesystem_size(handle, &size))
+            return false;
+
+        *out_bytes_read =
+            fread(out_text, 1, size, static_cast<FILE*>(handle->handle));
+
+        return *out_bytes_read == size;
     }
 
     return false;

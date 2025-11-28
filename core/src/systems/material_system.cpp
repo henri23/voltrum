@@ -6,8 +6,7 @@
 #include "memory/memory.hpp"
 #include "renderer/renderer_frontend.hpp"
 
-// WARN: Temporary inject platform layer here
-#include "platform/filesystem.hpp"
+#include "systems/resource_system.hpp"
 #include "systems/texture_system.hpp"
 
 struct Material_Reference {
@@ -30,8 +29,6 @@ internal_var Material_System_State state = {};
 INTERNAL_FUNC b8 create_default_material(Material_System_State* state);
 INTERNAL_FUNC void destroy_material(Material* material);
 INTERNAL_FUNC b8 load_material(Material_Config config, Material* material);
-INTERNAL_FUNC b8 load_configuration_file(const char* path,
-    Material_Config* out_config);
 
 Material* material_system_acquire_from_config(Material_Config config);
 
@@ -45,7 +42,7 @@ b8 material_system_init(Material_System_Config config) {
 
     // Already zeroed out by the allocate function
     state.registered_materials = static_cast<Material*>(
-        memory_allocate(sizeof(Material) * count, Memory_Tag::MATERIAL));
+        memory_allocate(sizeof(Material) * count, Memory_Tag::ARRAY));
 
     // Invalidate all ids present in the material array
     for (u32 i = 0; i < count; ++i) {
@@ -79,7 +76,7 @@ void material_system_shutdown() {
     // Deallocate the memory of the registry
     memory_deallocate(state.registered_materials,
         sizeof(Material) * state.config.max_material_count,
-        Memory_Tag::MATERIAL);
+        Memory_Tag::ARRAY);
 
     // Release default texture resources
     destroy_material(&state.default_material);
@@ -90,21 +87,29 @@ void material_system_shutdown() {
 }
 
 Material* material_system_acquire(const char* name) {
-    Material_Config config;
+    Resource resource = {};
 
-    const char* format_str = "assets/materials/%s.%s";
-    char full_file_path[512];
-
-    string_format(full_file_path, format_str, name, "vol");
-    if (!load_configuration_file(full_file_path, &config)) {
+    if (!resource_system_load(name, Resource_Type::MATERIAL, &resource)) {
         CORE_ERROR(
             "Failed to load material file: '%s'. Null pointer will be "
             "returned.",
-            full_file_path);
+            name);
         return nullptr;
     }
 
-    return material_system_acquire_from_config(config);
+    Material* material = nullptr;
+    if (resource.data) {
+        material = material_system_acquire_from_config(
+            *static_cast<Material_Config*>(resource.data));
+    }
+
+    resource_system_unload(&resource);
+
+    if (!material) {
+        CORE_ERROR("Failed to load material resource, returning nullptr");
+    }
+
+    return material;
 }
 
 Material* material_system_acquire_from_config(Material_Config config) {
@@ -274,95 +279,6 @@ INTERNAL_FUNC b8 load_material(Material_Config config, Material* material) {
             config.name);
         return false;
     }
-
-    return true;
-}
-
-INTERNAL_FUNC b8 load_configuration_file(const char* path,
-    Material_Config* out_config) {
-
-    File_Handle file;
-    if (!filesystem_open(path, File_Modes::READ, false, &file)) {
-        CORE_ERROR(
-            "load_configuratin_file - Unable to open material file at path "
-            "'%s'",
-            path);
-
-        return false;
-    }
-
-    char line_buffer[512] = "";
-    char* p = &line_buffer[0];
-
-    u64 line_length = 0;
-    u32 line_number = 1;
-
-    while (filesystem_read_line(&file, 511, &p, &line_length)) {
-        char* trimmed = string_trim(line_buffer);
-
-        line_length = string_length(trimmed);
-
-        if (line_length < 1 || trimmed[0] == '#') {
-            line_number++;
-            continue;
-        }
-
-        s32 equal_index = string_index_of(trimmed, '=');
-        if (equal_index == -1) {
-            CORE_WARN(
-                "Potential formatting  issue found in '%s': token '=' not "
-                "found. Skipping line '%ui'",
-                path,
-                line_number);
-            line_number++;
-            continue;
-        }
-
-        char raw_var_name[64];
-        memory_zero(raw_var_name, sizeof(char) * 64);
-        string_substr(raw_var_name, trimmed, 0, equal_index);
-        char* trimmed_var_name = string_trim(raw_var_name);
-
-        // Assume a max line length of 511 - 64 (for the variable name)
-        char raw_value[446];
-        memory_zero(raw_value, sizeof(char) * 446);
-        string_substr(raw_value,
-            trimmed,
-            equal_index + 1,
-            -1); // Proceede until the end of the string
-        char* trimmed_value = string_trim(raw_value);
-
-        if (string_check_equal_insensitive(trimmed_var_name, "version")) {
-            // TODO: handle version
-
-        } else if (string_check_equal_insensitive(trimmed_var_name, "name")) {
-            string_ncopy(out_config->name,
-                trimmed_value,
-                MATERIAL_NAME_MAX_LENGTH);
-
-        } else if (string_check_equal_insensitive(trimmed_var_name,
-                       "diffuse_map_name")) {
-
-            string_ncopy(out_config->diffuse_map_name,
-                trimmed_value,
-                TEXTURE_NAME_MAX_LENGTH);
-
-        } else if (string_check_equal_insensitive(trimmed_var_name,
-                       "diffuse_color")) {
-            if (!string_to_vec4(trimmed_value, &out_config->diffuse_color)) {
-                CORE_WARN(
-                    "Error parsing diffuse color in file '%s'. Using default "
-                    "of white instead",
-                    path);
-                out_config->diffuse_color = vec4_one();
-            }
-        }
-
-        memory_zero(line_buffer, sizeof(char) * 512);
-        line_number++;
-    }
-
-    filesystem_close(&file);
 
     return true;
 }
