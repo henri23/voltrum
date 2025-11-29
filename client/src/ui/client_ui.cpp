@@ -50,10 +50,15 @@ void client_ui_render_voltrum_window(void* user_data) {
     // System info section
     ImGui::SeparatorText("System Information");
     ImGuiIO& io = ImGui::GetIO();
+
+    USE_FONT(BOLD_ITALIC);
+
     ImGui::Text("Frame Time: %.3f ms", 1000.0f / io.Framerate);
     ImGui::Text("FPS: %.1f", io.Framerate);
     ImGui::Text("Vertices: %d", io.MetricsRenderVertices);
     ImGui::Text("Indices: %d", io.MetricsRenderIndices);
+
+    END_FONT();
 
     // Show demo window if enabled
     if (show_demo_window) {
@@ -94,15 +99,15 @@ void client_ui_render_menus(void* user_data) {
         // Theme submenu
         if (ImGui::BeginMenu("Theme")) {
             if (ImGui::MenuItem("Dark")) {
-                ui_set_theme(UI_Theme::DARK);
+                ui_change_theme(UI_Theme::DARK);
                 CORE_DEBUG("Theme changed to Dark");
             }
             if (ImGui::MenuItem("Light")) {
-                ui_set_theme(UI_Theme::LIGHT);
+                ui_change_theme(UI_Theme::LIGHT);
                 CORE_DEBUG("Theme changed to Light");
             }
             if (ImGui::MenuItem("Catppuccin Mocha")) {
-                ui_set_theme(UI_Theme::CATPPUCCIN_MOCHA);
+                ui_change_theme(UI_Theme::CATPPUCCIN_MOCHA);
                 CORE_DEBUG("Theme changed to Catppuccin Mocha");
             }
             ImGui::EndMenu();

@@ -4,8 +4,10 @@
 
 // List of system resource loaders that are known to the core library
 #include "resources/loaders/binary_loader.hpp"
+#include "resources/loaders/font_loader.hpp"
 #include "resources/loaders/image_loader.hpp"
 #include "resources/loaders/material_loader.hpp"
+#include "resources/loaders/text_loader.hpp"
 
 struct Resource_System_State {
     Resource_System_Config config;
@@ -26,9 +28,11 @@ b8 resource_system_init(Resource_System_Config config) {
         state.registered_loaders[i].id = INVALID_ID;
     }
 
+    resource_system_register_loader(text_resource_loader_create());
     resource_system_register_loader(binary_resource_loader_create());
     resource_system_register_loader(image_resource_loader_create());
     resource_system_register_loader(material_resource_loader_create());
+    resource_system_register_loader(font_resource_loader_create());
 
     CORE_TRACE("Resource system initialized with base path '%s'",
         config.asset_base_path);

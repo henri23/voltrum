@@ -129,7 +129,7 @@ INTERNAL_FUNC void material_resource_unload(struct Resource_Loader* self,
     Resource* resource) {
     if (!self || !resource) {
         CORE_WARN(
-            "image_loader_unload called with nullptr for self of resource.");
+            "text_loader_unload called with nullptr for self of resource.");
         return;
     }
 

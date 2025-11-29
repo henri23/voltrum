@@ -1,21 +1,23 @@
 #include "ui.hpp"
-#include "renderer/vulkan/vulkan_ui.hpp"
-#include "ui_fonts.hpp"
 #include "ui_themes.hpp"
 #include "ui_titlebar.hpp"
 #include "ui_viewport.hpp"
 
+#include "core/asserts.hpp"
 #include "core/logger.hpp"
 #include "events/events.hpp"
-#include "imgui.h"
-#include "imgui_impl_sdl3.h"
-#include "imgui_impl_vulkan.h"
 #include "input/input_codes.hpp"
 #include "memory/memory.hpp"
 #include "platform/platform.hpp"
+#include "systems/resource_system.hpp"
+
 #include "renderer/vulkan/vulkan_types.hpp"
+#include "renderer/vulkan/vulkan_ui.hpp"
 
 #include <SDL3/SDL.h>
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_vulkan.h>
 
 // Internal UI state - not exposed to client
 struct UI_State {
@@ -32,9 +34,10 @@ struct UI_State {
     unsigned int dockspace_id;
     b8 dockspace_open;
     b8 window_began; // Track if ImGui::Begin() was called this frame
+    ImFont* fonts[(u8)Font_Style::MAX_COUNT];
 };
 
-internal_var UI_State ui_state;
+internal_var UI_State state;
 
 // Forward declarations for internal functions
 INTERNAL_FUNC b8 setup_imgui_context(f32 main_scale, void* window);
@@ -42,6 +45,7 @@ INTERNAL_FUNC b8 ui_event_handler(const Event* event);
 INTERNAL_FUNC ImGuiKey engine_key_to_imgui_key(Key_Code key);
 INTERNAL_FUNC int engine_mouse_to_imgui_button(Mouse_Button button);
 INTERNAL_FUNC void ui_dockspace_render();
+INTERNAL_FUNC b8 load_default_fonts();
 
 b8 ui_initialize(UI_Theme theme,
     Auto_Array<UI_Layer>* layers,
@@ -51,23 +55,23 @@ b8 ui_initialize(UI_Theme theme,
 
     CORE_DEBUG("Initializing UI subsystem...");
 
-    if (ui_state.is_initialized) {
+    if (state.is_initialized) {
         CORE_WARN("UI subsystem already initialized");
         return true;
     }
 
     // Preserve vulkan_init_info before zeroing state
     ImGui_ImplVulkan_InitInfo preserved_vulkan_init_info =
-        ui_state.vulkan_init_info;
+        state.vulkan_init_info;
 
     // Zero out the state (though it should already be zero)
-    memory_zero(&ui_state, sizeof(UI_State));
+    memory_zero(&state, sizeof(UI_State));
 
     // Restore vulkan_init_info
-    ui_state.vulkan_init_info = preserved_vulkan_init_info;
+    state.vulkan_init_info = preserved_vulkan_init_info;
 
     // Set configuration from parameters BEFORE setting up ImGui context
-    ui_state.current_theme = theme;
+    state.current_theme = theme;
 
     // Get window details from platform
     u32 width, height;
@@ -85,23 +89,20 @@ b8 ui_initialize(UI_Theme theme,
     }
 
     // Set remaining configuration parameters
-    ui_state.layers = layers;
+    state.layers = layers;
 
-    ui_state.is_initialized = true;
+    state.is_initialized = true;
 
     // Initialize dockspace state
-    ui_state.dockspace_id = 0;    // Will be set on first render
-    ui_state.dockspace_open = true;
-    ui_state.window_began = false;
+    state.dockspace_id = 0; // Will be set on first render
+    state.dockspace_open = true;
+    state.window_began = false;
 
-    // Initialize font system
-    if (!ui_fonts_initialize()) {
+    // Initialize font subsystem
+    if (!load_default_fonts()) {
         CORE_ERROR("Failed to initialize font system");
         return false;
     }
-
-    // Load default fonts
-    ui_fonts_register_defaults();
 
     // Setup ImGui docking
     ImGuiIO& io = ImGui::GetIO();
@@ -138,7 +139,7 @@ b8 ui_initialize(UI_Theme theme,
 void ui_shutdown() {
     CORE_DEBUG("Shutting down UI subsystem...");
 
-    if (!ui_state.is_initialized) {
+    if (!state.is_initialized) {
         CORE_WARN("UI subsystem not initialized");
         return;
     }
@@ -157,14 +158,17 @@ void ui_shutdown() {
     events_unregister_callback(Event_Type::MOUSE_WHEEL_SCROLLED,
         ui_get_event_callback());
 
-    // Note: All ImGui cleanup happens in ui_cleanup_vulkan_resources after Vulkan synchronization
-    CORE_DEBUG("ImGui backends and context will be destroyed by renderer during Vulkan cleanup");
+    // Note: All ImGui cleanup happens in ui_cleanup_vulkan_resources after
+    // Vulkan synchronization
+    CORE_DEBUG(
+        "ImGui backends and context will be destroyed by renderer during "
+        "Vulkan cleanup");
 
     // Cleanup component system
-    if (!ui_state.layers->empty()) {
+    if (!state.layers->empty()) {
         // Call detach callbacks for all active components
-        for (u32 i = 0; i < ui_state.layers->size(); ++i) {
-            UI_Layer* component = &ui_state.layers->data[i];
+        for (u32 i = 0; i < state.layers->size(); ++i) {
+            UI_Layer* component = &state.layers->data[i];
             if (component->on_detach) {
 
                 component->on_detach(component->component_state);
@@ -172,24 +176,27 @@ void ui_shutdown() {
             }
         }
 
-        ui_state.layers->clear();
+        state.layers->clear();
         CORE_DEBUG("UI components cleared.");
     }
 
     // Reset state
-    ui_state.is_initialized = false;
-    ui_state.current_theme = UI_Theme::DARK;
-    ui_state.menu_callback = nullptr;
+    state.is_initialized = false;
+    state.current_theme = UI_Theme::DARK;
+    state.menu_callback = nullptr;
 
     // Clear any remaining ImGui state pointers to prevent access after shutdown
-    // Note: Actual ImGui context destruction happens in ui_cleanup_vulkan_resources
+    // Note: Actual ImGui context destruction happens in
+    // ui_cleanup_vulkan_resources
 
     CORE_DEBUG("UI subsystem shut down successfully");
 }
 
+ImFont* ui_get_font(Font_Style style) { return state.fonts[(u8)style]; }
+
 // Internal UI event handler for engine events - translate to ImGui native API
 INTERNAL_FUNC b8 ui_event_handler(const Event* event) {
-    if (!ui_state.is_initialized) {
+    if (!state.is_initialized) {
         return false;
     }
 
@@ -267,7 +274,7 @@ INTERNAL_FUNC b8 setup_imgui_context(f32 main_scale, void* window) {
     ImGuiStyle& style = ImGui::GetStyle();
 
     // Apply the configured theme
-    ui_themes_apply(ui_state.current_theme, style);
+    ui_themes_apply(state.current_theme, style);
 
 #ifndef PLATFORM_APPLE
     // Setup scaling
@@ -297,7 +304,7 @@ INTERNAL_FUNC b8 setup_imgui_context(f32 main_scale, void* window) {
     }
 
     // Initialize ImGui Vulkan backend using prepared init info
-    if (!ImGui_ImplVulkan_Init(&ui_state.vulkan_init_info)) {
+    if (!ImGui_ImplVulkan_Init(&state.vulkan_init_info)) {
         CORE_ERROR("Failed to initialize ImGui Vulkan backend");
         return false;
     }
@@ -309,16 +316,16 @@ INTERNAL_FUNC b8 setup_imgui_context(f32 main_scale, void* window) {
 // Component system implementation
 
 // Internal accessor for current theme (for core UI components only)
-UI_Theme ui_get_current_theme() { return ui_state.current_theme; }
+UI_Theme ui_get_current_theme() { return state.current_theme; }
 
 // Set UI theme at runtime
-void ui_set_theme(UI_Theme theme) {
+void ui_change_theme(UI_Theme theme) {
     if ((int)theme >= (int)UI_Theme::COUNT) {
         CORE_WARN("Invalid theme index, defaulting to DARK");
         theme = UI_Theme::DARK;
     }
 
-    ui_state.current_theme = theme;
+    state.current_theme = theme;
 
     // Re-apply theme to ImGui style
     ImGuiStyle& style = ImGui::GetStyle();
@@ -393,22 +400,21 @@ b8 ui_setup_vulkan_resources(Vulkan_Context* context) {
         &context->ui_linear_sampler));
 
     // Prepare ImGui Vulkan backend initialization info for later use
-    ui_state.vulkan_init_info = {};
-    ui_state.vulkan_init_info.Instance = context->instance;
-    ui_state.vulkan_init_info.PhysicalDevice = context->device.physical_device;
-    ui_state.vulkan_init_info.Device = context->device.logical_device;
-    ui_state.vulkan_init_info.QueueFamily =
-        context->device.graphics_queue_index;
-    ui_state.vulkan_init_info.Queue = context->device.graphics_queue;
-    ui_state.vulkan_init_info.DescriptorPool = context->ui_descriptor_pool;
-    ui_state.vulkan_init_info.DescriptorPoolSize = 0;
-    ui_state.vulkan_init_info.MinImageCount =
+    state.vulkan_init_info = {};
+    state.vulkan_init_info.Instance = context->instance;
+    state.vulkan_init_info.PhysicalDevice = context->device.physical_device;
+    state.vulkan_init_info.Device = context->device.logical_device;
+    state.vulkan_init_info.QueueFamily = context->device.graphics_queue_index;
+    state.vulkan_init_info.Queue = context->device.graphics_queue;
+    state.vulkan_init_info.DescriptorPool = context->ui_descriptor_pool;
+    state.vulkan_init_info.DescriptorPoolSize = 0;
+    state.vulkan_init_info.MinImageCount =
         context->swapchain.max_in_flight_frames;
-    ui_state.vulkan_init_info.ImageCount = context->swapchain.image_count;
-    ui_state.vulkan_init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-    ui_state.vulkan_init_info.RenderPass = context->ui_renderpass.handle;
-    ui_state.vulkan_init_info.Subpass = 0;
-    ui_state.vulkan_init_info.Allocator = context->allocator;
+    state.vulkan_init_info.ImageCount = context->swapchain.image_count;
+    state.vulkan_init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    state.vulkan_init_info.RenderPass = context->ui_renderpass.handle;
+    state.vulkan_init_info.Subpass = 0;
+    state.vulkan_init_info.Allocator = context->allocator;
 
     CORE_DEBUG("UI Vulkan resources created successfully");
     return true;
@@ -421,7 +427,8 @@ void ui_cleanup_vulkan_resources(Vulkan_Context* context) {
     ui_titlebar_cleanup_renderer_resources();
     ui_viewport_cleanup_vulkan_resources(context);
 
-    // Shutdown ImGui backends AFTER component cleanup and Vulkan synchronization
+    // Shutdown ImGui backends AFTER component cleanup and Vulkan
+    // synchronization
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     CORE_DEBUG("ImGui backends shutdown complete after Vulkan synchronization");
@@ -465,7 +472,7 @@ void ui_on_vulkan_resize(Vulkan_Context* context, u32 width, u32 height) {
 }
 
 void ui_begin_vulkan_frame() {
-    if (!ui_state.is_initialized) {
+    if (!state.is_initialized) {
         return;
     }
 
@@ -476,7 +483,7 @@ void ui_begin_vulkan_frame() {
 }
 
 b8 ui_draw_components(Vulkan_Command_Buffer* command_buffer) {
-    if (!ui_state.is_initialized) {
+    if (!state.is_initialized) {
         CORE_ERROR(
             "ui_render_vulkan_components called, but ui state is not "
             "intialized");
@@ -491,8 +498,8 @@ b8 ui_draw_components(Vulkan_Command_Buffer* command_buffer) {
     ui_titlebar_draw();
 
     // Render all registered UI components
-    for (u32 i = 0; i < ui_state.layers->length; ++i) {
-        UI_Layer* layer = &ui_state.layers->data[i];
+    for (u32 i = 0; i < state.layers->length; ++i) {
+        UI_Layer* layer = &state.layers->data[i];
 
         if (layer->on_render)
             layer->on_render(layer->component_state);
@@ -762,12 +769,12 @@ INTERNAL_FUNC int engine_mouse_to_imgui_button(Mouse_Button button) {
 // Internal dockspace rendering function
 INTERNAL_FUNC void ui_dockspace_render() {
     // Reset the window_began flag at the start of each frame
-    ui_state.window_began = false;
+    state.window_began = false;
 
     // Generate dockspace ID on first use (when ImGui context is ready)
-    if (ui_state.dockspace_id == 0) {
-        ui_state.dockspace_id = ImGui::GetID("MainDockspace");
-        CORE_DEBUG("Generated dockspace ID: %u", ui_state.dockspace_id);
+    if (state.dockspace_id == 0) {
+        state.dockspace_id = ImGui::GetID("MainDockspace");
+        CORE_DEBUG("Generated dockspace ID: %u", state.dockspace_id);
     }
 
     // Setup viewport for fullscreen dockspace
@@ -799,8 +806,8 @@ INTERNAL_FUNC void ui_dockspace_render() {
 
     // Begin the main dockspace window
     const char* window_name = "DockSpace";
-    ImGui::Begin(window_name, &ui_state.dockspace_open, window_flags);
-    ui_state.window_began = true;
+    ImGui::Begin(window_name, &state.dockspace_open, window_flags);
+    state.window_began = true;
 
     // Pop style vars
     ImGui::PopStyleVar(3);
@@ -814,7 +821,7 @@ INTERNAL_FUNC void ui_dockspace_render() {
         style.WindowMinSize.x = 300.0f;
 
         // Create dockspace
-        ImGui::DockSpace(ui_state.dockspace_id);
+        ImGui::DockSpace(state.dockspace_id);
 
         // Restore original window size
         style.WindowMinSize.x = minWinSizeX;
@@ -823,8 +830,68 @@ INTERNAL_FUNC void ui_dockspace_render() {
     }
 
     // End the dockspace window
-    if (ui_state.window_began) {
+    if (state.window_began) {
         ImGui::End(); // End DockSpace window
-        ui_state.window_began = false;
+        state.window_began = false;
     }
+}
+
+b8 load_default_fonts() {
+    ImGuiIO& io = ImGui::GetIO();
+
+    constexpr const char* style_names[] = {"normal",
+        "italic",
+        "bold_normal",
+        "bold_italic"};
+
+    // Loop through all combinations and load fonts
+    for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s) {
+        // Build resource path: "jetbrains/jetbrains_{style}"
+        char path[128];
+        u32 i = 0;
+
+        const char* prefix = "jetbrains/jetbrains_";
+        for (u32 j = 0; prefix[j] != '\0'; ++j)
+            path[i++] = prefix[j];
+
+        for (u32 j = 0; style_names[s][j] != '\0'; ++j)
+            path[i++] = style_names[s][j];
+
+        path[i] = '\0';
+
+        // Load from resource system
+        Resource resource = {};
+        if (!resource_system_load(path, Resource_Type::FONT, &resource)) {
+            CORE_ERROR("Failed to load font: %s", path);
+            state.fonts[s] = nullptr;
+            continue;
+        }
+
+        // Add to ImGui
+        ImFontConfig config = {};
+        config.FontDataOwnedByAtlas = false;
+
+        state.fonts[s] = io.Fonts->AddFontFromMemoryTTF(resource.data,
+            resource.data_size,
+            20.0f,
+            &config);
+
+        // Unload resource immediately - ImGui has copied the data
+        resource_system_unload(&resource);
+
+        if (state.fonts[s]) {
+            CORE_DEBUG("Loaded font: %s at %.0fpt", path, 20.0f);
+        }
+    }
+
+    // Build atlas
+    if (!io.Fonts->Build()) {
+        CORE_ERROR("Failed to build font atlas");
+        return false;
+    }
+
+    // Set default font
+    io.FontDefault = state.fonts[(u8)Font_Style::NORMAL];
+
+    return true;
 }

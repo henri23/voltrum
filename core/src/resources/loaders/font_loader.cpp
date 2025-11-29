@@ -1,16 +1,14 @@
-#include "binary_loader.hpp"
+#include "font_loader.hpp"
 #include "core/logger.hpp"
 #include "memory/memory.hpp"
 #include "platform/filesystem.hpp"
 #include "utils/string.hpp"
 
-INTERNAL_FUNC b8 binary_resource_load(struct Resource_Loader* self,
+INTERNAL_FUNC b8 font_resource_load(struct Resource_Loader* self,
     const char* name,
     Resource* out_resource) {
-
     if (!self || !name || !out_resource) {
-        CORE_ERROR(
-            "material_loader_load - Ensure all pointers are not nullptr");
+        CORE_ERROR("font_resource_load - Make sure all pointers are valid");
         return false;
     }
 
@@ -22,14 +20,14 @@ INTERNAL_FUNC b8 binary_resource_load(struct Resource_Loader* self,
         resource_system_base_path(),
         self->type_path,
         name,
-        ""); // No need for extension because must be specified by the user
+        ".ttf");
 
     out_resource->full_path = string_duplicate(full_file_path);
 
     File_Handle file;
     if (!filesystem_open(full_file_path, File_Modes::READ, true, &file)) {
         CORE_ERROR(
-            "binary_resource_load - unable to open binary file for "
+            "font_resource_load - unable to open text file for "
             "reading: '%s'",
             full_file_path);
         return false;
@@ -37,7 +35,7 @@ INTERNAL_FUNC b8 binary_resource_load(struct Resource_Loader* self,
 
     u64 file_size = 0;
     if (!filesystem_size(&file, &file_size)) {
-        CORE_ERROR("binary_loader_load - Unable to read file: '%s'",
+        CORE_ERROR("font_loader_load - Unable to read file: '%s'",
             full_file_path);
         filesystem_close(&file);
         return false;
@@ -48,7 +46,7 @@ INTERNAL_FUNC b8 binary_resource_load(struct Resource_Loader* self,
 
     u64 read_size = 0;
     if (!filesystem_read_all_bytes(&file, resource_data, &read_size)) {
-        CORE_ERROR("binary_loader_load - Unable to binary read file '%s'",
+        CORE_ERROR("font_loader_load - Unable to read font '%s'",
             full_file_path);
         filesystem_close(&file);
         return false;
@@ -63,12 +61,12 @@ INTERNAL_FUNC b8 binary_resource_load(struct Resource_Loader* self,
     return true;
 }
 
-INTERNAL_FUNC void binary_resource_unload(struct Resource_Loader* self,
+INTERNAL_FUNC void font_resource_unload(struct Resource_Loader* self,
     Resource* resource) {
 
     if (!self || !resource) {
         CORE_WARN(
-            "binary_loader_unload called with nullptr for self of resource.");
+            "image_loader_unload called with nullptr for self of resource.");
         return;
     }
 
@@ -88,13 +86,12 @@ INTERNAL_FUNC void binary_resource_unload(struct Resource_Loader* self,
     }
 }
 
-Resource_Loader binary_resource_loader_create() {
-    Resource_Loader loader;
-    loader.load = binary_resource_load;
-    loader.unload = binary_resource_unload;
-    loader.type = Resource_Type::BINARY;
-    loader.type_path = ""; // Since the binary files are not a distinct type
-                           // they can be loaded from anywhere, so the full path
-                           // must be provided for them relative to the assets
+Resource_Loader font_resource_loader_create() {
+    Resource_Loader loader = {};
+    loader.load = font_resource_load;
+    loader.unload = font_resource_unload;
+    loader.type = Resource_Type::FONT;
+    loader.type_path = "fonts";
+
     return loader;
 }
