@@ -41,15 +41,6 @@ b8 renderer_create_geometry(Geometry* geometry,
 
 void renderer_destroy_geometry(Geometry* geometry);
 
-// UI Image Management
-b8 renderer_create_ui_image(u32 width,
-    u32 height,
-    const void* pixel_data,
-    u32 pixel_data_size,
-    UI_Image_Resource* out_image_resource);
-
-void renderer_destroy_ui_image(UI_Image_Resource* resource);
-
 // WARN: The exposing of this method from the core library is temporary until
 // the camera system is developed
 VOLTRUM_API void renderer_set_view(mat4 view);
