@@ -3,108 +3,22 @@
 #include "memory/memory.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
-// Internal function declarations
-INTERNAL_FUNC void vulkan_renderpass_create_main_internal(
-    Vulkan_Context* context,
-    Vulkan_Renderpass* out_renderpass,
-    f32 x,
-    f32 y,
-    f32 w,
-    f32 h,
-    f32 r,
-    f32 g,
-    f32 b,
-    f32 a,
-    f32 depth,
-    u32 stencil);
-
-INTERNAL_FUNC void vulkan_renderpass_create_ui_internal(Vulkan_Context* context,
-    Vulkan_Renderpass* out_renderpass,
-    f32 x,
-    f32 y,
-    f32 w,
-    f32 h,
-    f32 r,
-    f32 g,
-    f32 b,
-    f32 a,
-    f32 depth,
-    u32 stencil);
-
-// Public dispatch function
 void vulkan_renderpass_create(Vulkan_Context* context,
     Vulkan_Renderpass* out_renderpass,
-    Renderpass_Type type,
-    f32 x,
-    f32 y,
-    f32 w,
-    f32 h,
-    f32 r,
-    f32 g,
-    f32 b,
-    f32 a,
+    vec4 render_area,
+    vec4 clear_color,
     f32 depth,
-    u32 stencil) {
+    u32 stencil,
+    Renderpass_Clear_Flags clear_flags,
+    b8 has_prev_pass,
+    b8 has_next_pass) {
 
-    switch (type) {
-    case Renderpass_Type::MAIN:
-        vulkan_renderpass_create_main_internal(context,
-            out_renderpass,
-            x,
-            y,
-            w,
-            h,
-            r,
-            g,
-            b,
-            a,
-            depth,
-            stencil);
-        break;
-    case Renderpass_Type::UI:
-        vulkan_renderpass_create_ui_internal(context,
-            out_renderpass,
-            x,
-            y,
-            w,
-            h,
-            r,
-            g,
-            b,
-            a,
-            depth,
-            stencil);
-        break;
-    }
+    out_renderpass->render_area = render_area;
+    out_renderpass->clear_color = clear_color;
+    out_renderpass->clear_flags = (u8)clear_flags;
 
-    // Set the renderpass type for later use
-    out_renderpass->type = type;
-}
-
-INTERNAL_FUNC void vulkan_renderpass_create_main_internal(
-    Vulkan_Context* context,
-    Vulkan_Renderpass* out_renderpass,
-    // Definition of the area of the image that we want to render to
-    f32 x,
-    f32 y,
-    f32 w,
-    f32 h, // (TODO) Change to Vec4
-    f32 r,
-    f32 g,
-    f32 b,
-    f32 a, // Clear color
-    f32 depth,
-    u32 stencil) {
-
-    out_renderpass->x = x;
-    out_renderpass->y = y;
-    out_renderpass->w = w;
-    out_renderpass->h = h;
-
-    out_renderpass->r = r;
-    out_renderpass->g = g;
-    out_renderpass->b = b;
-    out_renderpass->a = a;
+    out_renderpass->has_prev = has_prev_pass;
+    out_renderpass->has_next = has_next_pass;
 
     out_renderpass->depth = depth;
     out_renderpass->stencil = stencil;
@@ -115,41 +29,40 @@ INTERNAL_FUNC void vulkan_renderpass_create_main_internal(
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 
     // Prepare two attachments for color and depth
-    constexpr u32 attachment_description_count = 2;
-    VkAttachmentDescription
-        attachment_descriptions[attachment_description_count];
+    u32 attachment_description_count = 0;
+    VkAttachmentDescription attachment_descriptions[2];
+
+    // Determine for the color attachment whether we will be clearing the color
+    b8 do_clear_color =
+        u32(clear_flags & Renderpass_Clear_Flags::COLOR_BUFFER) != 0;
 
     // We need to define what attachments will be used during rendering, i.e.
     // images like color/depth buffers
     VkAttachmentDescription color_attachment;
-
     // Use standard RGBA format for off-screen rendering
     color_attachment.format = VK_FORMAT_R8G8B8A8_UNORM;
-
     // Set each pixel to be samples only once by the shaders
     color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-
     // When the renderpass starts, clear the color attachment (typically to
     // black of specified color)
-    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-
+    color_attachment.loadOp = do_clear_color ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                             : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     // When the renderpass stops, store the results. This settings is very
     // important since we want to store the results of the renderpass to allow
     // the swapchain to present them
     color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-
     // Since we do not use stencil operations, we do not care about these two
     color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
-    color_attachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
+    color_attachment.initialLayout =
+        has_prev_pass ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL  // VP pass
+                      : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // Imgui pass
     // After render pass, the image will be ready for shader sampling
-    color_attachment.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
+    color_attachment.finalLayout =
+        has_next_pass ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL // VP pass
+                      : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;         // ImGui pass
     color_attachment.flags = 0;
-
-    attachment_descriptions[0] = color_attachment;
+    attachment_descriptions[attachment_description_count++] = color_attachment;
 
     // Specify that during the subpass. attachment with index 0 will be used
     // with color-optimzed layout
@@ -162,35 +75,42 @@ INTERNAL_FUNC void vulkan_renderpass_create_main_internal(
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_attachment_reference;
 
-    VkAttachmentDescription depth_attachment = {};
-    depth_attachment.format = context->device.depth_format;
+    b8 do_clear_depth =
+        u32(clear_flags & Renderpass_Clear_Flags::DEPTH_BUFFER) != 0;
 
-    depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    // Skip the depth attachment in case of the UI renderpass
+    if (do_clear_depth) {
+        VkAttachmentDescription depth_attachment = {};
+        depth_attachment.format = context->device.depth_format;
 
-    depth_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    // We do not vare about the z-buffer contents after rendering
-    depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depth_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 
-    // We do not do stencil operations
-    depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depth_attachment.loadOp = do_clear_depth ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                                 : VK_ATTACHMENT_LOAD_OP_LOAD;
+        // We do not vare about the z-buffer contents after rendering
+        depth_attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-    depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depth_attachment.finalLayout =
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        // We do not do stencil operations
+        depth_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depth_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-    attachment_descriptions[1] = depth_attachment;
+        depth_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        depth_attachment.finalLayout =
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-    VkAttachmentReference depth_attachment_reference;
-    depth_attachment_reference.attachment = 1;
-    depth_attachment_reference.layout =
-        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachment_descriptions[attachment_description_count++] =
+            depth_attachment;
 
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_attachment_reference;
-
-    // TODO: Specify other attachment types like input, resolve, preserve
-    subpass.pDepthStencilAttachment = &depth_attachment_reference;
+        VkAttachmentReference depth_attachment_reference;
+        depth_attachment_reference.attachment = 1;
+        depth_attachment_reference.layout =
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        subpass.pDepthStencilAttachment = &depth_attachment_reference;
+    } else {
+        memory_zero(&attachment_descriptions[attachment_description_count],
+            sizeof(VkAttachmentDescription));
+        subpass.pDepthStencilAttachment = nullptr;
+    }
 
     subpass.inputAttachmentCount = 0;
     subpass.pInputAttachments = nullptr;
@@ -259,42 +179,48 @@ void vulkan_renderpass_begin(Vulkan_Command_Buffer* command_buffer,
     begin_info.renderPass = renderpass->handle;
     begin_info.framebuffer = frame_buffer;
 
-    begin_info.renderArea.offset.x = renderpass->x;
-    begin_info.renderArea.offset.y = renderpass->y;
-    begin_info.renderArea.extent.width = renderpass->w;
-    begin_info.renderArea.extent.height = renderpass->h;
+    begin_info.renderArea.offset.x = renderpass->render_area.x;
+    begin_info.renderArea.offset.y = renderpass->render_area.y;
+    begin_info.renderArea.extent.width = renderpass->render_area.z;
+    begin_info.renderArea.extent.height = renderpass->render_area.w;
+
+    begin_info.clearValueCount = 0;
+    begin_info.pClearValues = nullptr;
 
     VkClearValue clear_values[2];
-    u32 clear_value_count;
+    memory_zero(clear_values, sizeof(VkClearValue) * 2);
 
-    // Configure clear values based on renderpass type
-    switch (renderpass->type) {
-    case Renderpass_Type::MAIN:
-        // Main renderpass: color + depth clear values
-        clear_value_count = 2;
-        memory_zero(clear_values, sizeof(VkClearValue) * 2);
-        clear_values[0].color.float32[0] = renderpass->r;
-        clear_values[0].color.float32[1] = renderpass->g;
-        clear_values[0].color.float32[2] = renderpass->b;
-        clear_values[0].color.float32[3] = renderpass->a;
-        clear_values[1].depthStencil.depth = renderpass->depth;
-        clear_values[1].depthStencil.stencil = renderpass->stencil;
+    b8 do_clear_color = (renderpass->clear_flags &
+                            (u32)Renderpass_Clear_Flags::COLOR_BUFFER) != 0;
+    if (do_clear_color) {
+        memory_copy(clear_values[begin_info.clearValueCount].color.float32,
+            renderpass->clear_color.elements,
+            sizeof(f32) * 4);
 
-        break;
-
-    case Renderpass_Type::UI:
-        // UI renderpass: color clear value only (no depth)
-        clear_value_count = 1;
-        memory_zero(clear_values, sizeof(VkClearValue) * 1);
-        clear_values[0].color.float32[0] = renderpass->r;
-        clear_values[0].color.float32[1] = renderpass->g;
-        clear_values[0].color.float32[2] = renderpass->b;
-        clear_values[0].color.float32[3] = renderpass->a;
-        break;
+        begin_info.clearValueCount++;
     }
 
-    begin_info.clearValueCount = clear_value_count;
-    begin_info.pClearValues = clear_values;
+    b8 do_clear_depth = (renderpass->clear_flags &
+                            (u8)Renderpass_Clear_Flags::DEPTH_BUFFER) != 0;
+    if (do_clear_depth) {
+        memory_copy(clear_values[begin_info.clearValueCount].color.float32,
+            renderpass->clear_color.elements,
+            sizeof(f32) * 4);
+
+        clear_values[begin_info.clearValueCount].depthStencil.depth =
+            renderpass->depth;
+
+        b8 do_clear_stencil =
+            (renderpass->clear_flags &
+                (u32)Renderpass_Clear_Flags::STENCIL_BUFFER) != 0;
+
+        clear_values[begin_info.clearValueCount].depthStencil.stencil =
+            do_clear_stencil ? renderpass->stencil : 0;
+
+        begin_info.clearValueCount++;
+    }
+
+    begin_info.pClearValues = begin_info.clearValueCount > 0 ? clear_values : 0;
 
     vkCmdBeginRenderPass(command_buffer->handle,
         &begin_info,
@@ -308,98 +234,4 @@ void vulkan_renderpass_end(Vulkan_Command_Buffer* command_buffer,
 
     vkCmdEndRenderPass(command_buffer->handle);
     command_buffer->state = Command_Buffer_State::RECORDING;
-}
-
-INTERNAL_FUNC void vulkan_renderpass_create_ui_internal(Vulkan_Context* context,
-    Vulkan_Renderpass* out_renderpass,
-    // TODO: Change with vec4
-    f32 x,
-    f32 y,
-    f32 w,
-    f32 h,
-    f32 r,
-    f32 g,
-    f32 b,
-    f32 a,
-    f32 depth,
-    u32 stencil) {
-
-    out_renderpass->x = x;
-    out_renderpass->y = y;
-    out_renderpass->w = w;
-    out_renderpass->h = h;
-
-    out_renderpass->r = r;
-    out_renderpass->g = g;
-    out_renderpass->b = b;
-    out_renderpass->a = a;
-
-    out_renderpass->depth = depth;
-    out_renderpass->stencil = stencil;
-
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-
-    constexpr u32 attachment_description_count = 1;
-    VkAttachmentDescription
-        attachment_descriptions[attachment_description_count];
-
-    VkAttachmentDescription color_attachment;
-    color_attachment.format = context->swapchain.image_format.format;
-    color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    color_attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    color_attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    color_attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    color_attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    color_attachment.flags = 0;
-
-    attachment_descriptions[0] = color_attachment;
-
-    VkAttachmentReference color_attachment_reference;
-    color_attachment_reference.attachment = 0;
-    color_attachment_reference.layout =
-        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_attachment_reference;
-
-    // UI renderpass doesn't need depth attachment - ImGui handles layering
-    // through draw order
-    subpass.pDepthStencilAttachment = nullptr;
-
-    subpass.inputAttachmentCount = 0;
-    subpass.pInputAttachments = nullptr;
-    subpass.pResolveAttachments = nullptr;
-    subpass.preserveAttachmentCount = 0;
-    subpass.pPreserveAttachments = nullptr;
-
-    // Simplified dependency for UI renderpass - color attachment only
-    VkSubpassDependency dependency;
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependency.dependencyFlags = 0;
-
-    VkRenderPassCreateInfo create_info = {
-        VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO};
-    create_info.attachmentCount = attachment_description_count;
-    create_info.pAttachments = attachment_descriptions;
-    create_info.subpassCount = 1;
-    create_info.pSubpasses = &subpass;
-    create_info.dependencyCount = 1;
-    create_info.pDependencies = &dependency;
-    create_info.pNext = nullptr;
-    create_info.flags = 0;
-
-    VK_CHECK(vkCreateRenderPass(context->device.logical_device,
-        &create_info,
-        context->allocator,
-        &out_renderpass->handle));
-
-    CORE_INFO("UI renderpass object created successfully");
 }

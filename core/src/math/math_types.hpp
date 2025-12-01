@@ -70,5 +70,5 @@ struct mat4 {
 
 struct vertex_3d {
     vec3 position;
-    vec2 texture_coordinate;
+    vec2 texture_coordinates;
 };

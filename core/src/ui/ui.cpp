@@ -10,6 +10,7 @@
 #include "memory/memory.hpp"
 #include "platform/platform.hpp"
 #include "systems/resource_system.hpp"
+#include "systems/texture_system.hpp"
 
 #include "renderer/vulkan/vulkan_types.hpp"
 #include "renderer/vulkan/vulkan_ui.hpp"
@@ -19,25 +20,39 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 
-// Internal UI state - not exposed to client
 struct UI_State {
     Auto_Array<UI_Layer>* layers;
     UI_Theme current_theme;
     PFN_menu_callback menu_callback;
+    const char* app_name;
     b8 is_initialized;
 
-    // Vulkan backend initialization info (prepared in
-    // ui_setup_vulkan_resources)
     ImGui_ImplVulkan_InitInfo vulkan_init_info;
 
-    // Dockspace state
     unsigned int dockspace_id;
     b8 dockspace_open;
     b8 window_began; // Track if ImGui::Begin() was called this frame
+
     ImFont* fonts[(u8)Font_Style::MAX_COUNT];
+
+    Texture* app_icon;
+    Texture* minimize_icon;
+    Texture* maximize_icon;
+    Texture* restore_icon;
+    Texture* close_icon;
+    b8 is_titlebar_hovered;
+    b8 is_menu_hovered;
+
+    b8 is_resizing;
+    u32 resize_direction; // Bitmask: LEFT=1, RIGHT=2, TOP=4, BOTTOM=8
+    ImVec2 initial_mouse_pos;
+    s32 initial_window_x, initial_window_y;
+    s32 initial_window_width, initial_window_height;
 };
 
 internal_var UI_State state;
+
+UI_State* ui_get_state() { return &state; }
 
 // Forward declarations for internal functions
 INTERNAL_FUNC b8 setup_imgui_context(f32 main_scale, void* window);
@@ -109,8 +124,10 @@ b8 ui_initialize(UI_Theme theme,
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     CORE_DEBUG("ImGui docking enabled");
 
-    // Setup infrastructure components
-    ui_titlebar_setup(menu_callback, app_name);
+    // Setup infrastructure components (titlebar icons loaded later after Vulkan
+    // init)
+    state.menu_callback = menu_callback;
+    state.app_name = app_name;
 
     // Register UI event callbacks with LOWEST priority so canvas can override
     events_register_callback(Event_Type::KEY_PRESSED,
@@ -134,6 +151,14 @@ b8 ui_initialize(UI_Theme theme,
 
     CORE_INFO("UI subsystem initialized successfully");
     return true;
+}
+
+void ui_load_resources() {
+    // Load titlebar icons now that texture system is initialized
+    extern Vulkan_Context* vulkan_get_context();
+    ui_titlebar_setup(state.menu_callback,
+        state.app_name,
+        vulkan_get_context());
 }
 
 void ui_shutdown() {
@@ -424,7 +449,6 @@ void ui_cleanup_vulkan_resources(Vulkan_Context* context) {
     CORE_DEBUG("Cleaning up UI Vulkan resources...");
 
     // Clean up all UI component Vulkan resources first
-    ui_titlebar_cleanup_renderer_resources();
     ui_viewport_cleanup_vulkan_resources(context);
 
     // Shutdown ImGui backends AFTER component cleanup and Vulkan
@@ -894,4 +918,151 @@ b8 load_default_fonts() {
     io.FontDefault = state.fonts[(u8)Font_Style::NORMAL];
 
     return true;
+}
+
+// ============================================================================
+// NEW RENDER CONTEXT API (CLEAN SEPARATION)
+// ============================================================================
+
+UI_Render_Context ui_create_render_context(const UI_Renderer_Info* info) {
+    if (!state.is_initialized) {
+        CORE_ERROR("UI not initialized - call ui_initialize() first");
+        return nullptr;
+    }
+
+    CORE_DEBUG("Creating UI render context with Vulkan resources...");
+
+    // Store Vulkan device info (will replace vulkan_init_info in final version)
+    // For now, create the Vulkan resources directly
+
+    // 1. Create descriptor pool
+    VkDescriptorPoolSize pool_sizes[] = {
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000}};
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets = 1000;
+    pool_info.poolSizeCount = 1;
+    pool_info.pPoolSizes = pool_sizes;
+
+    VkDescriptorPool descriptor_pool;
+    if (vkCreateDescriptorPool(info->device,
+            &pool_info,
+            info->allocator,
+            &descriptor_pool) != VK_SUCCESS) {
+        CORE_ERROR("Failed to create UI descriptor pool");
+        return nullptr;
+    }
+
+    // 2. Initialize ImGui Vulkan backend
+    state.vulkan_init_info.Instance = info->instance;
+    state.vulkan_init_info.PhysicalDevice = info->physical_device;
+    state.vulkan_init_info.Device = info->device;
+    state.vulkan_init_info.QueueFamily = info->graphics_queue_family;
+    state.vulkan_init_info.Queue = info->graphics_queue;
+    state.vulkan_init_info.DescriptorPool = descriptor_pool;
+    state.vulkan_init_info.RenderPass = info->ui_renderpass;
+    state.vulkan_init_info.MinImageCount = info->min_image_count;
+    state.vulkan_init_info.ImageCount = info->image_count;
+    state.vulkan_init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    state.vulkan_init_info.Allocator = info->allocator;
+
+    ImGui_ImplVulkan_Init(&state.vulkan_init_info);
+
+    // 3. Load titlebar icon textures (merged from ui_load_resources)
+    state.app_icon = texture_system_acquire("voltrum_icon", true);
+    state.minimize_icon = texture_system_acquire("window_minimize", true);
+    state.maximize_icon = texture_system_acquire("window_maximize", true);
+    state.restore_icon = texture_system_acquire("window_restore", true);
+    state.close_icon = texture_system_acquire("window_close", true);
+
+    // 4. Create descriptor sets for icons
+    Texture* icons[] = {state.app_icon,
+        state.minimize_icon,
+        state.maximize_icon,
+        state.restore_icon,
+        state.close_icon};
+    for (u32 i = 0; i < 5; ++i) {
+        if (!icons[i]) {
+            CORE_WARN("Failed to load titlebar icon %u", i);
+            continue;
+        }
+
+        Vulkan_Texture_Data* data =
+            (Vulkan_Texture_Data*)icons[i]->internal_data;
+
+        if (!data) {
+            CORE_ERROR("Texture has null internal data");
+            continue;
+        }
+
+        data->descriptor_set = ImGui_ImplVulkan_AddTexture(data->sampler,
+            data->image.view,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    }
+
+    CORE_INFO("UI render context created successfully");
+    return (UI_Render_Context)&state;
+}
+
+void ui_destroy_render_context(UI_Render_Context ctx) {
+    if (!ctx)
+        return;
+
+    CORE_DEBUG("Destroying UI render context...");
+
+    // Cleanup titlebar descriptor sets
+    Texture* icons[] = {state.app_icon,
+        state.minimize_icon,
+        state.maximize_icon,
+        state.restore_icon,
+        state.close_icon};
+    for (u32 i = 0; i < 5; ++i) {
+        if (icons[i]) {
+            Vulkan_Texture_Data* data =
+                (Vulkan_Texture_Data*)icons[i]->internal_data;
+
+            if (data && data->descriptor_set != VK_NULL_HANDLE) {
+                ImGui_ImplVulkan_RemoveTexture(data->descriptor_set);
+                data->descriptor_set = VK_NULL_HANDLE;
+            }
+            texture_system_release(icons[i]->name);
+        }
+    }
+
+    // Shutdown ImGui backends
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+
+    CORE_DEBUG("UI render context destroyed");
+}
+
+void ui_begin_frame(UI_Render_Context ctx) {
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+}
+
+void ui_render_frame(UI_Render_Context ctx, VkCommandBuffer cmd_buffer) {
+    // Render dockspace
+    ui_dockspace_render();
+
+    // Render custom titlebar
+    ui_titlebar_draw();
+
+    // Render all registered UI components
+    for (u32 i = 0; i < state.layers->length; ++i) {
+        UI_Layer* layer = &state.layers->data[i];
+        if (layer->on_render)
+            layer->on_render(layer->component_state);
+    }
+
+    // Finalize rendering
+    ImGui::Render();
+    ImDrawData* draw_data = ImGui::GetDrawData();
+
+    if (draw_data->DisplaySize.x > 0 && draw_data->DisplaySize.y > 0) {
+        ImGui_ImplVulkan_RenderDrawData(draw_data, cmd_buffer);
+    }
 }

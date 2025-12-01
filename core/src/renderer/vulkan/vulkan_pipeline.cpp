@@ -15,6 +15,7 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
     VkViewport viewport,
     VkRect2D scissor,
     b8 is_wireframe,
+    b8 depth_test_enabled,
     Vulkan_Pipeline* out_pipeline) {
 
     // Viewport state creation
@@ -69,14 +70,16 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
     multisampling_create_info.alphaToCoverageEnable = VK_FALSE;
     multisampling_create_info.alphaToOneEnable = VK_FALSE;
 
-    // Depth and stencil testing
     VkPipelineDepthStencilStateCreateInfo depth_stencil = {
         VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
-    depth_stencil.depthTestEnable = VK_TRUE;
-    depth_stencil.depthWriteEnable = VK_TRUE;
-    depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
-    depth_stencil.depthBoundsTestEnable = VK_FALSE;
-    depth_stencil.stencilTestEnable = VK_FALSE;
+    // Depth and stencil testing
+    if (depth_test_enabled) {
+        depth_stencil.depthTestEnable = VK_TRUE;
+        depth_stencil.depthWriteEnable = VK_TRUE;
+        depth_stencil.depthCompareOp = VK_COMPARE_OP_LESS;
+        depth_stencil.depthBoundsTestEnable = VK_FALSE;
+        depth_stencil.stencilTestEnable = VK_FALSE;
+    }
 
     VkPipelineColorBlendAttachmentState color_blend_attachment_state = {};
     color_blend_attachment_state.blendEnable = VK_TRUE;
@@ -122,6 +125,7 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
 
     VkVertexInputBindingDescription binding_description;
     binding_description.binding = 0;
+    // TODO: maybe change to stride but I do not need it for now
     binding_description.stride = sizeof(vertex_3d);
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 

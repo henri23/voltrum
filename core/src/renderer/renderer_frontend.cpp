@@ -62,32 +62,56 @@ void renderer_on_resize(u16 width, u16 height) {
     state.backend.resized(&state.backend, width, height);
 }
 
-b8 renderer_begin_frame(f32 delta_t) {
-    return state.backend.begin_frame(&state.backend, delta_t);
-}
-
-b8 renderer_end_frame(f32 delta_t) {
-    b8 result = state.backend.end_frame(&state.backend, delta_t);
-
-    state.backend.frame_number++;
-    return result;
-}
-
 b8 renderer_draw_frame(Render_Packet* packet) {
-    if (renderer_begin_frame(packet->delta_time)) {
+    if (state.backend.begin_frame(&state.backend, packet->delta_time)) {
 
-        state.backend.update_global_state(state.projection,
+        if (state.backend.start_renderpass(&state.backend,
+                Renderpass_Type::VIEWPORT)) {
+            CORE_ERROR(
+                "backend.start_renderpass - Viewport renderpass failed. "
+                "Application shutting down...");
+            return false;
+        }
+
+        state.backend.update_global_viewport_state(state.projection,
             state.view,
             vec3_zero(),
             vec4_one(),
             0);
 
+        // Draw geometries
         u32 count = packet->geometry_count;
         for (u32 i = 0; i < count; ++i) {
             state.backend.draw_geometry(packet->geometries[i]);
         }
 
-        b8 result = renderer_end_frame(packet->delta_time);
+        if (state.backend.finish_renderpass(&state.backend,
+                Renderpass_Type::VIEWPORT)) {
+            CORE_ERROR(
+                "backend.end_renderpass - Viewport renderpass failed. "
+                "Appplication shutting down...");
+        }
+
+        if (state.backend.start_renderpass(&state.backend,
+                Renderpass_Type::UI)) {
+            CORE_ERROR(
+                "backend.start_renderpass - UI renderpass failed. "
+                "Application shutting down...");
+            return false;
+        }
+
+        // TODO: Draw UI geometry
+
+        if (state.backend.finish_renderpass(&state.backend,
+                Renderpass_Type::UI)) {
+            CORE_ERROR(
+                "backend.start_renderpass - UI renderpass failed. "
+                "Application shutting down...");
+            return false;
+        }
+
+        b8 result = state.backend.end_frame(&state.backend, packet->delta_time);
+        state.backend.frame_number++;
 
         if (!result) {
             CORE_ERROR(

@@ -243,27 +243,27 @@ void create_swapchain(Vulkan_Context* context,
 
     // Create depth buffer. The depth buffer is an image cotaining the depth
     // from the camera point of view
-    if (!vulkan_device_detect_depth_format(&context->device)) {
-        context->device.depth_format = VK_FORMAT_UNDEFINED;
-        // TODO: Make this error recoverable by chosing a different format
-        CORE_FATAL("Failed to find a supported depth format!");
-    }
+    // if (!vulkan_device_detect_depth_format(&context->device)) {
+    //     context->device.depth_format = VK_FORMAT_UNDEFINED;
+    //     // TODO: Make this error recoverable by chosing a different format
+    //     CORE_FATAL("Failed to find a supported depth format!");
+    // }
 
     // Z-buffer creation
     // Create a depth image. The depth image is an image where the depth info
     // is written too. However the swapchain does not create this image for us
     // so it must be created manually
-    vulkan_image_create(context,
-        VK_IMAGE_TYPE_2D,
-        actual_extent.width,
-        actual_extent.height,
-        context->device.depth_format, // Set above
-        VK_IMAGE_TILING_OPTIMAL,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        true,
-        VK_IMAGE_ASPECT_DEPTH_BIT,
-        &out_swapchain->depth_attachment);
+    // vulkan_image_create(context,
+    //     VK_IMAGE_TYPE_2D,
+    //     actual_extent.width,
+    //     actual_extent.height,
+    //     context->device.depth_format, // Set above
+    //     VK_IMAGE_TILING_OPTIMAL,
+    //     VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+    //     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    //     true,
+    //     VK_IMAGE_ASPECT_DEPTH_BIT,
+    //     &out_swapchain->depth_attachment);
 
     CORE_INFO("Vulkan swapchain successfully created.");
 }
@@ -296,7 +296,7 @@ void vulkan_swapchain_destroy(Vulkan_Context* context,
     vkDeviceWaitIdle(context->device.logical_device);
 
     // Destroy the images that we create
-    vulkan_image_destroy(context, &swapchain->depth_attachment);
+    // vulkan_image_destroy(context, &swapchain->depth_attachment);
 
     CORE_DEBUG("Destroying image views... Found %d views",
         swapchain->image_count);

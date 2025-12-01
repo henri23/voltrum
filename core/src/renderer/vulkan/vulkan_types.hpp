@@ -5,16 +5,9 @@
 
 #include "data_structures/auto_array.hpp"
 #include "renderer/renderer_types.hpp"
-
 #include <vulkan/vulkan.h>
 
 #define VK_CHECK(expr) RUNTIME_ASSERT(expr == VK_SUCCESS);
-
-// Forward declarations and enums
-enum class Renderpass_Type {
-    MAIN, // Main 3D scene rendering with depth buffer
-    UI    // UI overlay rendering, color only
-};
 
 struct Vulkan_Buffer {
     u64 total_size;
@@ -84,46 +77,21 @@ enum class Renderpass_State {
 struct Vulkan_Renderpass {
     VkRenderPass handle;
 
-    f32 x, y, w, h;
-    f32 r, g, b, a;
+    vec4 render_area;
+    vec4 clear_color;
 
     f32 depth;
     u32 stencil;
 
-    Renderpass_Type
-        type; // Store renderpass type for attachment count optimization
+    u8 clear_flags;
+    b8 has_prev;
+    b8 has_next;
+
     Renderpass_State state;
 };
 
-struct Vulkan_Framebuffer {
-    VkFramebuffer handle;
-    u32 attachment_count;
-    VkImageView* attachments;
-    Vulkan_Renderpass* renderpass;
-};
-
-// Off-screen rendering target (groups related resources like Vulkan_Swapchain)
-// Uses same number of framebuffers as swapchain and synchronizes with
-// image_index
-struct Vulkan_Offscreen_Target {
-    u32 width;
-    u32 height;
-    VkFormat color_format;
-    VkFormat depth_format;
-
-    // Dynamic count matching swapchain image_count
-    u32 framebuffer_count;
-
-    // Rendering attachments (one per swapchain image)
-    Vulkan_Image* color_attachments;
-    Vulkan_Image* depth_attachments;
-    Vulkan_Framebuffer* framebuffers;
-
-    // Texture sampling resources (one per swapchain image)
-    VkSampler* samplers;
-    VkDescriptorSet* descriptor_sets;
-};
-
+// The swapchain will be owned by the ui library so no need to have a depth
+// z-buffer
 struct Vulkan_Swapchain {
     VkSwapchainKHR handle;
     u32 max_in_flight_frames;
@@ -132,10 +100,32 @@ struct Vulkan_Swapchain {
     VkImage* images;    // array of VkImages. Automatically created and cleaned
     VkImageView* views; // array of Views, struct that lets us access the images
 
-    Auto_Array<Vulkan_Framebuffer> framebuffers;
+    VkFramebuffer framebuffers[3];
+
+    u32 framebuffer_width;
+    u32 framebuffer_height;
+
+    u64 framebuffer_size_generation;
+    u64 framebuffer_size_last_generation;
 
     VkSurfaceFormatKHR image_format;
     VkExtent2D extent;
+};
+
+struct Vulkan_Viewport {
+    VkImage* images;    // array of VkImages. Automatically created and cleaned
+    VkImageView* views; // array of Views, struct that lets us access the images
+
+    VkFramebuffer framebuffers[3];
+
+    VkSurfaceFormatKHR image_format;
+    VkExtent2D extent;
+
+    u32 framebuffer_width;
+    u32 framebuffer_height;
+
+    u64 framebuffer_size_generation;
+    u64 framebuffer_size_last_generation;
 
     Vulkan_Image depth_attachment;
 };
@@ -153,11 +143,6 @@ struct Vulkan_Command_Buffer {
     VkCommandBuffer handle;
 
     Command_Buffer_State state;
-};
-
-struct Vulkan_Fence {
-    VkFence handle;
-    b8 is_signaled;
 };
 
 struct Vulkan_Shader_Stage {
@@ -207,6 +192,21 @@ struct Vulkan_Material_Shader_Object_State {
         descriptor_states[VULKAN_MATERIAL_SHADER_DESCRIPTOR_COUNT];
 };
 
+struct Vulkan_Material_Shader_Global_Ubo {
+    mat4 projection; // 64 bytes
+    mat4 view;       // 64 bytes
+    mat4 padding_0;  // 64 bytes
+    mat4 padding_1;  // 64 bytes
+};
+
+// Local_Uniform_Object gets uploaded one per object per frame
+struct Vulkan_Material_Shader_Instance_Ubo {
+    vec4 diffuse_color;
+    vec4 padding_0;
+    vec4 padding_1;
+    vec4 padding_2;
+};
+
 struct Vulkan_Material_Shader {
     // The shader stage count is for vertex and fragment shaders
     Vulkan_Shader_Stage stages[VULKAN_MATERIAL_SHADER_STAGE_COUNT];
@@ -235,7 +235,7 @@ struct Vulkan_Material_Shader {
     Vulkan_Material_Shader_Object_State
         object_states[VULKAN_MAX_MATERIAL_COUNT];
 
-    Global_Uniform_Object global_ubo;
+    Vulkan_Material_Shader_Global_Ubo global_ubo;
 };
 
 struct Vulkan_Context {
@@ -246,14 +246,6 @@ struct Vulkan_Context {
     VkAllocationCallbacks* allocator;
     VkPhysicalDevice
         physical_device; // Implicitly destroyed destroying VkInstance
-
-    u32 framebuffer_width;
-    u32 framebuffer_height;
-
-    // Keep two replicas for last time and current. If these two are out of
-    // sync, a resize event has ocurred
-    u64 framebuffer_size_generation;
-    u64 framebuffer_size_last_generation;
 
 #ifdef DEBUG_BUILD
     VkDebugUtilsMessengerEXT debug_messenger;
@@ -267,38 +259,30 @@ struct Vulkan_Context {
 
     Vulkan_Material_Shader material_shader;
 
-    Vulkan_Swapchain swapchain;
     Vulkan_Device device;
 
-    Vulkan_Renderpass main_renderpass;
+    // Swapchain is owned by the main renderpass which is owned by ImGui
+    Vulkan_Swapchain swapchain;
+    Vulkan_Viewport viewport;
+
+    Vulkan_Renderpass viewport_renderpass;
     Vulkan_Renderpass ui_renderpass;
 
     Vulkan_Buffer object_vertex_buffer;
     Vulkan_Buffer object_index_buffer;
 
-    // Main off-screen rendering target
-    Vulkan_Offscreen_Target main_target;
-
     // Command buffers for rendering ui components
-    Auto_Array<Vulkan_Command_Buffer> ui_graphics_command_buffers;
-
-    // Main renderer command buffers for off-screen rendering
-    Auto_Array<Vulkan_Command_Buffer> main_command_buffers;
+    Auto_Array<Vulkan_Command_Buffer> command_buffers;
 
     Auto_Array<VkSemaphore> image_available_semaphores;
     Auto_Array<VkSemaphore> render_finished_semaphores;
 
     u32 in_flight_fence_count;
+    VkFence in_flight_fences[2];
 
-    Auto_Array<Vulkan_Fence> in_flight_fences;
     // Keep information about the fences of the images currently in flight. The
     // fences are not owned by this array
-    Auto_Array<Vulkan_Fence*> images_in_flight;
-
-    // ImGui integration components
-    VkDescriptorPool ui_descriptor_pool;
-    VkDescriptorSetLayout ui_descriptor_set_layout;
-    VkSampler ui_linear_sampler;
+    VkFence* images_in_flight[3];
 
     u64 geometry_vertex_offset;
     u64 geometry_index_offset;

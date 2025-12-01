@@ -137,16 +137,16 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
     // Pipeline creation
     VkViewport viewport;
     viewport.x = 0.0f;
-    viewport.y = (f32)context->main_target.height;
-    viewport.width = (f32)context->main_target.width;
-    viewport.height = -(f32)context->main_target.height;
+    viewport.y = (f32)context->viewport.framebuffer_height;
+    viewport.width = (f32)context->viewport.framebuffer_width;
+    viewport.height = -(f32)context->viewport.framebuffer_height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor;
     scissor.offset.x = scissor.offset.y = 0;
-    scissor.extent.width = context->main_target.width;
-    scissor.extent.height = context->main_target.height;
+    scissor.extent.width = context->viewport.framebuffer_width;
+    scissor.extent.height = context->viewport.framebuffer_height;
 
     // Attributes
     u32 offset = 0;
@@ -185,7 +185,7 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
     }
 
     if (!vulkan_graphics_pipeline_create(context,
-            &context->main_renderpass,
+            &context->ui_renderpass,
             attribute_count,
             attribute_descriptions,
             descriptor_set_layout_count,
@@ -195,6 +195,7 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
             viewport,
             scissor,
             false,
+            true,
             &out_shader->pipeline)) {
 
         CORE_ERROR("Failed to load graphics pipeline for object shader");
@@ -210,7 +211,8 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
                                 : 0;
 
     if (!vulkan_buffer_create(context,
-            sizeof(Global_Uniform_Object) * context->swapchain.image_count,
+            sizeof(Vulkan_Material_Shader_Global_Ubo) *
+                context->swapchain.image_count,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             device_local_bits | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -247,7 +249,8 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
     // Fixed the device local and host visible at the same time bug by querying
     // the capabilities of the selected GPU and adjusting accordingly
     if (!vulkan_buffer_create(context,
-            sizeof(Material_Uniform_Object) * VULKAN_MAX_MATERIAL_COUNT,
+            sizeof(Vulkan_Material_Shader_Instance_Ubo) *
+                VULKAN_MAX_MATERIAL_COUNT,
             VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                 VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
             device_local_bits | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
@@ -304,7 +307,7 @@ void vulkan_material_shader_destroy(Vulkan_Context* context,
 void vulkan_material_shader_use(Vulkan_Context* context,
     Vulkan_Material_Shader* shader) {
     u32 image_index = context->image_index;
-    vulkan_graphics_pipeline_bind(&context->main_command_buffers[image_index],
+    vulkan_graphics_pipeline_bind(&context->command_buffers[image_index],
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         &shader->pipeline);
 }
@@ -319,13 +322,13 @@ void vulkan_material_shader_update_global_state(Vulkan_Context* context,
     u32 image_index = context->image_index;
 
     VkCommandBuffer command_buffer =
-        context->main_command_buffers[image_index].handle;
+        context->command_buffers[image_index].handle;
 
     VkDescriptorSet global_descriptor =
         shader->global_descriptor_sets[image_index];
 
-    u32 range = sizeof(Global_Uniform_Object);
-    u64 offset = sizeof(Global_Uniform_Object) * image_index;
+    u32 range = sizeof(Vulkan_Material_Shader_Global_Ubo);
+    u64 offset = sizeof(Vulkan_Material_Shader_Global_Ubo) * image_index;
 
     // Update uniform buffer data every frame with the correct offset for this
     // image
@@ -376,7 +379,7 @@ void vulkan_material_shader_set_model(Vulkan_Context* context,
     if (context && shader) {
         u32 image_index = context->image_index;
         VkCommandBuffer command_buffer =
-            context->main_command_buffers[image_index].handle;
+            context->command_buffers[image_index].handle;
 
         // Push constants work similar to unfiroms but they can work
         // without descriptor sets. It can be executed at any point
@@ -400,7 +403,7 @@ void vulkan_material_shader_apply_material(Vulkan_Context* context,
 
     u32 image_index = context->image_index;
     VkCommandBuffer command_buffer =
-        context->main_command_buffers[image_index].handle;
+        context->command_buffers[image_index].handle;
 
     // Obtain material data
     Vulkan_Material_Shader_Object_State* object_state =
@@ -418,18 +421,19 @@ void vulkan_material_shader_apply_material(Vulkan_Context* context,
     u32 descriptor_index = 0;
 
     // Descriptor 0 - Uniform buffer
-    u32 range = sizeof(Material_Uniform_Object);
-    u32 offset = sizeof(Material_Uniform_Object) * material->internal_id;
-    Material_Uniform_Object lbo;
+    u32 range = sizeof(Vulkan_Material_Shader_Instance_Ubo);
+    u32 offset =
+        sizeof(Vulkan_Material_Shader_Instance_Ubo) * material->internal_id;
+    Vulkan_Material_Shader_Instance_Ubo instance_ubo;
 
-    lbo.diffuse_color = material->diffuse_color;
+    instance_ubo.diffuse_color = material->diffuse_color;
 
     vulkan_buffer_load_data(context,
         &shader->object_uniform_buffer,
         offset,
         range,
         0,
-        &lbo);
+        &instance_ubo);
 
     u32* global_ubo_generation =
         &object_state->descriptor_states[descriptor_index]
