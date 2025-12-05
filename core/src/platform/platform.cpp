@@ -263,6 +263,8 @@ b8 platform_create_vulkan_surface(Vulkan_Context* context) {
     return true;
 }
 
+SDL_Window* platform_get_window() { return state_ptr->window; }
+
 b8 platform_get_window_details(u32* width, u32* height, f32* main_scale) {
 
     int w, h;
@@ -437,7 +439,9 @@ INTERNAL_FUNC SDL_HitTestResult platform_hit_test_callback(SDL_Window* win,
     if (area->y <= TITLEBAR_HEIGHT_PIXELS) {
         // Call UI function to check if we're hovering the titlebar (not
         // buttons)
-        b8 titlebar_hovered = ui_is_titlebar_hovered();
+        // Commented out for UI rewrite - titlebar dragging temporarily disabled
+        // b8 titlebar_hovered = ui_is_titlebar_hovered();
+        b8 titlebar_hovered = false; // Temporarily disabled
 
         if (titlebar_hovered) {
             return SDL_HITTEST_DRAGGABLE;

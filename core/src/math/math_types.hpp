@@ -72,3 +72,8 @@ struct vertex_3d {
     vec3 position;
     vec2 texture_coordinates;
 };
+
+struct vertex_2d {
+    vec2 position;
+    vec2 texture_coordinates;
+};

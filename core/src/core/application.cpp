@@ -16,7 +16,7 @@
 #include "systems/resource_system.hpp"
 #include "systems/texture_system.hpp"
 
-#include "ui/ui.hpp"
+// #include "ui/ui.hpp"  // Commented out for UI rewrite
 
 // Application configuration
 constexpr u32 TARGET_FPS = 140;
@@ -203,14 +203,15 @@ b8 application_init(Client* client_state) {
     // TODO: Temp
 
     // Initialize UI with configuration from client
-    if (!ui_initialize(client_state->config.theme,
-            &client_state->layers,
-            client_state->menu_callback,
-            client_state->config.name,
-            internal_state->plat_state.window)) {
-        CORE_FATAL("Failed to initialize UI subsystem");
-        return false;
-    }
+    // Commented out for UI rewrite
+    // if (!ui_initialize(client_state->config.theme,
+    //         &client_state->layers,
+    //         client_state->menu_callback,
+    //         client_state->config.name,
+    //         internal_state->plat_state.window)) {
+    //     CORE_FATAL("Failed to initialize UI subsystem");
+    //     return false;
+    // }
 
     // Register application ESC key handler with HIGH priority to always work
     events_register_callback(Event_Type::KEY_PRESSED,
@@ -344,7 +345,7 @@ void application_shutdown() {
     }
 
     CORE_DEBUG("Shutting down UI subsystem...");
-    ui_shutdown();
+    // ui_shutdown();  // Commented out for UI rewrite
 
     CORE_DEBUG("Shutting down geometry subsystem...");
     geometry_system_shutdown();

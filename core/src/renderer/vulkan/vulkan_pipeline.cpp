@@ -6,6 +6,7 @@
 
 b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
     Vulkan_Renderpass* renderpass,
+    u32 stride,
     u32 attribute_count,
     VkVertexInputAttributeDescription* attributes,
     u32 descriptor_set_layout_count,
@@ -125,8 +126,7 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
 
     VkVertexInputBindingDescription binding_description;
     binding_description.binding = 0;
-    // TODO: maybe change to stride but I do not need it for now
-    binding_description.stride = sizeof(vertex_3d);
+    binding_description.stride = stride;
     binding_description.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     VkPipelineVertexInputStateCreateInfo vertex_input_info = {
@@ -172,7 +172,9 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
     pipeline_create_info.pViewportState = &viewport_state;
     pipeline_create_info.pRasterizationState = &rasterizer_create_info;
     pipeline_create_info.pMultisampleState = &multisampling_create_info;
-    pipeline_create_info.pDepthStencilState = &depth_stencil;
+    pipeline_create_info.pDepthStencilState =
+        depth_test_enabled ? &depth_stencil : nullptr;
+
     pipeline_create_info.pColorBlendState = &color_blend_state_crate_info;
     pipeline_create_info.pDynamicState = &dynamic_state_create_info;
     pipeline_create_info.pTessellationState = 0;

@@ -6,6 +6,7 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
     // Does not use this renderpass necessarily, but it needs to use a render-
     // pass that uses the same setup and the renderpass passed here
     Vulkan_Renderpass* renderpass,
+    u32 stride,
     u32 attribute_count,
     VkVertexInputAttributeDescription* attributes,
     u32 descriptor_set_layout_count,

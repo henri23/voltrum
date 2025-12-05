@@ -1,6 +1,8 @@
 #pragma once
 
-#include "ui/ui.hpp"
+#include "defines.hpp"  // For b8 type
+
+// #include "ui/ui.hpp"  // Commented out for UI rewrite
 
 // Example application layer that demonstrates the viewport
 b8 app_viewport_layer_initialize();

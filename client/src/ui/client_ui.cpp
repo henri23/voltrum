@@ -2,9 +2,13 @@
 
 // Direct ImGui access (now available as public dependency from core)
 #include <core/logger.hpp>
-#include <ui/ui.hpp>
+// #include <ui/ui.hpp>  // Commented out for UI rewrite
 
 #include <imgui.h>
+
+// Stub out UI functions for now during UI rewrite
+#define USE_FONT(font_style) // Disabled during UI rewrite
+#define END_FONT() // Disabled during UI rewrite
 
 internal_var b8 show_demo_window;
 
@@ -96,22 +100,22 @@ void client_ui_render_menus(void* user_data) {
 
         ImGui::Separator();
 
-        // Theme submenu
-        if (ImGui::BeginMenu("Theme")) {
-            if (ImGui::MenuItem("Dark")) {
-                ui_change_theme(UI_Theme::DARK);
-                CORE_DEBUG("Theme changed to Dark");
-            }
-            if (ImGui::MenuItem("Light")) {
-                ui_change_theme(UI_Theme::LIGHT);
-                CORE_DEBUG("Theme changed to Light");
-            }
-            if (ImGui::MenuItem("Catppuccin Mocha")) {
-                ui_change_theme(UI_Theme::CATPPUCCIN_MOCHA);
-                CORE_DEBUG("Theme changed to Catppuccin Mocha");
-            }
-            ImGui::EndMenu();
-        }
+        // Theme submenu (Commented out for UI rewrite)
+        // if (ImGui::BeginMenu("Theme")) {
+        //     if (ImGui::MenuItem("Dark")) {
+        //         ui_change_theme(UI_Theme::DARK);
+        //         CORE_DEBUG("Theme changed to Dark");
+        //     }
+        //     if (ImGui::MenuItem("Light")) {
+        //         ui_change_theme(UI_Theme::LIGHT);
+        //         CORE_DEBUG("Theme changed to Light");
+        //     }
+        //     if (ImGui::MenuItem("Catppuccin Mocha")) {
+        //         ui_change_theme(UI_Theme::CATPPUCCIN_MOCHA);
+        //         CORE_DEBUG("Theme changed to Catppuccin Mocha");
+        //     }
+        //     ImGui::EndMenu();
+        // }
 
         ImGui::EndMenu();
     }

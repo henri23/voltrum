@@ -1,15 +1,17 @@
 #include "app_viewport_layer.hpp"
-#include "ui/ui_viewport.hpp"
+// #include "ui/ui_viewport.hpp"  // Commented out for UI rewrite
 #include "core/logger.hpp"
+#include <imgui.h>  // For ImGui calls below
 
 b8 app_viewport_layer_initialize() {
     CORE_DEBUG("Initializing app viewport layer...");
 
+    // Commented out for UI rewrite
     // Initialize the viewport UI component
-    if (!ui_viewport_initialize()) {
-        CORE_ERROR("Failed to initialize viewport UI");
-        return false;
-    }
+    // if (!ui_viewport_initialize()) {
+    //     CORE_ERROR("Failed to initialize viewport UI");
+    //     return false;
+    // }
 
     CORE_INFO("App viewport layer initialized successfully");
     return true;
@@ -17,12 +19,13 @@ b8 app_viewport_layer_initialize() {
 
 void app_viewport_layer_shutdown() {
     CORE_DEBUG("Shutting down app viewport layer...");
-    ui_viewport_shutdown();
+    // ui_viewport_shutdown();  // Commented out for UI rewrite
 }
 
 void app_viewport_layer_render(void* component_state) {
+    // Commented out for UI rewrite
     // Render the viewport - this will create the 2D workspace window
-    ui_viewport_draw(component_state);
+    // ui_viewport_draw(component_state);
 
     // Example: Add some additional CAD-specific UI elements
     if (ImGui::Begin("CAD Tools")) {

@@ -3,6 +3,10 @@
 #include "memory/memory.hpp"
 #include "platform/platform.hpp"
 #include "systems/material_system.hpp"
+
+#include "math/math_types.hpp"
+#include "utils/string.hpp"
+
 #include "vulkan_backend.hpp"
 #include "vulkan_buffer.hpp"
 #include "vulkan_command_buffer.hpp"
@@ -13,19 +17,20 @@
 #include "vulkan_swapchain.hpp"
 #include "vulkan_types.hpp"
 #include "vulkan_utils.hpp"
+#include "vulkan_viewport.hpp"
 
 #include "data_structures/auto_array.hpp"
 
-#include "vulkan_ui.hpp"
+#include "ui_backend/vulkan_ui_backend.hpp"
 
-#include "shaders/vulkan_material_shader.hpp"
-
-#include "math/math_types.hpp"
-#include "utils/string.hpp"
+#include "shaders/vulkan_imgui_shader_pipeline.hpp"
+#include "shaders/vulkan_material_shader_pipeline.hpp"
 
 internal_var Vulkan_Context context;
-internal_var u32 cached_framebuffer_width = 0;
-internal_var u32 cached_framebuffer_height = 0;
+internal_var u32 cached_swapchain_fb_width = 0;
+internal_var u32 cached_swapchain_fb_height = 0;
+internal_var u32 cached_viewport_fb_width = 0;
+internal_var u32 cached_viewport_fb_height = 0;
 
 // Forward declare messenger callback
 VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(
@@ -112,17 +117,26 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
     // application_get_framebuffer_size(&cached_framebuffer_width,
     //     &cached_framebuffer_height);
 
-    platform_get_drawable_size(&cached_framebuffer_width,
-        &cached_framebuffer_height);
+    platform_get_drawable_size(&cached_swapchain_fb_width,
+        &cached_swapchain_fb_height);
 
     context.swapchain.framebuffer_width =
-        (cached_framebuffer_width != 0) ? cached_framebuffer_width : 1280;
+        (cached_swapchain_fb_width != 0) ? cached_swapchain_fb_width : 1280;
 
     context.swapchain.framebuffer_height =
-        (cached_framebuffer_height != 0) ? cached_framebuffer_height : 720;
+        (cached_swapchain_fb_height != 0) ? cached_swapchain_fb_height : 720;
 
-    cached_framebuffer_width = 0;
-    cached_framebuffer_height = 0;
+    cached_swapchain_fb_width = 0;
+    cached_swapchain_fb_height = 0;
+
+    context.viewport.framebuffer_width =
+        (cached_viewport_fb_width != 0) ? cached_viewport_fb_width : 900;
+
+    context.viewport.framebuffer_height =
+        (cached_viewport_fb_height != 0) ? cached_viewport_fb_height : 550;
+
+    cached_viewport_fb_width = 0;
+    cached_viewport_fb_height = 0;
 
     VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
 
@@ -234,11 +248,20 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
         context.swapchain.framebuffer_height,
         &context.swapchain);
 
-    vec4 viewport_render_area = {0.0f, 0.0f, 800.0f, 600.0f};
     vec4 swapchain_render_area = {0.0f,
         0.0f,
         (f32)context.swapchain.framebuffer_width,
         (f32)context.swapchain.framebuffer_height};
+
+    vulkan_viewport_create(&context,
+        context.viewport.framebuffer_width,
+        context.viewport.framebuffer_height,
+        &context.viewport);
+
+    vec4 viewport_render_area = {0.0f,
+        0.0f,
+        (f32)context.viewport.framebuffer_width,
+        (f32)context.viewport.framebuffer_height};
 
     vec4 clear_color = {0.0f, 0.0f, 0.2f, 1.0f};
 
@@ -312,15 +335,23 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
     }
 
     // Create builtin shaders
-    if (!vulkan_material_shader_create(&context, &context.material_shader)) {
+    if (!vulkan_material_shader_pipeline_create(&context,
+            &context.material_shader)) {
 
         CORE_ERROR("Error loading built-in object shader");
         return false;
     }
 
-    // Initialize UI Vulkan resources using new interface
-    if (!ui_setup_vulkan_resources(&context)) {
-        CORE_ERROR("Failed to setup UI Vulkan resources");
+    if (!vulkan_imgui_shader_pipeline_create(&context, &context.imgui_shader)) {
+
+        CORE_ERROR("Error loading built-in imgui shader");
+        return false;
+    }
+
+    // Initialize ImGui UI backend
+    SDL_Window* window = platform_get_window();
+    if (!vulkan_ui_backend_initialize(&context, window)) {
+        CORE_ERROR("Failed to initialize ImGui UI backend");
         return false;
     }
 
@@ -357,9 +388,8 @@ void vulkan_shutdown(Renderer_Backend* backend) {
     CORE_DEBUG("Waiting for device to finish operations before UI cleanup...");
     vkDeviceWaitIdle(context.device.logical_device);
 
-    // Cleanup UI Vulkan resources using new interface (includes ImGui shutdown
-    // and all UI component cleanup)
-    ui_cleanup_vulkan_resources(&context);
+    // Shutdown ImGui UI backend
+    vulkan_ui_backend_shutdown(&context);
 
     // Destroy all offscreen render target resources
 
@@ -371,7 +401,7 @@ void vulkan_shutdown(Renderer_Backend* backend) {
     vulkan_buffer_destroy(&context, &context.object_index_buffer);
 
     // Destroy shader modules
-    vulkan_material_shader_destroy(&context, &context.material_shader);
+    vulkan_material_shader_pipeline_destroy(&context, &context.material_shader);
 
     // Destroy sync objects
     for (u8 i = 0; i < context.swapchain.max_in_flight_frames; ++i) {
@@ -411,6 +441,7 @@ void vulkan_shutdown(Renderer_Backend* backend) {
     vulkan_renderpass_destroy(&context, &context.viewport_renderpass);
     vulkan_renderpass_destroy(&context, &context.ui_renderpass);
 
+    vulkan_viewport_destroy(&context, &context.viewport);
     vulkan_swapchain_destroy(&context, &context.swapchain);
 
     vulkan_device_shutdown(&context);
@@ -437,8 +468,8 @@ void vulkan_shutdown(Renderer_Backend* backend) {
 
 void vulkan_on_resized(Renderer_Backend* backend, u16 width, u16 height) {
 
-    cached_framebuffer_width = width;
-    cached_framebuffer_height = height;
+    cached_swapchain_fb_width = width;
+    cached_swapchain_fb_height = height;
 
     ++context.swapchain.framebuffer_size_generation;
 
@@ -448,7 +479,8 @@ void vulkan_on_resized(Renderer_Backend* backend, u16 width, u16 height) {
         context.swapchain.framebuffer_size_generation);
 
     // Notify UI module of resize
-    ui_on_vulkan_resize(&context, width, height);
+    // ui_on_vulkan_resize(&context, width, height);  // Commented out for UI
+    // rewrite
 }
 
 b8 vulkan_begin_frame(Renderer_Backend* backend, f32 delta_t) {
@@ -556,12 +588,8 @@ b8 vulkan_begin_frame(Renderer_Backend* backend, f32 delta_t) {
     context.ui_renderpass.render_area.z = context.swapchain.framebuffer_width;
     context.ui_renderpass.render_area.w = context.swapchain.framebuffer_height;
 
-    vulkan_renderpass_begin(cmd_buffer,
-        &context.ui_renderpass,
-        context.swapchain.framebuffers[context.image_index]);
-
-    // Begin UI frame using new interface
-    ui_begin_vulkan_frame();
+    // Start new ImGui frame
+    vulkan_ui_backend_new_frame();
 
     return true;
 }
@@ -575,14 +603,14 @@ void vulkan_update_global_viewport_state(mat4 projection,
         &context.command_buffers[context.image_index];
 
     // Bind pipeline
-    vulkan_material_shader_use(&context, &context.material_shader);
+    vulkan_material_shader_pipeline_use(&context, &context.material_shader);
 
     // Update uniform buffer data
     context.material_shader.global_ubo.projection = projection;
     context.material_shader.global_ubo.view = view;
 
     // Bind descriptor sets
-    vulkan_material_shader_update_global_state(&context,
+    vulkan_material_shader_pipeline_update_global_state(&context,
         &context.material_shader,
         context.frame_delta_time);
 }
@@ -706,9 +734,12 @@ b8 vulkan_renderpass_start(Renderer_Backend* backend,
     switch (renderpass_type) {
 
     case Renderpass_Type::VIEWPORT:
-        vulkan_material_shader_use(&context, &context.material_shader);
+        vulkan_material_shader_pipeline_use(&context, &context.material_shader);
         break;
     case Renderpass_Type::UI:
+        // Commented out for UI rewrite - will be implemented in
+        // vulkan_ui_backend vulkan_imgui_shader_pipeline_use(&context,
+        // &context.imgui_shader);
         break;
     }
 
@@ -730,6 +761,8 @@ b8 vulkan_renderpass_finish(Renderer_Backend* backend,
         break;
     case Renderpass_Type::UI:
         renderpass = &context.ui_renderpass;
+        // Render ImGui draw data before ending the UI renderpass
+        vulkan_ui_backend_render(&context, cmd_buffer->handle);
         break;
     default:
         CORE_ERROR(
@@ -934,7 +967,8 @@ void regenerate_framebuffers() {
 
     for (u32 i = 0; i < image_count; ++i) {
 
-        VkImageView viewport_attachments[2] = {context.viewport.views[i],
+        VkImageView viewport_attachments[2] = {
+            context.viewport.color_attachments[i].view,
             context.viewport.depth_attachment.view};
 
         VkFramebufferCreateInfo framebuffer_create_info = {
@@ -1005,8 +1039,8 @@ b8 recreate_swapchain(Renderer_Backend* backend, b8 is_resized_event) {
     vulkan_device_detect_depth_format(&context.device);
 
     vulkan_swapchain_recreate(&context,
-        cached_framebuffer_width,
-        cached_framebuffer_height,
+        cached_swapchain_fb_width,
+        cached_swapchain_fb_height,
         &context.swapchain);
 
     // Sync the framebuffer size with the cached values, if the size has changed
@@ -1038,8 +1072,8 @@ b8 recreate_swapchain(Renderer_Backend* backend, b8 is_resized_event) {
         context.ui_renderpass.render_area.w =
             context.swapchain.framebuffer_height;
 
-        cached_framebuffer_width = 0;
-        cached_framebuffer_height = 0;
+        cached_swapchain_fb_width = 0;
+        cached_swapchain_fb_height = 0;
 
         context.swapchain.framebuffer_size_last_generation =
             context.swapchain.framebuffer_size_generation;
@@ -1319,7 +1353,7 @@ void vulkan_destroy_texture(Texture* texture) {
 
 b8 vulkan_create_material(struct Material* material) {
     if (material) {
-        if (!vulkan_material_shader_acquire_resource(&context,
+        if (!vulkan_material_shader_pipeline_acquire_resource(&context,
                 &context.material_shader,
                 material)) {
             CORE_ERROR(
@@ -1338,7 +1372,7 @@ b8 vulkan_create_material(struct Material* material) {
 void vulkan_destroy_material(struct Material* material) {
     if (material) {
         if (material->internal_id != INVALID_ID) {
-            vulkan_material_shader_release_resource(&context,
+            vulkan_material_shader_pipeline_release_resource(&context,
                 &context.material_shader,
                 material);
         } else {
@@ -1491,18 +1525,18 @@ void vulkan_draw_geometry(Geometry_Render_Data data) {
         &context.command_buffers[context.image_index];
 
     // TODO: Check if this is needed
-    vulkan_material_shader_use(&context, &context.material_shader);
+    vulkan_material_shader_pipeline_use(&context, &context.material_shader);
 
-    vulkan_material_shader_set_model(&context,
+    vulkan_material_shader_pipeline_set_model(&context,
         &context.material_shader,
         data.model);
 
     if (data.geometry->material) {
-        vulkan_material_shader_apply_material(&context,
+        vulkan_material_shader_pipeline_apply_material(&context,
             &context.material_shader,
             data.geometry->material);
     } else {
-        vulkan_material_shader_apply_material(&context,
+        vulkan_material_shader_pipeline_apply_material(&context,
             &context.material_shader,
             material_system_get_default());
     }

@@ -226,23 +226,23 @@ Geometry_Config geometry_system_generate_plane_config(f32 width,
 
             v0->position.x = min_x;
             v0->position.y = min_y;
-            v0->texture_coordinate.x = min_uvx;
-            v0->texture_coordinate.y = min_uvy;
+            v0->texture_coordinates.x = min_uvx;
+            v0->texture_coordinates.y = min_uvy;
 
             v1->position.x = max_x;
             v1->position.y = max_y;
-            v1->texture_coordinate.x = max_uvx;
-            v1->texture_coordinate.y = max_uvy;
+            v1->texture_coordinates.x = max_uvx;
+            v1->texture_coordinates.y = max_uvy;
 
             v2->position.x = min_x;
             v2->position.y = max_y;
-            v2->texture_coordinate.x = min_uvx;
-            v2->texture_coordinate.y = max_uvy;
+            v2->texture_coordinates.x = min_uvx;
+            v2->texture_coordinates.y = max_uvy;
 
             v3->position.x = max_x;
             v3->position.y = min_y;
-            v3->texture_coordinate.x = max_uvx;
-            v3->texture_coordinate.y = min_uvy;
+            v3->texture_coordinates.x = max_uvx;
+            v3->texture_coordinates.y = min_uvy;
 
             u32 i_offset = ((y * x_segment_count) + x) * 6;
             config.indices[i_offset + 0] = v_offset + 0;
@@ -331,23 +331,23 @@ INTERNAL_FUNC b8 create_default_geometry(Geometry_System_State* state) {
 
     verts[0].position.x = -0.5 * f;
     verts[0].position.y = -0.5 * f;
-    verts[0].texture_coordinate.x = 0.0f;
-    verts[0].texture_coordinate.y = 0.0f;
+    verts[0].texture_coordinates.x = 0.0f;
+    verts[0].texture_coordinates.y = 0.0f;
 
     verts[1].position.x = 0.5 * f;
     verts[1].position.y = 0.5 * f;
-    verts[1].texture_coordinate.x = 1.0f;
-    verts[1].texture_coordinate.y = 1.0f;
+    verts[1].texture_coordinates.x = 1.0f;
+    verts[1].texture_coordinates.y = 1.0f;
 
     verts[2].position.x = -0.5 * f;
     verts[2].position.y = 0.5 * f;
-    verts[2].texture_coordinate.x = 0.0f;
-    verts[2].texture_coordinate.y = 1.0f;
+    verts[2].texture_coordinates.x = 0.0f;
+    verts[2].texture_coordinates.y = 1.0f;
 
     verts[3].position.x = 0.5 * f;
     verts[3].position.y = -0.5 * f;
-    verts[3].texture_coordinate.x = 1.0f;
-    verts[3].texture_coordinate.y = 0.0f;
+    verts[3].texture_coordinates.x = 1.0f;
+    verts[3].texture_coordinates.y = 0.0f;
 
     u32 indices[6] = {0, 1, 2, 0, 3, 1};
 

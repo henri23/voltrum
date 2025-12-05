@@ -40,7 +40,7 @@ void vulkan_renderpass_create(Vulkan_Context* context,
     // images like color/depth buffers
     VkAttachmentDescription color_attachment;
     // Use standard RGBA format for off-screen rendering
-    color_attachment.format = VK_FORMAT_R8G8B8A8_UNORM;
+    color_attachment.format = VK_FORMAT_B8G8R8A8_UNORM;
     // Set each pixel to be samples only once by the shaders
     color_attachment.samples = VK_SAMPLE_COUNT_1_BIT;
     // When the renderpass starts, clear the color attachment (typically to
@@ -55,8 +55,8 @@ void vulkan_renderpass_create(Vulkan_Context* context,
     color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     color_attachment.initialLayout =
-        has_prev_pass ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL  // VP pass
-                      : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; // Imgui pass
+        has_prev_pass ? VK_IMAGE_LAYOUT_UNDEFINED  // ImGui pass
+                      : VK_IMAGE_LAYOUT_UNDEFINED; // VP pass
     // After render pass, the image will be ready for shader sampling
     color_attachment.finalLayout =
         has_next_pass ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL // VP pass

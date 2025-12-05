@@ -555,7 +555,13 @@ b8 ui_draw_components(Vulkan_Command_Buffer* command_buffer) {
     }
 
     // Record ImGui draw commands to the current command buffer
-    ImGui_ImplVulkan_RenderDrawData(draw_data, command_buffer->handle);
+    // Pass custom pipeline to override ImGui's default
+    extern Vulkan_Context* vulkan_get_context();
+    Vulkan_Context* ctx = vulkan_get_context();
+    ImGui_ImplVulkan_RenderDrawData(
+        draw_data,
+        command_buffer->handle
+    );
 
     return true;
 }
@@ -1063,6 +1069,12 @@ void ui_render_frame(UI_Render_Context ctx, VkCommandBuffer cmd_buffer) {
     ImDrawData* draw_data = ImGui::GetDrawData();
 
     if (draw_data->DisplaySize.x > 0 && draw_data->DisplaySize.y > 0) {
-        ImGui_ImplVulkan_RenderDrawData(draw_data, cmd_buffer);
+        // Pass custom pipeline to override ImGui's default
+        extern Vulkan_Context* vulkan_get_context();
+        Vulkan_Context* ctx = vulkan_get_context();
+        ImGui_ImplVulkan_RenderDrawData(
+            draw_data,
+            cmd_buffer
+        );
     }
 }

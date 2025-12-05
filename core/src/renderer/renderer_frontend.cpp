@@ -65,7 +65,7 @@ void renderer_on_resize(u16 width, u16 height) {
 b8 renderer_draw_frame(Render_Packet* packet) {
     if (state.backend.begin_frame(&state.backend, packet->delta_time)) {
 
-        if (state.backend.start_renderpass(&state.backend,
+        if (!state.backend.start_renderpass(&state.backend,
                 Renderpass_Type::VIEWPORT)) {
             CORE_ERROR(
                 "backend.start_renderpass - Viewport renderpass failed. "
@@ -85,14 +85,14 @@ b8 renderer_draw_frame(Render_Packet* packet) {
             state.backend.draw_geometry(packet->geometries[i]);
         }
 
-        if (state.backend.finish_renderpass(&state.backend,
+        if (!state.backend.finish_renderpass(&state.backend,
                 Renderpass_Type::VIEWPORT)) {
             CORE_ERROR(
                 "backend.end_renderpass - Viewport renderpass failed. "
                 "Appplication shutting down...");
         }
 
-        if (state.backend.start_renderpass(&state.backend,
+        if (!state.backend.start_renderpass(&state.backend,
                 Renderpass_Type::UI)) {
             CORE_ERROR(
                 "backend.start_renderpass - UI renderpass failed. "
@@ -102,7 +102,7 @@ b8 renderer_draw_frame(Render_Packet* packet) {
 
         // TODO: Draw UI geometry
 
-        if (state.backend.finish_renderpass(&state.backend,
+        if (!state.backend.finish_renderpass(&state.backend,
                 Renderpass_Type::UI)) {
             CORE_ERROR(
                 "backend.start_renderpass - UI renderpass failed. "

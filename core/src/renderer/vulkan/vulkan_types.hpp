@@ -113,8 +113,7 @@ struct Vulkan_Swapchain {
 };
 
 struct Vulkan_Viewport {
-    VkImage* images;    // array of VkImages. Automatically created and cleaned
-    VkImageView* views; // array of Views, struct that lets us access the images
+    Vulkan_Image color_attachments[3];
 
     VkFramebuffer framebuffers[3];
 
@@ -207,7 +206,7 @@ struct Vulkan_Material_Shader_Instance_Ubo {
     vec4 padding_2;
 };
 
-struct Vulkan_Material_Shader {
+struct Vulkan_Material_Shader_Pipeline {
     // The shader stage count is for vertex and fragment shaders
     Vulkan_Shader_Stage stages[VULKAN_MATERIAL_SHADER_STAGE_COUNT];
 
@@ -238,6 +237,19 @@ struct Vulkan_Material_Shader {
     Vulkan_Material_Shader_Global_Ubo global_ubo;
 };
 
+constexpr const u32 VULKAN_IMGUI_SHADER_MAX_TEXTURE_COUNT = 1024;
+
+struct Vulkan_ImGui_Shader_Pipeline {
+    Vulkan_Pipeline pipeline;
+
+    // Single descriptor set for textures
+    VkDescriptorPool texture_descriptor_pool;
+    VkDescriptorSetLayout texture_descriptor_set_layout;
+
+    // Linear sampler for UI textures
+    VkSampler texture_linear_sampler;
+};
+
 struct Vulkan_Context {
     f32 frame_delta_time;
 
@@ -257,7 +269,9 @@ struct Vulkan_Context {
 
     b8 recreating_swapchain;
 
-    Vulkan_Material_Shader material_shader;
+    // List of shaders
+    Vulkan_Material_Shader_Pipeline material_shader;
+    Vulkan_ImGui_Shader_Pipeline imgui_shader;
 
     Vulkan_Device device;
 
@@ -280,8 +294,8 @@ struct Vulkan_Context {
     u32 in_flight_fence_count;
     VkFence in_flight_fences[2];
 
-    // Keep information about the fences of the images currently in flight. The
-    // fences are not owned by this array
+    // Keep information about the fences of the images currently in flight.
+    // The fences are not owned by this array
     VkFence* images_in_flight[3];
 
     u64 geometry_vertex_offset;

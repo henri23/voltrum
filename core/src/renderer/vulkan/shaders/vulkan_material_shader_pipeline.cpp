@@ -1,4 +1,4 @@
-#include "vulkan_material_shader.hpp"
+#include "vulkan_material_shader_pipeline.hpp"
 #include "defines.hpp"
 
 #include "renderer/vulkan/vulkan_buffer.hpp"
@@ -8,15 +8,13 @@
 #include "core/logger.hpp"
 #include "renderer/vulkan/vulkan_shader_utils.hpp"
 
-#include "math/math.hpp"
 #include "math/math_types.hpp"
 #include "systems/texture_system.hpp"
-#include <vulkan/vulkan_core.h>
 
 #define BUILTIN_SHADER_NAME_MATERIAL "Builtin.MaterialShader"
 
-b8 vulkan_material_shader_create(Vulkan_Context* context,
-    Vulkan_Material_Shader* out_shader) {
+b8 vulkan_material_shader_pipeline_create(Vulkan_Context* context,
+    Vulkan_Material_Shader_Pipeline* out_shader) {
 
     char stage_type_strs[VULKAN_MATERIAL_SHADER_STAGE_COUNT][5] = {"vert",
         "frag"};
@@ -186,6 +184,7 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
 
     if (!vulkan_graphics_pipeline_create(context,
             &context->ui_renderpass,
+            sizeof(vertex_3d),
             attribute_count,
             attribute_descriptions,
             descriptor_set_layout_count,
@@ -265,8 +264,8 @@ b8 vulkan_material_shader_create(Vulkan_Context* context,
     return true;
 }
 
-void vulkan_material_shader_destroy(Vulkan_Context* context,
-    Vulkan_Material_Shader* shader) {
+void vulkan_material_shader_pipeline_destroy(Vulkan_Context* context,
+    Vulkan_Material_Shader_Pipeline* shader) {
 
     VkDevice logical_device = context->device.logical_device;
 
@@ -304,8 +303,8 @@ void vulkan_material_shader_destroy(Vulkan_Context* context,
     }
 }
 
-void vulkan_material_shader_use(Vulkan_Context* context,
-    Vulkan_Material_Shader* shader) {
+void vulkan_material_shader_pipeline_use(Vulkan_Context* context,
+    Vulkan_Material_Shader_Pipeline* shader) {
     u32 image_index = context->image_index;
     vulkan_graphics_pipeline_bind(&context->command_buffers[image_index],
         VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -315,8 +314,9 @@ void vulkan_material_shader_use(Vulkan_Context* context,
 // Not all GPUs are capable of performing an update operation after a bind
 // operation for the descriptor sets for instead I need to implement the updated
 // pattern, because nertheless I need to just bind once
-void vulkan_material_shader_update_global_state(Vulkan_Context* context,
-    Vulkan_Material_Shader* shader,
+void vulkan_material_shader_pipeline_update_global_state(
+    Vulkan_Context* context,
+    Vulkan_Material_Shader_Pipeline* shader,
     f32 delta_time) {
 
     u32 image_index = context->image_index;
@@ -372,8 +372,8 @@ void vulkan_material_shader_update_global_state(Vulkan_Context* context,
         0);
 }
 
-void vulkan_material_shader_set_model(Vulkan_Context* context,
-    Vulkan_Material_Shader* shader,
+void vulkan_material_shader_pipeline_set_model(Vulkan_Context* context,
+    Vulkan_Material_Shader_Pipeline* shader,
     mat4 model) {
 
     if (context && shader) {
@@ -394,8 +394,8 @@ void vulkan_material_shader_set_model(Vulkan_Context* context,
     }
 }
 
-void vulkan_material_shader_apply_material(Vulkan_Context* context,
-    Vulkan_Material_Shader* shader,
+void vulkan_material_shader_pipeline_apply_material(Vulkan_Context* context,
+    Vulkan_Material_Shader_Pipeline* shader,
     Material* material) {
 
     if (!context || !shader)
@@ -549,8 +549,8 @@ void vulkan_material_shader_apply_material(Vulkan_Context* context,
         0);
 }
 
-b8 vulkan_material_shader_acquire_resource(Vulkan_Context* context,
-    Vulkan_Material_Shader* shader,
+b8 vulkan_material_shader_pipeline_acquire_resource(Vulkan_Context* context,
+    Vulkan_Material_Shader_Pipeline* shader,
     Material* material) {
     // TODO: Change the memory management inside the gpu buffer to freelist
     material->internal_id = shader->object_uniform_buffer_index;
@@ -591,8 +591,8 @@ b8 vulkan_material_shader_acquire_resource(Vulkan_Context* context,
     return true;
 }
 
-void vulkan_material_shader_release_resource(Vulkan_Context* context,
-    Vulkan_Material_Shader* shader,
+void vulkan_material_shader_pipeline_release_resource(Vulkan_Context* context,
+    Vulkan_Material_Shader_Pipeline* shader,
     Material* material) {
 
     constexpr u32 descriptor_set_count = 3;

@@ -79,13 +79,14 @@ b8 client_initialize(Client* client_state) {
 #if defined(PLATFORM_WINDOWS) && !defined(VOLTRUM_STATIC_LINKING)
     // Get ImGui context from core DLL for Windows compatibility
     // Only needed when using dynamic linking (DLL)
-    void* imgui_context = ui_get_imgui_context();
-    if (imgui_context) {
-        ImGui::SetCurrentContext((ImGuiContext*)imgui_context);
-        CLIENT_DEBUG("Set ImGui context from core DLL");
-    } else {
-        CLIENT_WARN("Failed to get ImGui context from core DLL");
-    }
+    // Commented out for UI rewrite
+    // void* imgui_context = ui_get_imgui_context();
+    // if (imgui_context) {
+    //     ImGui::SetCurrentContext((ImGuiContext*)imgui_context);
+    //     CLIENT_DEBUG("Set ImGui context from core DLL");
+    // } else {
+    //     CLIENT_WARN("Failed to get ImGui context from core DLL");
+    // }
 #endif
 
     events_register_callback(Event_Type::KEY_PRESSED,
@@ -244,23 +245,24 @@ b8 create_client(Client* client_state) {
         memory_allocate(sizeof(Frontend_State), Memory_Tag::CLIENT);
 
     // Create layers using C++17 compatible initialization
-    UI_Layer voltrum_layer;
-    voltrum_layer.name = "voltrum_window";
-    voltrum_layer.on_render = client_ui_render_voltrum_window;
-    voltrum_layer.on_attach = nullptr;
-    voltrum_layer.on_detach = nullptr;
-    voltrum_layer.component_state = nullptr;
-    client_state->layers.push_back(voltrum_layer);
+    // Commented out for UI rewrite
+    // UI_Layer voltrum_layer;
+    // voltrum_layer.name = "voltrum_window";
+    // voltrum_layer.on_render = client_ui_render_voltrum_window;
+    // voltrum_layer.on_attach = nullptr;
+    // voltrum_layer.on_detach = nullptr;
+    // voltrum_layer.component_state = nullptr;
+    // client_state->layers.push_back(voltrum_layer);
 
-    UI_Layer viewport_layer;
-    viewport_layer.name = "viewport_layer";
-    viewport_layer.on_render = app_viewport_layer_render;
-    viewport_layer.on_attach = nullptr;
-    viewport_layer.on_detach = nullptr;
-    viewport_layer.component_state = nullptr;
-    client_state->layers.push_back(viewport_layer);
+    // UI_Layer viewport_layer;
+    // viewport_layer.name = "viewport_layer";
+    // viewport_layer.on_render = app_viewport_layer_render;
+    // viewport_layer.on_attach = nullptr;
+    // viewport_layer.on_detach = nullptr;
+    // viewport_layer.component_state = nullptr;
+    // client_state->layers.push_back(viewport_layer);
 
-    client_state->menu_callback = client_ui_render_menus;
+    // client_state->menu_callback = client_ui_render_menus;
 
     return true;
 }

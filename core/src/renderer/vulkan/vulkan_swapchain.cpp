@@ -6,7 +6,6 @@
 #include "defines.hpp"
 
 #include "renderer/vulkan/vulkan_device.hpp"
-#include "renderer/vulkan/vulkan_image.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
 void create_swapchain(Vulkan_Context* context,
@@ -240,14 +239,6 @@ void create_swapchain(Vulkan_Context* context,
     }
 
     CORE_DEBUG("Created images and image views for swapchain");
-
-    // Create depth buffer. The depth buffer is an image cotaining the depth
-    // from the camera point of view
-    // if (!vulkan_device_detect_depth_format(&context->device)) {
-    //     context->device.depth_format = VK_FORMAT_UNDEFINED;
-    //     // TODO: Make this error recoverable by chosing a different format
-    //     CORE_FATAL("Failed to find a supported depth format!");
-    // }
 
     // Z-buffer creation
     // Create a depth image. The depth image is an image where the depth info
