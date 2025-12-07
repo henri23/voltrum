@@ -19,6 +19,7 @@ b8 renderer_backend_initialize(Renderer_Backend_Type type,
         out_backend->update_global_viewport_state =
             vulkan_update_global_viewport_state;
         out_backend->draw_geometry = vulkan_draw_geometry;
+        out_backend->draw_ui = vulkan_draw_ui;
 
         out_backend->start_renderpass = vulkan_renderpass_start,
         out_backend->finish_renderpass = vulkan_renderpass_finish,
@@ -51,6 +52,7 @@ void renderer_backend_shutdown(Renderer_Backend* backend) {
     backend->update_global_viewport_state = nullptr;
 
     backend->draw_geometry = nullptr;
+    backend->draw_ui = nullptr;
 
     backend->create_texture = nullptr;
     backend->destroy_texture = nullptr;

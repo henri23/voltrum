@@ -16,6 +16,10 @@
 #include "systems/resource_system.hpp"
 #include "systems/texture_system.hpp"
 
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_vulkan.h>
+
 // #include "ui/ui.hpp"  // Commented out for UI rewrite
 
 // Application configuration
@@ -288,6 +292,18 @@ void application_run() {
                 }
             }
 
+            // TODO: temp
+            ImGui_ImplVulkan_NewFrame();
+            ImGui_ImplSDL3_NewFrame();
+            ImGui::NewFrame();
+
+            // Build UI content (demo window for testing)
+            ImGui::ShowDemoWindow();
+
+            // Finalize ImGui rendering
+            ImGui::Render();
+            // TODO: Temp
+
             Render_Packet packet;
             packet.delta_time = delta_time;
 
@@ -299,6 +315,8 @@ void application_run() {
             packet.geometry_count = 1;
             packet.geometries = &test_render;
             // TODO: temp
+
+            packet.ui_data.draw_list = ImGui::GetDrawData();
 
             if (!renderer_draw_frame(&packet)) {
                 internal_state->is_running = false;

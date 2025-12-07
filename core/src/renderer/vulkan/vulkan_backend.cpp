@@ -401,6 +401,7 @@ void vulkan_shutdown(Renderer_Backend* backend) {
     vulkan_buffer_destroy(&context, &context.object_index_buffer);
 
     // Destroy shader modules
+    vulkan_imgui_shader_pipeline_destroy(&context, &context.imgui_shader);
     vulkan_material_shader_pipeline_destroy(&context, &context.material_shader);
 
     // Destroy sync objects
@@ -588,9 +589,6 @@ b8 vulkan_begin_frame(Renderer_Backend* backend, f32 delta_t) {
     context.ui_renderpass.render_area.z = context.swapchain.framebuffer_width;
     context.ui_renderpass.render_area.w = context.swapchain.framebuffer_height;
 
-    // Start new ImGui frame
-    vulkan_ui_backend_new_frame();
-
     return true;
 }
 
@@ -761,8 +759,6 @@ b8 vulkan_renderpass_finish(Renderer_Backend* backend,
         break;
     case Renderpass_Type::UI:
         renderpass = &context.ui_renderpass;
-        // Render ImGui draw data before ending the UI renderpass
-        vulkan_ui_backend_render(&context, cmd_buffer->handle);
         break;
     default:
         CORE_ERROR(
@@ -1566,4 +1562,10 @@ void vulkan_draw_geometry(Geometry_Render_Data data) {
     } else {
         vkCmdDraw(cmd_buffer->handle, buffer_data->vertex_count, 1, 0, 0);
     }
+}
+
+void vulkan_draw_ui(UI_Render_Data data) {
+    vulkan_imgui_shader_pipeline_draw(&context,
+        &context.imgui_shader,
+        data.draw_list);
 }

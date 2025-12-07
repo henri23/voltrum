@@ -100,7 +100,10 @@ b8 renderer_draw_frame(Render_Packet* packet) {
             return false;
         }
 
-        // TODO: Draw UI geometry
+        // Draw UI geometry
+        if (packet->ui_data.draw_list) {
+            state.backend.draw_ui(packet->ui_data);
+        }
 
         if (!state.backend.finish_renderpass(&state.backend,
                 Renderpass_Type::UI)) {

@@ -17,12 +17,15 @@ void vulkan_update_global_viewport_state(mat4 projection,
     s32 mode);
 b8 vulkan_end_frame(Renderer_Backend* backend, f32 delta_t);
 
-b8 vulkan_renderpass_start(Renderer_Backend* backend,
+b8 vulkan_renderpass_start(
+    Renderer_Backend* backend,
     Renderpass_Type renderpass_type);
-b8 vulkan_renderpass_finish(Renderer_Backend* backend,
+b8 vulkan_renderpass_finish(
+    Renderer_Backend* backend,
     Renderpass_Type renderpass_type);
 
 void vulkan_draw_geometry(Geometry_Render_Data data);
+void vulkan_draw_ui(UI_Render_Data data);
 
 void vulkan_create_texture(const u8* pixels, Texture* texture);
 void vulkan_destroy_texture(Texture* texture);

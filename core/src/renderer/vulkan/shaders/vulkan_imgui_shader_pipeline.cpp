@@ -2,17 +2,11 @@
 
 #include "defines.hpp"
 
-#include "renderer/vulkan/vulkan_buffer.hpp"
 #include "renderer/vulkan/vulkan_pipeline.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
 #include "core/logger.hpp"
 
-#include "math/math_types.hpp"
-#include "systems/texture_system.hpp"
-#include <vulkan/vulkan_core.h>
-
-// Include ImGui Vulkan backend to access shader modules
 #include <imgui_impl_vulkan.h>
 
 b8 vulkan_imgui_shader_pipeline_create(Vulkan_Context* context,
@@ -96,7 +90,6 @@ void vulkan_imgui_shader_pipeline_destroy(Vulkan_Context* context,
 
     VkDevice logical_device = context->device.logical_device;
 
-    // Destroy descriptor resources
     vkDestroyDescriptorPool(logical_device,
         shader->texture_descriptor_pool,
         context->allocator);
@@ -105,21 +98,35 @@ void vulkan_imgui_shader_pipeline_destroy(Vulkan_Context* context,
         shader->texture_descriptor_set_layout,
         context->allocator);
 
-    // Destroy sampler
     vkDestroySampler(logical_device,
         shader->texture_linear_sampler,
         context->allocator);
 
-    // Destroy pipeline
     vulkan_graphics_pipeline_destroy(context, &shader->pipeline);
-
-    // Note: No shader modules to destroy - ImGui manages its own
 }
 
-void vulkan_imgui_shader_pipeline_use(Vulkan_Context* context,
-    Vulkan_ImGui_Shader_Pipeline* shader) {
+void vulkan_imgui_shader_pipeline_draw(Vulkan_Context* context,
+    Vulkan_ImGui_Shader_Pipeline* shader,
+    ImDrawData* draw_data) {
 
-    (void)context;
     (void)shader;
-    // No-op: ImGui backend binds its own pipeline.
+
+    if (!draw_data) {
+        CORE_ERROR(
+            "vulkan_imgui_shader_pipeline_draw - Draw list provided to the "
+            "shader program is not valid. Skipping drawing...");
+        return;
+    }
+
+    if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f) {
+        CORE_WARN(
+            "vulkan_imgui_shader_pipeline_draw - Display is minimized, "
+            "skipping drawing...");
+        return;
+    }
+
+    Vulkan_Command_Buffer* cmd_buffer =
+        &context->command_buffers[context->image_index];
+
+    ImGui_ImplVulkan_RenderDrawData(draw_data, cmd_buffer->handle);
 }

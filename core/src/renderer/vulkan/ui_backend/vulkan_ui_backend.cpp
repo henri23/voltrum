@@ -79,20 +79,3 @@ void vulkan_ui_backend_shutdown(Vulkan_Context* context) {
 
     CORE_INFO("ImGui UI backend shutdown complete");
 }
-
-void vulkan_ui_backend_new_frame() {
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-}
-
-void vulkan_ui_backend_render(Vulkan_Context* context,
-    VkCommandBuffer command_buffer) {
-
-    // Finish building ImGui draw data
-    ImGui::Render();
-    ImDrawData* draw_data = ImGui::GetDrawData();
-
-    // Render ImGui draw data
-    ImGui_ImplVulkan_RenderDrawData(draw_data, command_buffer);
-}
