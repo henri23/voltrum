@@ -553,7 +553,7 @@ b8 vulkan_begin_frame(Renderer_Backend* backend, f32 delta_t) {
     // CORE_DEBUG("frame_render() with frame: '%d' and image index: '%d'",
     //              context.current_frame, context.image_index);
 
-    // At this point we have an image index that we can render to!
+    // At this point we have an image index that we can render to!vulkan_backend
 
     // Begin recording commands
     Vulkan_Command_Buffer* cmd_buffer =

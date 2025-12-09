@@ -48,7 +48,7 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
     // of winding order
     rasterizer_create_info.cullMode = VK_CULL_MODE_NONE;
 
-    // Desines what is considered the front face of a triangle
+    // Decides what is considered the front face of a triangle
     rasterizer_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     // Disables depth bias. Depth bias is used to tweak depth values to avoid

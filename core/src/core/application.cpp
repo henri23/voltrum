@@ -15,12 +15,7 @@
 #include "systems/material_system.hpp"
 #include "systems/resource_system.hpp"
 #include "systems/texture_system.hpp"
-
-#include <imgui.h>
-#include <imgui_impl_sdl3.h>
-#include <imgui_impl_vulkan.h>
-
-// #include "ui/ui.hpp"  // Commented out for UI rewrite
+#include "ui/ui.hpp"
 
 // Application configuration
 constexpr u32 TARGET_FPS = 140;
@@ -206,16 +201,15 @@ b8 application_init(Client* client_state) {
         Memory_Tag::ARRAY);
     // TODO: Temp
 
-    // Initialize UI with configuration from client
-    // Commented out for UI rewrite
-    // if (!ui_initialize(client_state->config.theme,
-    //         &client_state->layers,
-    //         client_state->menu_callback,
-    //         client_state->config.name,
-    //         internal_state->plat_state.window)) {
-    //     CORE_FATAL("Failed to initialize UI subsystem");
-    //     return false;
-    // }
+    if (!ui_initialize(internal_state->client->layers.data,
+            internal_state->client->layers.length,
+            UI_Theme::CATPPUCCIN_MOCHA,
+            nullptr,
+            client_state->config.name,
+            internal_state->plat_state.window)) {
+        CORE_FATAL("Failed to initiliaze ui system");
+        return false;
+    }
 
     // Register application ESC key handler with HIGH priority to always work
     events_register_callback(Event_Type::KEY_PRESSED,
@@ -292,22 +286,10 @@ void application_run() {
                 }
             }
 
-            // TODO: temp
-            ImGui_ImplVulkan_NewFrame();
-            ImGui_ImplSDL3_NewFrame();
-            ImGui::NewFrame();
-
-            // Build UI content (demo window for testing)
-            ImGui::ShowDemoWindow();
-
-            // Finalize ImGui rendering
-            ImGui::Render();
-            // TODO: Temp
-
             Render_Packet packet;
             packet.delta_time = delta_time;
 
-            // TODO: temp
+            // TODO: temp - viewport geometry
             Geometry_Render_Data test_render;
             test_render.geometry = internal_state->test_geometry;
             test_render.model = mat4_identity();
@@ -316,7 +298,10 @@ void application_run() {
             packet.geometries = &test_render;
             // TODO: temp
 
-            packet.ui_data.draw_list = ImGui::GetDrawData();
+            packet.ui_data.draw_list =
+                ui_draw_layers(internal_state->client->layers.data,
+                    internal_state->client->layers.length,
+                    packet.delta_time);
 
             if (!renderer_draw_frame(&packet)) {
                 internal_state->is_running = false;
@@ -363,7 +348,8 @@ void application_shutdown() {
     }
 
     CORE_DEBUG("Shutting down UI subsystem...");
-    // ui_shutdown();  // Commented out for UI rewrite
+    ui_shutdown(internal_state->client->layers.data,
+        internal_state->client->layers.length);
 
     CORE_DEBUG("Shutting down geometry subsystem...");
     geometry_system_shutdown();

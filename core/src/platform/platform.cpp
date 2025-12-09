@@ -8,10 +8,11 @@
 #include "core/logger.hpp"
 #include "data_structures/auto_array.hpp"
 #include "events/events.hpp"
+#include "renderer/vulkan/vulkan_types.hpp"
+
 #include "input/input.hpp"
 #include "input/input_codes.hpp"
-#include "renderer/vulkan/vulkan_types.hpp"
-#include "ui/ui_titlebar.hpp"
+#include <imgui_impl_sdl3.h>
 
 internal_var Platform_State* state_ptr = nullptr;
 
@@ -113,7 +114,7 @@ b8 platform_message_pump() {
     b8 quit_flagged = false;
 
     while (SDL_PollEvent(&sdl_event)) {
-        // Get current key modifiers state
+
         SDL_Keymod sdl_mods = SDL_GetModState();
         Key_Modifiers modifiers = Key_Modifiers::NONE;
 
@@ -126,6 +127,10 @@ b8 platform_message_pump() {
         if (sdl_mods & (SDL_KMOD_LALT | SDL_KMOD_RALT)) {
             modifiers |= Key_Modifiers::ALT;
         }
+
+        // TODO: Maybe use the event priority system to process events from the
+        // event dispatcher
+        ImGui_ImplSDL3_ProcessEvent(&sdl_event);
 
         switch (sdl_event.type) {
         case SDL_EVENT_QUIT:

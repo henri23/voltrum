@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(voltrum_core)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(VULKAN_SDK $ENV{VULKAN_SDK})
 
@@ -48,10 +48,6 @@ endif()
 
 file(GLOB_RECURSE ENGINE_SRC "src/*.cpp")
 file(GLOB_RECURSE HEADERS "src/*.hpp")
-
-# Exclude all ui/*.cpp files from build (commenting out for UI rewrite)
-# Keep vulkan_ui_backend.cpp which is in renderer/vulkan/ui_backend/
-list(FILTER ENGINE_SRC EXCLUDE REGEX "src/ui/ui.*\\.cpp$")
 
 message(STATUS "Core sources found: ${ENGINE_SRC}")
 message(STATUS "Core headers found: ${HEADERS}")

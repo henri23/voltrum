@@ -5,9 +5,7 @@
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
-#include <vulkan/vulkan_core.h>
 
-// Helper function to check Vulkan results
 INTERNAL_FUNC void check_vk_result(VkResult err) {
     if (err == VK_SUCCESS)
         return;
@@ -19,24 +17,47 @@ INTERNAL_FUNC void check_vk_result(VkResult err) {
 
 b8 vulkan_ui_backend_initialize(Vulkan_Context* context, void* window) {
 
+    if (!window) {
+        CORE_FATAL(
+            "vulkan_ui_backend_initialize - Provided invalid window reference");
+        return false;
+    }
+
     CORE_INFO("Initializing ImGui UI backend...");
 
-    // Create ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-    // Setup ImGui style
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+// SDL3 viewport support is experimental and can cause crashes
+// Only enable if explicitly requested and working properly
+#ifdef VOLTRUM_ENABLE_VIEWPORTS
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Enable Multi-Viewport
+                                                        // / Platform Windows
+    CORE_DEBUG("ImGui viewports enabled (experimental with SDL3)");
+#else
+    CORE_DEBUG("ImGui viewports disabled (SDL3 compatibility mode)");
+#endif
+
     ImGui::StyleColorsDark();
 
-    // Setup Platform/Renderer backends
+    ImGuiStyle& style = ImGui::GetStyle();
+
+#ifndef PLATFORM_APPLE
+    // TODO: Setup scaling
+    // style.ScaleAllSizes(main_scale);
+    // style.FontScaleDpi = main_scale;
+#endif
+
     if (!ImGui_ImplSDL3_InitForVulkan((SDL_Window*)window)) {
         CORE_ERROR("Failed to initialize ImGui SDL3 backend");
         return false;
     }
 
-    // Setup Vulkan backend init info
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = context->instance;
     init_info.PhysicalDevice = context->device.physical_device;
@@ -44,11 +65,8 @@ b8 vulkan_ui_backend_initialize(Vulkan_Context* context, void* window) {
     init_info.QueueFamily = context->device.graphics_queue_index;
     init_info.Queue = context->device.graphics_queue;
     init_info.PipelineCache = VK_NULL_HANDLE;
-    init_info.DescriptorPoolSize =
-        VULKAN_IMGUI_SHADER_MAX_TEXTURE_COUNT; // Let ImGui create its own
-                                               // descriptor pool
-    init_info.RenderPass =
-        context->ui_renderpass.handle; // Set render pass here
+    init_info.DescriptorPoolSize = VULKAN_IMGUI_SHADER_MAX_TEXTURE_COUNT;
+    init_info.RenderPass = context->ui_renderpass.handle;
     init_info.Subpass = 0;
     init_info.MinImageCount = context->swapchain.image_count;
     init_info.ImageCount = context->swapchain.image_count;
@@ -61,8 +79,6 @@ b8 vulkan_ui_backend_initialize(Vulkan_Context* context, void* window) {
         ImGui_ImplSDL3_Shutdown();
         return false;
     }
-
-    // Fonts are now automatically uploaded during Init
 
     CORE_INFO("ImGui UI backend initialized successfully");
     return true;

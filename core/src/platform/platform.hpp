@@ -4,19 +4,13 @@
 
 #include <SDL3/SDL.h>
 
-// Forward declaration
-template<typename T>
-struct Auto_Array;
-
 struct Platform_State {
     SDL_Window* window;
     SDL_Renderer* renderer;
-	f32 main_scale;
+    f32 main_scale;
 };
 
-
-b8 platform_startup(
-	Platform_State* state,
+b8 platform_startup(Platform_State* state,
     const char* application_name,
     s32 width,
     s32 height);
