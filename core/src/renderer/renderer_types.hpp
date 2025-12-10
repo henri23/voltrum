@@ -56,6 +56,20 @@ struct Renderer_Backend {
         u32 index_count,
         const u32* indices);
     void (*destroy_geometry)(Geometry* geometry);
+
+    // Viewport management
+    void (*render_viewport)(Renderer_Backend* backend);
+    void* (*get_rendered_viewport)(Renderer_Backend* backend);
+    void (*resize_viewport)(
+        Renderer_Backend* backend,
+        u32 width,
+        u32 height
+    );
+    void (*get_viewport_size)(
+        Renderer_Backend* backend,
+        u32* width,
+        u32* height
+    );
 };
 
 // Render packets may contain info needed to render a frame

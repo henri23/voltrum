@@ -33,6 +33,12 @@ b8 renderer_backend_initialize(Renderer_Backend_Type type,
         out_backend->create_geometry = vulkan_create_geometry;
         out_backend->destroy_geometry = vulkan_destroy_geometry;
 
+        // Viewport management
+        out_backend->render_viewport = vulkan_render_viewport;
+        out_backend->get_rendered_viewport = vulkan_get_rendered_viewport;
+        out_backend->resize_viewport = vulkan_resize_viewport;
+        out_backend->get_viewport_size = vulkan_get_viewport_size;
+
         return true;
     }
     case Renderer_Backend_Type::OPENGL:
@@ -62,4 +68,9 @@ void renderer_backend_shutdown(Renderer_Backend* backend) {
 
     backend->create_geometry = nullptr;
     backend->destroy_geometry = nullptr;
+
+    backend->render_viewport = nullptr;
+    backend->get_rendered_viewport = nullptr;
+    backend->resize_viewport = nullptr;
+    backend->get_viewport_size = nullptr;
 }

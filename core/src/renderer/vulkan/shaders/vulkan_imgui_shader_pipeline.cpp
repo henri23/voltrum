@@ -82,6 +82,12 @@ b8 vulkan_imgui_shader_pipeline_create(Vulkan_Context* context,
         context->allocator,
         &out_shader->texture_linear_sampler));
 
+    // NOTE: Viewport descriptors will be created later after ImGui is initialized
+    // via vulkan_imgui_shader_pipeline_create_viewport_descriptors
+    for (u32 i = 0; i < 3; ++i) {
+        out_shader->viewport_descriptors[i] = VK_NULL_HANDLE;
+    }
+
     return true;
 }
 
@@ -89,6 +95,16 @@ void vulkan_imgui_shader_pipeline_destroy(Vulkan_Context* context,
     Vulkan_ImGui_Shader_Pipeline* shader) {
 
     VkDevice logical_device = context->device.logical_device;
+
+    // Clean up viewport descriptors
+    for (u32 i = 0; i < 3; ++i) {
+        if (shader->viewport_descriptors[i] != VK_NULL_HANDLE) {
+            vulkan_imgui_shader_pipeline_remove_texture_descriptor(
+                shader->viewport_descriptors[i]
+            );
+            shader->viewport_descriptors[i] = VK_NULL_HANDLE;
+        }
+    }
 
     vkDestroyDescriptorPool(logical_device,
         shader->texture_descriptor_pool,
@@ -129,4 +145,69 @@ void vulkan_imgui_shader_pipeline_draw(Vulkan_Context* context,
         &context->command_buffers[context->image_index];
 
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd_buffer->handle);
+}
+
+VkDescriptorSet vulkan_imgui_shader_pipeline_create_texture_descriptor(
+    Vulkan_Context* context,
+    Vulkan_ImGui_Shader_Pipeline* shader,
+    VkImageView image_view
+) {
+    // Use the existing linear sampler from the shader
+    VkDescriptorSet descriptor = ImGui_ImplVulkan_AddTexture(
+        shader->texture_linear_sampler,
+        image_view,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+    );
+
+    if (descriptor == VK_NULL_HANDLE) {
+        CORE_ERROR("Failed to create ImGui texture descriptor");
+    }
+
+    return descriptor;
+}
+
+void vulkan_imgui_shader_pipeline_remove_texture_descriptor(
+    VkDescriptorSet descriptor_set
+) {
+    if (descriptor_set != VK_NULL_HANDLE) {
+        ImGui_ImplVulkan_RemoveTexture(descriptor_set);
+    }
+}
+
+void vulkan_imgui_shader_pipeline_create_viewport_descriptors(
+    Vulkan_Context* context,
+    Vulkan_ImGui_Shader_Pipeline* shader
+) {
+    // Create descriptor for each swapchain image's color attachment
+    for (u32 i = 0; i < context->swapchain.image_count; ++i) {
+        shader->viewport_descriptors[i] =
+            vulkan_imgui_shader_pipeline_create_texture_descriptor(
+                context,
+                shader,
+                context->viewport.color_attachments[i].view
+            );
+
+        if (shader->viewport_descriptors[i] == VK_NULL_HANDLE) {
+            CORE_ERROR(
+                "Failed to create viewport descriptor for swapchain image %d",
+                i
+            );
+        }
+    }
+
+    CORE_DEBUG("Created viewport descriptors for %d swapchain images",
+        context->swapchain.image_count);
+}
+
+void vulkan_imgui_shader_pipeline_destroy_viewport_descriptors(
+    Vulkan_ImGui_Shader_Pipeline* shader
+) {
+    for (u32 i = 0; i < 3; ++i) {
+        if (shader->viewport_descriptors[i] != VK_NULL_HANDLE) {
+            vulkan_imgui_shader_pipeline_remove_texture_descriptor(
+                shader->viewport_descriptors[i]
+            );
+            shader->viewport_descriptors[i] = VK_NULL_HANDLE;
+        }
+    }
 }

@@ -165,11 +165,13 @@ ImDrawData* ui_draw_layers(UI_Layer* layers, u32 layer_count, f32 delta_t) {
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    // Render dockspace
-    ui_dockspace_render();
+    for (u32 i = 0; i < layer_count; ++i) {
+        UI_Layer* layer = &layers[i];
+        if (layer->on_update)
+            layer->on_update(layer, delta_t);
+    }
 
-    // Render custom titlebar
-    // ui_titlebar_draw();
+    ui_dockspace_render();
 
     ImGui::ShowDemoWindow();
 

@@ -28,3 +28,15 @@ void renderer_destroy_geometry(Geometry* geometry);
 // WARN: The exposing of this method from the core library is temporary until
 // the camera system is developed
 VOLTRUM_API void renderer_set_view(mat4 view);
+
+// Viewport management for editor
+VOLTRUM_API void renderer_render_viewport();
+VOLTRUM_API void* renderer_get_rendered_viewport();
+VOLTRUM_API void renderer_resize_viewport(
+    u32 width,
+    u32 height
+);
+VOLTRUM_API void renderer_get_viewport_size(
+    u32* width,
+    u32* height
+);

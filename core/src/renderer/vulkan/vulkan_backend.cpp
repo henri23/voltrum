@@ -289,6 +289,12 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
         true,
         false);
 
+    // Initialize framebuffers to VK_NULL_HANDLE before first regeneration
+    for (u32 i = 0; i < context.swapchain.image_count; ++i) {
+        context.viewport.framebuffers[i] = VK_NULL_HANDLE;
+        context.swapchain.framebuffers[i] = VK_NULL_HANDLE;
+    }
+
     regenerate_framebuffers();
 
     create_command_buffers(&context);
@@ -354,6 +360,12 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
         CORE_ERROR("Failed to initialize ImGui UI backend");
         return false;
     }
+
+    // Create viewport descriptors now that ImGui is initialized
+    vulkan_imgui_shader_pipeline_create_viewport_descriptors(
+        &context,
+        &context.imgui_shader
+    );
 
     create_buffers(&context);
     CORE_INFO("Vulkan buffers created.");
@@ -428,7 +440,6 @@ void vulkan_shutdown(Renderer_Backend* backend) {
         context.command_buffers[i].handle = nullptr;
     }
 
-    // First destroy the Vulkan objects
     for (u32 i = 0; i < context.swapchain.image_count; ++i) {
         vkDestroyFramebuffer(context.device.logical_device,
             context.viewport.framebuffers[i],
@@ -961,6 +972,28 @@ void create_command_buffers(Vulkan_Context* context) {
 void regenerate_framebuffers() {
     u32 image_count = context.swapchain.image_count;
 
+    // Destroy old framebuffers if they exist
+    for (u32 i = 0; i < image_count; ++i) {
+        if (context.viewport.framebuffers[i] != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(
+                context.device.logical_device,
+                context.viewport.framebuffers[i],
+                context.allocator
+            );
+            context.viewport.framebuffers[i] = VK_NULL_HANDLE;
+        }
+
+        if (context.swapchain.framebuffers[i] != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(
+                context.device.logical_device,
+                context.swapchain.framebuffers[i],
+                context.allocator
+            );
+            context.swapchain.framebuffers[i] = VK_NULL_HANDLE;
+        }
+    }
+
+    // Create new framebuffers
     for (u32 i = 0; i < image_count; ++i) {
 
         VkImageView viewport_attachments[2] = {
@@ -1568,4 +1601,86 @@ void vulkan_draw_ui(UI_Render_Data data) {
     vulkan_imgui_shader_pipeline_draw(&context,
         &context.imgui_shader,
         data.draw_list);
+}
+
+void vulkan_render_viewport(Renderer_Backend* backend) {
+    // This function is called to ensure viewport is ready for rendering
+    // Descriptor sets are created upfront, so nothing needed here currently
+    // This provides a hook for future per-frame viewport operations
+    (void)backend;
+}
+
+void* vulkan_get_rendered_viewport(Renderer_Backend* backend) {
+    (void)backend;
+
+    // Return the descriptor set for the current image index
+    return (void*)context.imgui_shader.viewport_descriptors[context.image_index];
+}
+
+void vulkan_resize_viewport(
+    Renderer_Backend* backend,
+    u32 width,
+    u32 height
+) {
+    // Ensure minimum size to avoid Vulkan errors
+    width = width < 1 ? 1 : width;
+    height = height < 1 ? 1 : height;
+
+    // Check if size actually changed
+    if (width == cached_viewport_fb_width &&
+        height == cached_viewport_fb_height) {
+        return;
+    }
+
+    CORE_DEBUG("Resizing viewport to %ux%u", width, height);
+
+    // Wait for device to be idle before destroying resources
+    vkDeviceWaitIdle(context.device.logical_device);
+
+    // Destroy existing viewport descriptors
+    vulkan_imgui_shader_pipeline_destroy_viewport_descriptors(
+        &context.imgui_shader
+    );
+
+    // Cache new dimensions
+    cached_viewport_fb_width = width;
+    cached_viewport_fb_height = height;
+
+    // Destroy old viewport
+    vulkan_viewport_destroy(&context, &context.viewport);
+
+    // Recreate viewport with new size
+    vulkan_viewport_create(&context, width, height, &context.viewport);
+
+    // Update render area for viewport renderpass
+    context.viewport_renderpass.render_area = vec4{
+        0.0f,
+        0.0f,
+        (f32)width,
+        (f32)height
+    };
+
+    // Regenerate framebuffers
+    regenerate_framebuffers();
+
+    // Recreate viewport descriptors with new viewport images
+    vulkan_imgui_shader_pipeline_create_viewport_descriptors(
+        &context,
+        &context.imgui_shader
+    );
+
+    CORE_DEBUG("Viewport resized successfully");
+}
+
+void vulkan_get_viewport_size(
+    Renderer_Backend* backend,
+    u32* width,
+    u32* height
+) {
+    if (width) {
+        *width = context.viewport.framebuffer_width;
+    }
+    if (height) {
+        *height = context.viewport.framebuffer_height;
+    }
 }

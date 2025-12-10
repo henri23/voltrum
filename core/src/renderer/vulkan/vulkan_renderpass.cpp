@@ -54,13 +54,16 @@ void vulkan_renderpass_create(Vulkan_Context* context,
     // Since we do not use stencil operations, we do not care about these two
     color_attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     color_attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    color_attachment.initialLayout =
-        has_prev_pass ? VK_IMAGE_LAYOUT_UNDEFINED  // ImGui pass
-                      : VK_IMAGE_LAYOUT_UNDEFINED; // VP pass
+    // For viewport pass: after first frame, image stays in
+    // SHADER_READ_ONLY_OPTIMAL Using same layout for initial and final avoids
+    // unnecessary transitions
+    color_attachment.initialLayout = has_next_pass
+                                         ? VK_IMAGE_LAYOUT_UNDEFINED  // VP pass
+                                         : VK_IMAGE_LAYOUT_UNDEFINED; // UI pass
     // After render pass, the image will be ready for shader sampling
     color_attachment.finalLayout =
         has_next_pass ? VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL // VP pass
-                      : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;         // ImGui pass
+                      : VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;         // UI pass
     color_attachment.flags = 0;
     attachment_descriptions[attachment_description_count++] = color_attachment;
 

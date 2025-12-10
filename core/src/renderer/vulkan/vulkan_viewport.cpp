@@ -90,6 +90,9 @@ void vulkan_viewport_create(Vulkan_Context* context,
         VK_IMAGE_ASPECT_DEPTH_BIT,
         &out_viewport->depth_attachment);
 
+    // Note: Layout transitions are handled automatically by the renderpass
+    // The viewport renderpass transitions from UNDEFINED -> COLOR_ATTACHMENT_OPTIMAL -> SHADER_READ_ONLY_OPTIMAL
+
     CORE_INFO("Vulkan viewport successfully created.");
 }
 

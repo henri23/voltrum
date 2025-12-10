@@ -248,6 +248,9 @@ struct Vulkan_ImGui_Shader_Pipeline {
 
     // Linear sampler for UI textures
     VkSampler texture_linear_sampler;
+
+    // Viewport descriptors (one per swapchain image)
+    VkDescriptorSet viewport_descriptors[3];
 };
 
 struct Vulkan_Context {

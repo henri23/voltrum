@@ -38,6 +38,9 @@ b8 renderer_startup(const char* application_name) {
         state.near_clip,
         state.far_clip);
 
+    // Default view to identity until the client provides a camera
+    state.view = mat4_identity();
+
     CORE_DEBUG("Renderer subsystem initialized");
     return true;
 }
@@ -160,4 +163,36 @@ b8 renderer_create_geometry(Geometry* geometry,
 
 void renderer_destroy_geometry(Geometry* geometry) {
     state.backend.destroy_geometry(geometry);
+}
+
+void renderer_render_viewport() {
+    state.backend.render_viewport(&state.backend);
+}
+
+void* renderer_get_rendered_viewport() {
+    return state.backend.get_rendered_viewport(&state.backend);
+}
+
+void renderer_resize_viewport(
+    u32 width,
+    u32 height
+) {
+    state.backend.resize_viewport(&state.backend, width, height);
+
+    // Update projection matrix for new aspect ratio
+    if (height > 0) {
+        state.projection = mat4_project_perspective(
+            deg_to_rad(45.0f),
+            width / (f32)height,
+            state.near_clip,
+            state.far_clip
+        );
+    }
+}
+
+void renderer_get_viewport_size(
+    u32* width,
+    u32* height
+) {
+    state.backend.get_viewport_size(&state.backend, width, height);
 }

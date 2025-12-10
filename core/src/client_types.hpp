@@ -1,13 +1,13 @@
 #pragma once
 
-#include "defines.hpp"
-#include "ui/ui_types.hpp"
-#include "ui/ui_themes.hpp"
 #include "data_structures/auto_array.hpp"
+#include "defines.hpp"
+#include "ui/ui_themes.hpp"
+#include "ui/ui_types.hpp"
 
 // Client configuration structure - client controls engine behavior
 struct App_Config {
-	UI_Theme theme;
+    UI_Theme theme;
     const char* name;
     u32 width;
     u32 height;
@@ -16,6 +16,9 @@ struct App_Config {
 // Application structure - similar to Game struct in koala_engine
 struct Client {
     App_Config config;
+    // Internal engine state (opaque pointer managed by core)
+    // Client cannot access this directly - only core can use this
+    void* internal_app_state;
 
     // Lifecycle callbacks - client implements these
     b8 (*initialize)(Client*);
@@ -25,12 +28,9 @@ struct Client {
     void (*shutdown)(Client*);
 
     // Client-specific state
-	Auto_Array<UI_Layer> layers;
-	PFN_menu_callback menu_callback;
-    
-    void* state; // Client state
+    Auto_Array<UI_Layer> layers;
 
-    // Internal engine state (opaque pointer managed by core)
-    // Client cannot access this directly - only core can use this
-    void* internal_app_state;
+    PFN_menu_callback menu_callback;
+
+    void* state; // Client state
 };

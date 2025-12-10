@@ -39,3 +39,17 @@ b8 vulkan_create_geometry(Geometry* geometry,
     u32 index_count,
     const u32* indices);
 void vulkan_destroy_geometry(Geometry* geometry);
+
+// Viewport management
+void vulkan_render_viewport(Renderer_Backend* backend);
+void* vulkan_get_rendered_viewport(Renderer_Backend* backend);
+void vulkan_resize_viewport(
+    Renderer_Backend* backend,
+    u32 width,
+    u32 height
+);
+void vulkan_get_viewport_size(
+    Renderer_Backend* backend,
+    u32* width,
+    u32* height
+);
