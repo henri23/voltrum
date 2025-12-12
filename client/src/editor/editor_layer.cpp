@@ -58,7 +58,8 @@ void editor_layer_on_detach(UI_Layer* self) {
 b8 editor_layer_on_update(UI_Layer* self, f32 delta_time) {
     Editor_Layer_State* state = (Editor_Layer_State*)self->state;
 
-    b8 viewport_active = state->viewport_focused || state->viewport_hovered;
+    b8 viewport_active = state->viewport_hovered;
+    // b8 viewport_active = state->viewport_focused || state->viewport_hovered;
 
     b8 camera_moved =
         viewport_camera_update(&state->camera, delta_time, viewport_active);
