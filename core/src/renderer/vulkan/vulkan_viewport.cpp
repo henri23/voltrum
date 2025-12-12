@@ -2,6 +2,7 @@
 #include "core/logger.hpp"
 #include "renderer/vulkan/vulkan_device.hpp"
 #include "vulkan_image.hpp"
+#include "vulkan_command_buffer.hpp"
 
 void vulkan_viewport_create(Vulkan_Context* context,
     u32 width,
@@ -68,6 +69,35 @@ void vulkan_viewport_create(Vulkan_Context* context,
             &out_viewport->color_attachments[i]);
     }
 
+    // Transition color attachments to SHADER_READ_ONLY_OPTIMAL layout
+    // This is required because ImGui descriptors expect this layout
+    Vulkan_Command_Buffer temp_buffer;
+    VkCommandPool pool = context->device.graphics_command_pool;
+    VkQueue queue = context->device.graphics_queue;
+    vulkan_command_buffer_startup_single_use(
+        context,
+        pool,
+        &temp_buffer
+    );
+
+    for (u32 i = 0; i < swapchain_image_count; ++i) {
+        vulkan_image_transition_layout(
+            context,
+            &temp_buffer,
+            &out_viewport->color_attachments[i],
+            out_viewport->image_format.format,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        );
+    }
+
+    vulkan_command_buffer_end_single_use(
+        context,
+        pool,
+        &temp_buffer,
+        queue
+    );
+
     // Create depth buffer. The depth buffer is an image cotaining the depth
     // from the camera point of view
     if (!vulkan_device_detect_depth_format(&context->device)) {
@@ -89,9 +119,6 @@ void vulkan_viewport_create(Vulkan_Context* context,
         true,
         VK_IMAGE_ASPECT_DEPTH_BIT,
         &out_viewport->depth_attachment);
-
-    // Note: Layout transitions are handled automatically by the renderpass
-    // The viewport renderpass transitions from UNDEFINED -> COLOR_ATTACHMENT_OPTIMAL -> SHADER_READ_ONLY_OPTIMAL
 
     CORE_INFO("Vulkan viewport successfully created.");
 }
