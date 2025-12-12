@@ -31,9 +31,9 @@ struct Internal_App_State {
     Platform_State plat_state;
     Absolute_Clock clock;
 
-    // WARN: Temp
+    UI_Context ui_context;
+
     Geometry* test_geometry;
-    // WARN: Temp
 };
 
 // Internal pointer to application state for easy access
@@ -201,7 +201,8 @@ b8 application_init(Client* client_state) {
         Memory_Tag::ARRAY);
     // TODO: Temp
 
-    if (!ui_initialize(internal_state->client->layers.data,
+    if (!ui_initialize(&internal_state->ui_context,
+            internal_state->client->layers.data,
             internal_state->client->layers.length,
             UI_Theme::CATPPUCCIN_MOCHA,
             nullptr,
@@ -297,18 +298,16 @@ void application_run() {
             packet.geometry_count = 1;
             packet.geometries = &test_render;
 
-            ui_update_layers(
+            ui_update_layers(&internal_state->ui_context,
                 internal_state->client->layers.data,
                 internal_state->client->layers.length,
-                packet.delta_time
-            );
+                packet.delta_time);
 
             packet.ui_data.draw_list =
-                ui_draw_layers(
+                ui_draw_layers(&internal_state->ui_context,
                     internal_state->client->layers.data,
                     internal_state->client->layers.length,
-                    packet.delta_time
-                );
+                    packet.delta_time);
 
             if (!renderer_draw_frame(&packet)) {
                 internal_state->is_running = false;
@@ -355,7 +354,8 @@ void application_shutdown() {
     }
 
     CORE_DEBUG("Shutting down UI subsystem...");
-    ui_shutdown(internal_state->client->layers.data,
+    ui_shutdown(&internal_state->ui_context,
+        internal_state->client->layers.data,
         internal_state->client->layers.length);
 
     CORE_DEBUG("Shutting down geometry subsystem...");

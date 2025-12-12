@@ -14,7 +14,6 @@ struct Viewport_Camera {
 
 struct Editor_Layer_State {
     Viewport_Camera camera;
-    b8 viewport_window_open;
     b8 viewport_focused;
     b8 viewport_hovered;
     vec2 viewport_size;

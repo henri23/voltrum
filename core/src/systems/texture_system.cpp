@@ -19,9 +19,8 @@ struct Texture_System_State {
     Texture_System_Config config;
     Texture default_texture;
 
-    // Texture registry has a combination of hashmap and a static array
     Hashmap<Texture_Reference> texture_registry;
-    Texture* registered_textures; // static array of textures
+    Texture* registered_textures;
 };
 
 internal_var Texture_System_State state;
@@ -42,9 +41,11 @@ INTERNAL_FUNC b8 load_texture(
     b8 is_ui_texture
 ) {
     Resource img_resource;
-    if (!resource_system_load(texture_name,
+    if (!resource_system_load(
+            texture_name,
             Resource_Type::IMAGE,
-            &img_resource)) {
+            &img_resource
+        )) {
 
         CORE_ERROR("Failed to load image resource for texture '%s'",
             texture_name);

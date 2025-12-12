@@ -1,43 +1,30 @@
 #include "ui.hpp"
+#include "ui_context.hpp"
+#include "ui_titlebar.hpp"
 
 #include "core/logger.hpp"
 #include "systems/resource_system.hpp"
 
 #include <SDL3/SDL.h>
-#include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 
-struct UI_State {
-    UI_Theme current_theme;
-    PFN_menu_callback menu_callback;
-    const char* app_name;
-    b8 is_initialized;
+INTERNAL_FUNC void ui_dockspace_render(UI_Context* context) {
+    UI_Dockspace_State* dockspace = &context->dockspace;
 
-    unsigned int dockspace_id;
-    b8 dockspace_open;
-    b8 window_began; // Track if ImGui::Begin() was called this frame
+    dockspace->window_began = false;
 
-    ImFont* fonts[(u8)Font_Style::MAX_COUNT];
-};
-
-internal_var UI_State state;
-
-INTERNAL_FUNC void ui_dockspace_render() {
-    state.window_began = false;
-
-    if (state.dockspace_id == 0) {
-        state.dockspace_id = ImGui::GetID("MainDockspace");
-        CORE_DEBUG("Generated dockspace ID: %u", state.dockspace_id);
+    if (dockspace->dockspace_id == 0) {
+        dockspace->dockspace_id = ImGui::GetID("MainDockspace");
+        CORE_DEBUG("Generated dockspace ID: %u", dockspace->dockspace_id);
     }
 
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImVec2 work_pos = viewport->WorkPos;
     ImVec2 work_size = viewport->WorkSize;
 
-    f32 titlebar_height = 50.0f;
-    work_pos.y += titlebar_height;
-    work_size.y -= titlebar_height;
+    work_pos.y += TITLEBAR_HEIGHT;
+    work_size.y -= TITLEBAR_HEIGHT;
 
     ImGui::SetNextWindowPos(work_pos);
     ImGui::SetNextWindowSize(work_size);
@@ -54,8 +41,8 @@ INTERNAL_FUNC void ui_dockspace_render() {
         ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
 
     const char* window_name = "DockSpace";
-    ImGui::Begin(window_name, &state.dockspace_open, window_flags);
-    state.window_began = true;
+    ImGui::Begin(window_name, &dockspace->dockspace_open, window_flags);
+    dockspace->window_began = true;
 
     ImGui::PopStyleVar(3);
 
@@ -65,20 +52,20 @@ INTERNAL_FUNC void ui_dockspace_render() {
         float minWinSizeX = style.WindowMinSize.x;
         style.WindowMinSize.x = 300.0f;
 
-        ImGui::DockSpace(state.dockspace_id);
+        ImGui::DockSpace(dockspace->dockspace_id);
 
         style.WindowMinSize.x = minWinSizeX;
     } else {
         CORE_ERROR("ImGui docking is not enabled!");
     }
 
-    if (state.window_began) {
+    if (dockspace->window_began) {
         ImGui::End();
-        state.window_began = false;
+        dockspace->window_began = false;
     }
 }
 
-INTERNAL_FUNC b8 load_default_fonts() {
+INTERNAL_FUNC b8 load_default_fonts(UI_Context* context) {
     ImGuiIO& io = ImGui::GetIO();
 
     constexpr const char* style_names[] = {"normal",
@@ -86,9 +73,7 @@ INTERNAL_FUNC b8 load_default_fonts() {
         "bold_normal",
         "bold_italic"};
 
-    // Loop through all combinations and load fonts
     for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s) {
-        // Build resource path: "jetbrains/jetbrains_{style}"
         char path[128];
         u32 i = 0;
 
@@ -104,21 +89,21 @@ INTERNAL_FUNC b8 load_default_fonts() {
         Resource resource = {};
         if (!resource_system_load(path, Resource_Type::FONT, &resource)) {
             CORE_ERROR("Failed to load font: %s", path);
-            state.fonts[s] = nullptr;
+            context->fonts[s] = nullptr;
             continue;
         }
 
         ImFontConfig config = {};
         config.FontDataOwnedByAtlas = false;
 
-        state.fonts[s] = io.Fonts->AddFontFromMemoryTTF(resource.data,
+        context->fonts[s] = io.Fonts->AddFontFromMemoryTTF(resource.data,
             resource.data_size,
             20.0f,
             &config);
 
         resource_system_unload(&resource);
 
-        if (state.fonts[s]) {
+        if (context->fonts[s]) {
             CORE_DEBUG("Loaded font: %s at %.0fpt", path, 20.0f);
         }
     }
@@ -128,19 +113,30 @@ INTERNAL_FUNC b8 load_default_fonts() {
         return false;
     }
 
-    io.FontDefault = state.fonts[(u8)Font_Style::NORMAL];
+    io.FontDefault = context->fonts[(u8)Font_Style::NORMAL];
 
     return true;
 }
 
-b8 ui_initialize(UI_Layer* layers,
+b8 ui_initialize(UI_Context* context,
+    UI_Layer* layers,
     u32 layer_count,
     UI_Theme theme,
     PFN_menu_callback menu_callback,
     const char* app_name,
     SDL_Window* window) {
 
-    load_default_fonts();
+    context->current_theme = theme;
+    context->menu_callback = menu_callback;
+    context->app_name = app_name;
+    context->is_initialized = true;
+
+    load_default_fonts(context);
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    ui_themes_apply(context->current_theme, style);
+
+    ui_titlebar_setup(context, app_name);
 
     for (u32 i = 0; i < layer_count; ++i) {
         UI_Layer* layer = &layers[i];
@@ -151,7 +147,7 @@ b8 ui_initialize(UI_Layer* layers,
     return true;
 }
 
-void ui_shutdown(UI_Layer* layers, u32 layer_count) {
+void ui_shutdown(UI_Context* context, UI_Layer* layers, u32 layer_count) {
     for (u32 i = 0; i < layer_count; ++i) {
         UI_Layer* layer = &layers[i];
         if (layer->on_detach)
@@ -159,7 +155,10 @@ void ui_shutdown(UI_Layer* layers, u32 layer_count) {
     }
 }
 
-void ui_update_layers(UI_Layer* layers, u32 layer_count, f32 delta_t) {
+void ui_update_layers(UI_Context* context,
+    UI_Layer* layers,
+    u32 layer_count,
+    f32 delta_t) {
     for (u32 i = 0; i < layer_count; ++i) {
         UI_Layer* layer = &layers[i];
         if (layer->on_update)
@@ -167,13 +166,16 @@ void ui_update_layers(UI_Layer* layers, u32 layer_count, f32 delta_t) {
     }
 }
 
-ImDrawData* ui_draw_layers(UI_Layer* layers, u32 layer_count, f32 delta_t) {
-
+ImDrawData* ui_draw_layers(UI_Context* context,
+    UI_Layer* layers,
+    u32 layer_count,
+    f32 delta_t) {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    ui_dockspace_render();
+    ui_titlebar_draw(context);
+    ui_dockspace_render(context);
 
     ImGui::ShowDemoWindow();
 

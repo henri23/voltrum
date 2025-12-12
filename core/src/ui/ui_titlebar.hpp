@@ -1,41 +1,13 @@
 #pragma once
 
 #include "defines.hpp"
-#include "ui_types.hpp"
 
-// Forward declarations
-struct UI_State;
-struct ImVec2;
+struct UI_Context;
 
-const f32 TITLEBAR_HEIGHT = 58.0f;
-/**
- * Custom Titlebar Component
- * Provides a custom window titlebar with embedded icons and integrated menu
- * Replaces the standard OS titlebar when enabled
- */
+const f32 TITLEBAR_HEIGHT = 54.0f;
 
-/**
- * Setup the custom titlebar with configuration and load icons
- */
-VOLTRUM_API void ui_titlebar_setup(
-	PFN_menu_callback callback,
-	const char* app_name);
+VOLTRUM_API void ui_titlebar_setup(UI_Context* context, const char* app_name);
 
-/**
- * Clean up renderer resources before backend shutdown
- * Called by renderer to prevent crashes during shutdown
- */
-VOLTRUM_API void ui_titlebar_cleanup_renderer_resources();
+VOLTRUM_API void ui_titlebar_draw(UI_Context* context);
 
-/**
- * Draw the custom titlebar
- * @param user_data - UI state pointer
- */
-VOLTRUM_API void ui_titlebar_draw();
-
-/**
- * Check if the titlebar is currently hovered (for native window dragging)
- * @return true if titlebar is hovered, false otherwise
- */
-VOLTRUM_API b8 ui_is_titlebar_hovered();
-
+VOLTRUM_API b8 ui_is_titlebar_hovered(UI_Context* context);

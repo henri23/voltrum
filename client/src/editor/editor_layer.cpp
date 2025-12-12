@@ -32,7 +32,6 @@ void editor_layer_on_attach(UI_Layer* self) {
     viewport_camera_recalculate_view(&state->camera);
     renderer_set_view(state->camera.view_matrix);
 
-    state->viewport_window_open = true;
     state->viewport_focused = false;
     state->viewport_hovered = false;
 
@@ -189,7 +188,9 @@ INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera* camera,
 
 INTERNAL_FUNC void render_viewport_window(Editor_Layer_State* state,
     f32 delta_time) {
-    ImGui::Begin("Viewport", &state->viewport_window_open);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin("Viewport");
+    ImGui::PopStyleVar();
 
     state->viewport_focused = ImGui::IsWindowFocused();
     state->viewport_hovered = ImGui::IsWindowHovered();
@@ -216,17 +217,11 @@ INTERNAL_FUNC void render_viewport_window(Editor_Layer_State* state,
 
     // Render viewport and get the current frame's descriptor
     renderer_render_viewport();
-    void* viewport_texture_id = renderer_get_rendered_viewport();
 
-    if (viewport_texture_id) {
-        ImGui::Image(viewport_texture_id,
-            content_size,
-            ImVec2(0, 0),
-            ImVec2(1, 1));
-    } else {
-        ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
-            "Viewport texture unavailable");
-    }
+    ImGui::Image(renderer_get_rendered_viewport(),
+        content_size,
+        ImVec2(0, 0),
+        ImVec2(1, 1));
 
     ImGui::End();
 }

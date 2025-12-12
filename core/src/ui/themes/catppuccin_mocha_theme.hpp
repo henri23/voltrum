@@ -25,33 +25,33 @@ static const UI_Theme_Palette catppuccin_mocha_palette = {
         255), // compliment (Teal)
 
     // Background colors (Catppuccin Mocha)
-    IM_COL32(49,
-        50,
-        68,
+    IM_COL32(40,
+        42,
+        54,
         255), // background (Surface0)
-    IM_COL32(30,
-        30,
-        46,
+    IM_COL32(24,
+        24,
+        37,
         255), // background_dark (Base)
-    IM_COL32(24,
-        24,
-        37,
-        255), // titlebar (Mantle)
-    IM_COL32(24,
-        24,
-        37,
-        255), // window_bg (Mantle)
     IM_COL32(17,
         17,
         27,
+        255), // titlebar (Mantle)
+    IM_COL32(17,
+        17,
+        27,
+        255), // window_bg (Mantle)
+    IM_COL32(11,
+        11,
+        18,
         255), // property_field (Crust)
-    IM_COL32(69,
-        71,
-        90,
+    IM_COL32(54,
+        56,
+        72,
         255), // background_popup (Surface1)
-    IM_COL32(30,
-        30,
-        46,
+    IM_COL32(24,
+        24,
+        37,
         255), // clear_color (Base)
 
     // Titlebar gradient colors (Catppuccin Mocha)
@@ -65,17 +65,17 @@ static const UI_Theme_Palette catppuccin_mocha_palette = {
         0), // titlebar_gradient_end - Mauve fully transparent
 
     // Text colors (Catppuccin Mocha)
-    IM_COL32(205,
-        214,
-        244,
+    IM_COL32(220,
+        224,
+        252,
         255), // text (Text)
-    IM_COL32(166,
-        173,
-        200,
+    IM_COL32(186,
+        194,
+        222,
         255), // text_brighter (Subtext1)
-    IM_COL32(127,
-        132,
-        156,
+    IM_COL32(147,
+        153,
+        178,
         255), // text_darker (Subtext0)
     IM_COL32(243,
         139,
