@@ -296,12 +296,19 @@ void application_run() {
 
             packet.geometry_count = 1;
             packet.geometries = &test_render;
-            // TODO: temp
+
+            ui_update_layers(
+                internal_state->client->layers.data,
+                internal_state->client->layers.length,
+                packet.delta_time
+            );
 
             packet.ui_data.draw_list =
-                ui_draw_layers(internal_state->client->layers.data,
+                ui_draw_layers(
+                    internal_state->client->layers.data,
                     internal_state->client->layers.length,
-                    packet.delta_time);
+                    packet.delta_time
+                );
 
             if (!renderer_draw_frame(&packet)) {
                 internal_state->is_running = false;

@@ -313,6 +313,7 @@ struct Vulkan_Context {
 struct Vulkan_Texture_Data {
     Vulkan_Image image;
     VkSampler sampler;
+    VkDescriptorSet ui_descriptor_set;
 };
 
 struct Vulkan_Physical_Device_Requirements {

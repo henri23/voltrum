@@ -7,6 +7,7 @@
 #include "math/math_types.hpp"
 
 #include "renderer/renderer_types.hpp"
+#include "renderer/vulkan/vulkan_types.hpp"
 
 // Renderer frontend will manage the backend interface state
 struct Renderer_System_State {
@@ -131,13 +132,29 @@ b8 renderer_draw_frame(Render_Packet* packet) {
 
 void renderer_set_view(mat4 view) { state.view = view; }
 
-void renderer_create_texture(const u8* pixels, struct Texture* texture) {
-
-    state.backend.create_texture(pixels, texture);
+void renderer_create_texture(
+    const u8* pixels,
+    struct Texture* texture,
+    b8 is_ui_texture
+) {
+    state.backend.create_texture(
+        pixels,
+        texture,
+        is_ui_texture
+    );
 }
 
 void renderer_destroy_texture(struct Texture* texture) {
     state.backend.destroy_texture(texture);
+}
+
+void* renderer_get_texture_draw_data(struct Texture* texture) {
+    if (!texture || !texture->internal_data) {
+        return nullptr;
+    }
+
+    Vulkan_Texture_Data* data = (Vulkan_Texture_Data*)texture->internal_data;
+    return (void*)(intptr_t)data->ui_descriptor_set;
 }
 
 b8 renderer_create_material(struct Material* material) {

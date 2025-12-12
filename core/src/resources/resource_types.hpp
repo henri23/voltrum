@@ -35,16 +35,16 @@ struct Image_Resource_Data {
 using Texture_ID = u32;
 constexpr u32 TEXTURE_NAME_MAX_LENGTH = 256;
 
-// Interface
 struct Texture {
     Texture_ID id;
     u32 width;
     u32 height;
     u8 channel_count;
     b8 has_transparency;
+    b8 is_ui_texture;
     u32 generation;
     char name[TEXTURE_NAME_MAX_LENGTH];
-    void* internal_data; // Graphics API specific data
+    void* internal_data;
 };
 
 // Bitmask

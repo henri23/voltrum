@@ -36,8 +36,11 @@ INTERNAL_FUNC void create_texture(Texture* texture) {
 
 INTERNAL_FUNC void destroy_texture(Texture* texture);
 
-INTERNAL_FUNC b8 load_texture(const char* texture_name, Texture* texture) {
-
+INTERNAL_FUNC b8 load_texture(
+    const char* texture_name,
+    Texture* texture,
+    b8 is_ui_texture
+) {
     Resource img_resource;
     if (!resource_system_load(texture_name,
             Resource_Type::IMAGE,
@@ -56,20 +59,14 @@ INTERNAL_FUNC b8 load_texture(const char* texture_name, Texture* texture) {
     temp_texture.height = resource_data->height;
     temp_texture.channel_count = resource_data->channel_count;
 
-    // Copy over the texture generation, because we might want to use
-    // alreaddy loaded texture as target texture in the arguments, so the
-    // code should be able to swap out the generation of the already loaded
-    // texture
     u32 current_generation = texture->generation;
-    texture->generation = INVALID_ID; // When trying to use this texture
-                                      // while loading, it will not be valid
+    texture->generation = INVALID_ID;
 
     u64 total_texture_size =
         temp_texture.width * temp_texture.height * temp_texture.channel_count;
 
     b8 has_transparency = false;
 
-    // Check for transparency
     for (u64 i = 0; i < total_texture_size; i += temp_texture.channel_count) {
         u8 alpha = resource_data->pixels[i + 3];
         if (alpha < 255) {
@@ -82,7 +79,11 @@ INTERNAL_FUNC b8 load_texture(const char* texture_name, Texture* texture) {
     temp_texture.generation = INVALID_ID;
     temp_texture.has_transparency = has_transparency;
 
-    renderer_create_texture(resource_data->pixels, &temp_texture);
+    renderer_create_texture(
+        resource_data->pixels,
+        &temp_texture,
+        is_ui_texture
+    );
 
     // Copy old texture
     Texture old_texture = *texture;
@@ -158,9 +159,11 @@ void texture_system_shutdown() {
     memory_zero(&state, sizeof(Texture_System_State));
 }
 
-// Returns already loaded texture or loads it from disk the first time
-Texture* texture_system_acquire(const char* name, b8 auto_release) {
-
+Texture* texture_system_acquire(
+    const char* name,
+    b8 auto_release,
+    b8 is_ui_texture
+) {
     if (string_check_equal_insensitive(name, DEFAULT_TEXTURE_NAME)) {
         CORE_WARN(
             "texture_system_acquire - Called for default texture. Use "
@@ -200,8 +203,7 @@ Texture* texture_system_acquire(const char* name, b8 auto_release) {
             return nullptr;
         }
 
-        // Texture not present so we need to load first
-        if (!load_texture(name, texture)) {
+        if (!load_texture(name, texture, is_ui_texture)) {
             CORE_ERROR("Failed to load texture '%s'", name);
             return nullptr;
         }

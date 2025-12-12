@@ -44,7 +44,11 @@ struct Renderer_Backend {
     void (*draw_geometry)(Geometry_Render_Data data);
     void (*draw_ui)(UI_Render_Data data);
 
-    void (*create_texture)(const u8* pixels, struct Texture* texture);
+    void (*create_texture)(
+        const u8* pixels,
+        struct Texture* texture,
+        b8 is_ui_texture
+    );
     void (*destroy_texture)(struct Texture* texture);
 
     b8 (*create_material)(struct Material* material);

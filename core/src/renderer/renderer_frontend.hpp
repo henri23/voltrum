@@ -12,8 +12,14 @@ void renderer_on_resize(u16 width, u16 height);
 
 b8 renderer_draw_frame(Render_Packet* packet);
 
-void renderer_create_texture(const u8* pixels, struct Texture* texture);
+void renderer_create_texture(
+    const u8* pixels,
+    struct Texture* texture,
+    b8 is_ui_texture = false
+);
 void renderer_destroy_texture(struct Texture* texture);
+
+void* renderer_get_texture_draw_data(struct Texture* texture);
 
 b8 renderer_create_material(struct Material* material);
 void renderer_destroy_material(struct Material* material);

@@ -1237,15 +1237,19 @@ INTERNAL_FUNC b8 create_buffers(Vulkan_Context* context) {
     return true;
 }
 
-void vulkan_create_texture(const u8* pixels, Texture* texture) {
-
-    // Internal data creation
-    // TODO: Use a custom allocator for this
+void vulkan_create_texture(
+    const u8* pixels,
+    Texture* texture,
+    b8 is_ui_texture
+) {
     texture->internal_data =
         memory_allocate(sizeof(Vulkan_Texture_Data), Memory_Tag::TEXTURE);
 
     Vulkan_Texture_Data* data =
         static_cast<Vulkan_Texture_Data*>(texture->internal_data);
+
+    data->ui_descriptor_set = VK_NULL_HANDLE;
+    texture->is_ui_texture = is_ui_texture;
 
     VkDeviceSize image_size =
         texture->width * texture->height * texture->channel_count;
@@ -1343,6 +1347,14 @@ void vulkan_create_texture(const u8* pixels, Texture* texture) {
         return;
     }
 
+    if (is_ui_texture) {
+        data->ui_descriptor_set = vulkan_imgui_shader_pipeline_create_texture_descriptor(
+            &context,
+            &context.imgui_shader,
+            data->image.view
+        );
+    }
+
     texture->generation++;
 }
 
@@ -1353,6 +1365,13 @@ void vulkan_destroy_texture(Texture* texture) {
         static_cast<Vulkan_Texture_Data*>(texture->internal_data);
 
     if (data) {
+        if (data->ui_descriptor_set != VK_NULL_HANDLE) {
+            vulkan_imgui_shader_pipeline_remove_texture_descriptor(
+                data->ui_descriptor_set
+            );
+            data->ui_descriptor_set = VK_NULL_HANDLE;
+        }
+
         vulkan_image_destroy(&context, &data->image);
         memory_zero(&data->image, sizeof(Vulkan_Image));
         vkDestroySampler(context.device.logical_device,

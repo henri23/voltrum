@@ -159,17 +159,19 @@ void ui_shutdown(UI_Layer* layers, u32 layer_count) {
     }
 }
 
-ImDrawData* ui_draw_layers(UI_Layer* layers, u32 layer_count, f32 delta_t) {
-
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
-
+void ui_update_layers(UI_Layer* layers, u32 layer_count, f32 delta_t) {
     for (u32 i = 0; i < layer_count; ++i) {
         UI_Layer* layer = &layers[i];
         if (layer->on_update)
             layer->on_update(layer, delta_t);
     }
+}
+
+ImDrawData* ui_draw_layers(UI_Layer* layers, u32 layer_count, f32 delta_t) {
+
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
 
     ui_dockspace_render();
 

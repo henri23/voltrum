@@ -27,7 +27,11 @@ b8 vulkan_renderpass_finish(
 void vulkan_draw_geometry(Geometry_Render_Data data);
 void vulkan_draw_ui(UI_Render_Data data);
 
-void vulkan_create_texture(const u8* pixels, Texture* texture);
+void vulkan_create_texture(
+    const u8* pixels,
+    Texture* texture,
+    b8 is_ui_texture
+);
 void vulkan_destroy_texture(Texture* texture);
 
 b8 vulkan_create_material(struct Material* material);
