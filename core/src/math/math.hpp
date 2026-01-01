@@ -20,7 +20,8 @@ namespace math {
     constexpr f32 DEG_RAD_FACTOR = PI / 180.0f;
     constexpr f32 RAD_DEG_FACTOR = 180.0f / PI;
 
-    constexpr f32 INFINITY = 1e30f;
+    // Avoid the standard math.h INFINITY macro name to keep Intellisense happy
+    constexpr f32 INFINITY_F = 1e30f;
     // The float epsilon is defined as the smallest number possible that, when
     // added to 1.0 yields a result different from 1.0, i.e. 1.0 + ESPILON
     // != 1.0

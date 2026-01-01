@@ -965,21 +965,21 @@ void regenerate_framebuffers() {
     u32 image_count = context.swapchain.image_count;
 
     // Destroy old framebuffers if they exist
-    for (u32 i = 0; i < image_count; ++i) {
-        if (context.viewport.framebuffers[i] != VK_NULL_HANDLE) {
-            vkDestroyFramebuffer(context.device.logical_device,
-                context.viewport.framebuffers[i],
-                context.allocator);
-            context.viewport.framebuffers[i] = VK_NULL_HANDLE;
-        }
-
-        if (context.swapchain.framebuffers[i] != VK_NULL_HANDLE) {
-            vkDestroyFramebuffer(context.device.logical_device,
-                context.swapchain.framebuffers[i],
-                context.allocator);
-            context.swapchain.framebuffers[i] = VK_NULL_HANDLE;
-        }
-    }
+    // for (u32 i = 0; i < image_count; ++i) {
+    //     if (context.viewport.framebuffers[i] != VK_NULL_HANDLE) {
+    //         vkDestroyFramebuffer(context.device.logical_device,
+    //             context.viewport.framebuffers[i],
+    //             context.allocator);
+    //         context.viewport.framebuffers[i] = VK_NULL_HANDLE;
+    //     }
+    //
+    //     if (context.swapchain.framebuffers[i] != VK_NULL_HANDLE) {
+    //         vkDestroyFramebuffer(context.device.logical_device,
+    //             context.swapchain.framebuffers[i],
+    //             context.allocator);
+    //         context.swapchain.framebuffers[i] = VK_NULL_HANDLE;
+    //     }
+    // }
 
     // Create new framebuffers
     for (u32 i = 0; i < image_count; ++i) {
@@ -1237,11 +1237,9 @@ INTERNAL_FUNC b8 create_buffers(Vulkan_Context* context) {
     return true;
 }
 
-void vulkan_create_texture(
-    const u8* pixels,
+void vulkan_create_texture(const u8* pixels,
     Texture* texture,
-    b8 is_ui_texture
-) {
+    b8 is_ui_texture) {
     texture->internal_data =
         memory_allocate(sizeof(Vulkan_Texture_Data), Memory_Tag::TEXTURE);
 
@@ -1348,11 +1346,10 @@ void vulkan_create_texture(
     }
 
     if (is_ui_texture) {
-        data->ui_descriptor_set = vulkan_imgui_shader_pipeline_create_texture_descriptor(
-            &context,
-            &context.imgui_shader,
-            data->image.view
-        );
+        data->ui_descriptor_set =
+            vulkan_imgui_shader_pipeline_create_texture_descriptor(&context,
+                &context.imgui_shader,
+                data->image.view);
     }
 
     texture->generation++;
@@ -1367,8 +1364,7 @@ void vulkan_destroy_texture(Texture* texture) {
     if (data) {
         if (data->ui_descriptor_set != VK_NULL_HANDLE) {
             vulkan_imgui_shader_pipeline_remove_texture_descriptor(
-                data->ui_descriptor_set
-            );
+                data->ui_descriptor_set);
             data->ui_descriptor_set = VK_NULL_HANDLE;
         }
 

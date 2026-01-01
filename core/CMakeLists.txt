@@ -68,7 +68,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PUBLIC "src")
-target_include_directories(${PROJECT_NAME} PRIVATE ${VULKAN_SDK}/Include)
+target_include_directories(${PROJECT_NAME} PRIVATE ${VULKAN_SDK}/include)
 target_include_directories(
     ${PROJECT_NAME}
     PRIVATE ${CMAKE_SOURCE_DIR}/external/stb_image
@@ -89,6 +89,7 @@ set(IMGUI_SRC
 
 add_library(imgui STATIC ${IMGUI_SRC})
 target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
+target_include_directories(imgui PRIVATE ${VULKAN_SDK}/include)
 target_link_libraries(imgui PUBLIC SDL3::SDL3 Vulkan::Vulkan)
 
 # Link imgui into core (PUBLIC so client can access ImGui headers)
