@@ -172,7 +172,8 @@ void material_system_release(const char* name) {
 
     if (string_check_equal_insensitive(name, DEFAULT_MATERIAL_NAME)) {
         CORE_WARN(
-            "texture_system_release - Called for default texture. Skipping...");
+            "material_system_release - Called for default texture. "
+            "Skipping...");
         return;
     }
 

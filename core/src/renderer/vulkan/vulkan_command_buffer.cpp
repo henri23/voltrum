@@ -105,6 +105,10 @@ void vulkan_command_buffer_update_submitted(
 void vulkan_command_buffer_reset(
     Vulkan_Command_Buffer* command_buffer) {
 
+    // Reset the Vulkan command buffer handle to INITIAL state
+    // This must be called after the fence wait (which happens in vulkan_begin_frame)
+    VK_CHECK(vkResetCommandBuffer(command_buffer->handle, 0));
+
     command_buffer->state = Command_Buffer_State::READY;
 }
 

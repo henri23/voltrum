@@ -43,7 +43,7 @@ exit /b 1
 :end_parse
 
 :: Hardcoded vcvarsall.bat path
-set VCVARS="C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat"
+set VCVARS="C:\Program Files\Microsoft Visual Studio\18\Community\\VC\Auxiliary\Build\vcvarsall.bat"
 
 :: Setup MSVC if cl.exe not found
 where cl >nul 2>&1
@@ -116,6 +116,16 @@ if errorlevel 1 (
 echo Build completed successfully.
 echo.
 
+:: Copy compile_commands.json to root directory
+echo Copying compile_commands.json to root directory...
+copy compile_commands.json .. >nul
+if errorlevel 1 (
+    echo WARNING: Failed to copy compile_commands.json
+) else (
+    echo compile_commands.json copied successfully.
+)
+echo.
+
 :: Test building and running
 if "%RUN_TESTS%"=="true" (
     echo Building voltrum tests...
@@ -129,9 +139,8 @@ if "%RUN_TESTS%"=="true" (
 
     echo Running voltrum tests...
     .\tests\voltrum_tests.exe
-    set TEST_EXIT_CODE=%ERRORLEVEL%
-    if not "%TEST_EXIT_CODE%"=="0" (
-        echo ERROR: Tests failed with exit code %TEST_EXIT_CODE%. Aborting build.
+    if errorlevel 1 (
+        echo ERROR: Tests failed. Aborting build.
         exit /b 1
     )
     echo All tests passed successfully.
@@ -141,6 +150,6 @@ if "%RUN_TESTS%"=="true" (
     echo.
 )
 
-echo Launching voltrum_client...
-client\voltrum_client.exe
+REM echo Launching voltrum_client...
+REM client\voltrum_client.exe
 cd ..

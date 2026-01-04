@@ -558,6 +558,21 @@ b8 vulkan_begin_frame(Renderer_Backend* backend, f32 delta_t) {
 
     // At this point we have an image index that we can render to!vulkan_backend
 
+    // Make sure this specific image (and its command buffer) is not still in use
+    if (context.images_in_flight[context.image_index] != nullptr) {
+        VkResult result = vkWaitForFences(context.device.logical_device,
+            1,
+            context.images_in_flight[context.image_index],
+            true,
+            UINT64_MAX);
+
+        if (!vulkan_result_is_success(result)) {
+            CORE_ERROR("Image-in-flight fence wait failure: '%s'",
+                vulkan_result_string(result, true));
+            return false;
+        }
+    }
+
     // Begin recording commands
     Vulkan_Command_Buffer* cmd_buffer =
         &context.command_buffers[context.image_index];
@@ -625,24 +640,7 @@ b8 vulkan_end_frame(Renderer_Backend* backend, f32 delta_t) {
     // End command buffer recording
     vulkan_command_buffer_end(cmd_buffer);
 
-    // Make sure the previous frame is not using this image (i.e. its fence is
-    // being waited on)
-    if (context.images_in_flight[context.image_index] != nullptr) {
-        VkResult result = vkWaitForFences(context.device.logical_device,
-            1,
-            context.images_in_flight[context.image_index],
-            true,
-            UINT64_MAX);
-
-        if (!vulkan_result_is_success(result)) {
-            CORE_FATAL("vk_fence_wait error: '%s'",
-                vulkan_result_string(result, true));
-        }
-
-        // by the time this operation completes, we are safe to perform ops.
-    }
-
-    // Mark the image fence as in-se by the current frame
+    // Mark the image fence as in-use by the current frame
     context.images_in_flight[context.image_index] =
         &context.in_flight_fences[context.current_frame];
 
@@ -965,21 +963,21 @@ void regenerate_framebuffers() {
     u32 image_count = context.swapchain.image_count;
 
     // Destroy old framebuffers if they exist
-    // for (u32 i = 0; i < image_count; ++i) {
-    //     if (context.viewport.framebuffers[i] != VK_NULL_HANDLE) {
-    //         vkDestroyFramebuffer(context.device.logical_device,
-    //             context.viewport.framebuffers[i],
-    //             context.allocator);
-    //         context.viewport.framebuffers[i] = VK_NULL_HANDLE;
-    //     }
-    //
-    //     if (context.swapchain.framebuffers[i] != VK_NULL_HANDLE) {
-    //         vkDestroyFramebuffer(context.device.logical_device,
-    //             context.swapchain.framebuffers[i],
-    //             context.allocator);
-    //         context.swapchain.framebuffers[i] = VK_NULL_HANDLE;
-    //     }
-    // }
+    for (u32 i = 0; i < image_count; ++i) {
+        if (context.viewport.framebuffers[i] != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(context.device.logical_device,
+                context.viewport.framebuffers[i],
+                context.allocator);
+            context.viewport.framebuffers[i] = VK_NULL_HANDLE;
+        }
+
+        if (context.swapchain.framebuffers[i] != VK_NULL_HANDLE) {
+            vkDestroyFramebuffer(context.device.logical_device,
+                context.swapchain.framebuffers[i],
+                context.allocator);
+            context.swapchain.framebuffers[i] = VK_NULL_HANDLE;
+        }
+    }
 
     // Create new framebuffers
     for (u32 i = 0; i < image_count; ++i) {
@@ -1103,22 +1101,12 @@ b8 recreate_swapchain(Renderer_Backend* backend, b8 is_resized_event) {
             &context.command_buffers[i]);
     }
 
-    // Destroy framebuffers
-    for (u32 i = 0; i < context.swapchain.image_count; ++i) {
-        vkDestroyFramebuffer(context.device.logical_device,
-            context.viewport.framebuffers[i],
-            context.allocator);
-
-        vkDestroyFramebuffer(context.device.logical_device,
-            context.swapchain.framebuffers[i],
-            context.allocator);
-    }
-
     context.ui_renderpass.render_area.z = context.swapchain.framebuffer_width;
     context.ui_renderpass.render_area.w = context.swapchain.framebuffer_height;
     context.ui_renderpass.render_area.x = 0;
     context.ui_renderpass.render_area.y = 0;
 
+    // regenerate_framebuffers() handles both destruction and creation with proper NULL checks
     regenerate_framebuffers();
 
     // Recreate main renderer command buffers

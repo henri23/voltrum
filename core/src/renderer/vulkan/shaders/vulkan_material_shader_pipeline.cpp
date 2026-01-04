@@ -183,7 +183,7 @@ b8 vulkan_material_shader_pipeline_create(Vulkan_Context* context,
     }
 
     if (!vulkan_graphics_pipeline_create(context,
-            &context->ui_renderpass,
+            &context->viewport_renderpass,
             sizeof(vertex_3d),
             attribute_count,
             attribute_descriptions,
