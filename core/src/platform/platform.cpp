@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "SDL3/SDL_vulkan.h"
-
 #include "core/logger.hpp"
 #include "data_structures/auto_array.hpp"
 #include "events/events.hpp"
@@ -12,7 +10,13 @@
 
 #include "input/input.hpp"
 #include "input/input_codes.hpp"
+
+#include <SDL3/SDL_vulkan.h>
 #include <imgui_impl_sdl3.h>
+
+#ifdef PLATFORM_WINDOWS
+extern "C" void platform_enable_rounded_corners(void* hwnd);
+#endif
 
 internal_var Platform_State* state_ptr = nullptr;
 
@@ -71,6 +75,16 @@ b8 platform_startup(Platform_State* state,
     }
 
     CORE_DEBUG("Window created successfully");
+
+#ifdef PLATFORM_WINDOWS
+    // Enable Windows 11 rounded corners for borderless window
+    void* hwnd =
+        SDL_GetPointerProperty(SDL_GetWindowProperties(state_ptr->window),
+            SDL_PROP_WINDOW_WIN32_HWND_POINTER,
+            nullptr);
+    platform_enable_rounded_corners(hwnd);
+    CORE_DEBUG("Windows 11 rounded corners enabled");
+#endif
 
     // Enable native window dragging and resizing for borderless window
     bool hit_test_result = SDL_SetWindowHitTest(state_ptr->window,
@@ -363,6 +377,24 @@ b8 platform_is_window_maximized() {
     return false;
 }
 
+void platform_set_window_icon(u8* pixels, u32 width, u32 height) {
+    if (!state_ptr || !state_ptr->window || !pixels) {
+        CORE_WARN("platform_set_window_icon: Invalid parameters");
+        return;
+    }
+
+    SDL_Surface* icon_surface = SDL_CreateSurfaceFrom(
+        width, height, SDL_PIXELFORMAT_RGBA32, pixels, width * 4);
+
+    if (icon_surface) {
+        SDL_SetWindowIcon(state_ptr->window, icon_surface);
+        SDL_DestroySurface(icon_surface);
+        CORE_DEBUG("Window icon set successfully (%dx%d)", width, height);
+    } else {
+        CORE_WARN("Failed to create SDL surface for icon: %s", SDL_GetError());
+    }
+}
+
 void platform_get_required_extensions(
     Auto_Array<const char*>* required_extensions) {
     // Get the extensions needed by SDL3 for Vulkan
@@ -424,6 +456,10 @@ void platform_get_window_size(s32* width, s32* height) {
     }
 }
 
+void platform_set_titlebar_hovered(b8 hovered) {
+    state_ptr->is_titlebar_hovered = hovered;
+}
+
 INTERNAL_FUNC SDL_HitTestResult platform_hit_test_callback(SDL_Window* win,
     const SDL_Point* area,
     void* data) {
@@ -442,13 +478,7 @@ INTERNAL_FUNC SDL_HitTestResult platform_hit_test_callback(SDL_Window* win,
     const int TITLEBAR_HEIGHT_PIXELS = (int)(TITLEBAR_HEIGHT_LOGICAL * scale_y);
 
     if (area->y <= TITLEBAR_HEIGHT_PIXELS) {
-        // Call UI function to check if we're hovering the titlebar (not
-        // buttons)
-        // Commented out for UI rewrite - titlebar dragging temporarily disabled
-        // b8 titlebar_hovered = ui_is_titlebar_hovered();
-        b8 titlebar_hovered = false; // Temporarily disabled
-
-        if (titlebar_hovered) {
+        if (state_ptr->is_titlebar_hovered) {
             return SDL_HITTEST_DRAGGABLE;
         }
     }

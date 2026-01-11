@@ -7,6 +7,9 @@ struct Client;
 
 VOLTRUM_API void application_get_framebuffer_size(u32* width, u32* height);
 
+// Get the UI context for UI operations from client code
+VOLTRUM_API struct UI_Context* application_get_ui_context();
+
 // Initialize application with client state
 VOLTRUM_API b8 application_init(Client* client_state);
 

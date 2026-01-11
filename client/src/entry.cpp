@@ -2,6 +2,7 @@
 #include "editor/editor_layer.hpp"
 
 // Interfaces from core library
+#include <core/application.hpp>
 #include <core/logger.hpp>
 #include <entry.hpp>
 #include <events/events.hpp>
@@ -9,11 +10,14 @@
 #include <input/input_codes.hpp>
 #include <math/math.hpp>
 #include <memory/memory.hpp>
+#include <ui/icons.hpp>
 #include <ui/ui.hpp>
 #include <ui/ui_types.hpp>
+#include <ui/ui_widgets.hpp>
 
 // WARN: This is temporary, the renderer subsystem should not be
 // exposed outside the engine
+#include <platform/platform.hpp>
 #include <renderer/renderer_frontend.hpp>
 
 #if defined(PLATFORM_WINDOWS) && !defined(VOLTRUM_STATIC_LINKING)
@@ -101,13 +105,45 @@ void client_shutdown(Client* client_state) {
     CLIENT_INFO("Client shutdown complete.")
 }
 
+// Menu callback - called by core UI to draw menu items
+void client_menu_callback() {
+    if (ui::BeginMenu("File")) {
+        if (ui::MenuItem(ICON_FA_RIGHT_FROM_BRACKET " Exit")) {
+            platform_close_window();
+        }
+        ui::EndMenu();
+    }
+
+    if (ui::BeginMenu("View")) {
+        ui::MenuItem(ICON_FA_WINDOW_MAXIMIZE " Viewport");
+        ui::MenuItem(ICON_FA_SLIDERS " Properties");
+
+        UI_Context* ui_ctx = application_get_ui_context();
+        b8 demo_visible = ui_is_demo_window_visible(ui_ctx);
+        if (ui::MenuItem(ICON_FA_CODE " ImGui Demo", nullptr, demo_visible)) {
+            ui_toggle_demo_window(ui_ctx);
+        }
+        ui::EndMenu();
+    }
+
+    if (ui::BeginMenu("Help")) {
+        ui::MenuItem(ICON_FA_CIRCLE_INFO " About");
+        ui::EndMenu();
+    }
+
+    if (ui::BeginMenu("Tools")) {
+        ui::MenuItem(ICON_FA_GEARS " Explore");
+        ui::EndMenu();
+    }
+}
+
 // Main client initialization function called by core
 b8 create_client(Client* client_state) {
     // Set up client configuration
     client_state->config.name = "Voltrum EDA";
     client_state->config.width = 1600;
     client_state->config.height = 900;
-    client_state->config.theme = UI_Theme::CATPPUCCIN_MOCHA;
+    client_state->config.theme = UI_Theme::CATPPUCCIN;
 
     // Set up lifecycle callbacks
     client_state->initialize = client_initialize;
@@ -123,6 +159,9 @@ b8 create_client(Client* client_state) {
     // Create and register editor layer
     UI_Layer editor_layer = create_editor_layer();
     client_state->layers.push_back(editor_layer);
+
+    // Set menu callback
+    client_state->menu_callback = client_menu_callback;
 
     return true;
 }

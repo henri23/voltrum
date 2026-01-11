@@ -11,7 +11,8 @@ struct ImGuiStyle;
 enum class UI_Theme {
     DARK = 0,        // Current Walnut-inspired dark theme
     LIGHT,           // Light theme
-    CATPPUCCIN_MOCHA, // Catppuccin Mocha color scheme
+    CATPPUCCIN,      // Catppuccin Mocha color scheme
+    TOKYO,           // Tokyo Night color scheme
     COUNT            // Number of available themes
 };
 

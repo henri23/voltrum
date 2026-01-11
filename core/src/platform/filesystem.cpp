@@ -19,7 +19,7 @@
 b8 filesystem_exists(const char* path) {
 #ifdef PLATFORM_WINDOWS
     struct _stat buffer;
-    return _stat(path, &buffer);
+    return _stat(path, &buffer) == 0;
 #else
     struct stat buffer;
     return stat(path, &buffer) == 0;

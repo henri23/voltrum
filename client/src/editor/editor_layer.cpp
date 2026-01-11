@@ -7,6 +7,7 @@
 #include <math/math.hpp>
 #include <memory/memory.hpp>
 #include <renderer/renderer_frontend.hpp>
+#include <ui/icons.hpp>
 
 INTERNAL_FUNC void viewport_camera_initialize(Viewport_Camera* camera,
     vec3 position = {0, 0, 10.0f});
@@ -21,6 +22,8 @@ INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera* camera,
 
 INTERNAL_FUNC void render_viewport_window(Editor_Layer_State* state,
     f32 delta_time);
+INTERNAL_FUNC void render_statistics_window(Editor_Layer_State* state,
+    f32 delta_time);
 
 void editor_layer_on_attach(UI_Layer* self) {
     self->state =
@@ -34,6 +37,12 @@ void editor_layer_on_attach(UI_Layer* self) {
 
     state->viewport_focused = false;
     state->viewport_hovered = false;
+
+    // Initialize metrics state
+    state->fps = 0.0f;
+    state->frame_time_ms = 0.0f;
+    state->fps_accumulator = 0.0f;
+    state->fps_frame_count = 0;
 
     u32 width = 0;
     u32 height = 0;
@@ -75,6 +84,7 @@ b8 editor_layer_on_render(UI_Layer* self, f32 delta_time) {
     Editor_Layer_State* state = (Editor_Layer_State*)self->state;
 
     render_viewport_window(state, delta_time);
+    render_statistics_window(state, delta_time);
 
     return true;
 }
@@ -190,7 +200,7 @@ INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera* camera,
 INTERNAL_FUNC void render_viewport_window(Editor_Layer_State* state,
     f32 delta_time) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("Viewport");
+    ImGui::Begin(ICON_FA_EXPAND " Viewport");
     ImGui::PopStyleVar();
 
     state->viewport_focused = ImGui::IsWindowFocused();
@@ -223,6 +233,29 @@ INTERNAL_FUNC void render_viewport_window(Editor_Layer_State* state,
         content_size,
         ImVec2(0, 0),
         ImVec2(1, 1));
+
+    ImGui::End();
+}
+
+INTERNAL_FUNC void render_statistics_window(Editor_Layer_State* state,
+    f32 delta_time) {
+    // Update FPS calculation - average over ~0.5 seconds for stability
+    state->fps_accumulator += delta_time;
+    state->fps_frame_count++;
+
+    if (state->fps_accumulator >= 0.5f) {
+        state->fps = (f32)state->fps_frame_count / state->fps_accumulator;
+        state->frame_time_ms = (state->fps_accumulator / state->fps_frame_count) * 1000.0f;
+        state->fps_accumulator = 0.0f;
+        state->fps_frame_count = 0;
+    }
+
+    ImGui::Begin(ICON_FA_CHART_LINE " Statistics");
+
+    ImGui::Text("FPS: %.1f", state->fps);
+    ImGui::Text("Frame Time: %.2f ms", state->frame_time_ms);
+    ImGui::Separator();
+    ImGui::Text("Allocations: %llu", memory_get_allocations_count());
 
     ImGui::End();
 }

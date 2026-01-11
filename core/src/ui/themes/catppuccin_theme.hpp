@@ -5,7 +5,7 @@
 #include "imgui.h"
 
 // Catppuccin Mocha theme palette - C++17 compatible
-static const UI_Theme_Palette catppuccin_mocha_palette = {
+static const UI_Theme_Palette catppuccin_palette = {
     // Primary colors (Catppuccin Mocha)
     IM_COL32(245,
         194,

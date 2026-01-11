@@ -2,17 +2,19 @@
 #include "imgui.h"
 
 // Include theme palettes
-#include "themes/catppuccin_mocha_theme.hpp"
+#include "themes/catppuccin_theme.hpp"
 #include "themes/dark_theme.hpp"
 #include "themes/light_theme.hpp"
+#include "themes/tokyo_theme.hpp"
 
 // Theme palette array
 internal_var const UI_Theme_Palette* theme_palettes[] = {&dark_palette,
     &light_palette,
-    &catppuccin_mocha_palette};
+    &catppuccin_palette,
+    &tokyo_palette};
 
 // Theme names
-static const char* theme_names[] = {"Dark", "Light", "Catppuccin Mocha"};
+static const char* theme_names[] = {"Dark", "Light", "Catppuccin", "Tokyo"};
 
 STATIC_ASSERT(sizeof(theme_palettes) / sizeof(theme_palettes[0]) ==
                   (int)UI_Theme::COUNT,
@@ -116,9 +118,24 @@ void ui_themes_apply(UI_Theme theme, ImGuiStyle& style) {
         ImGui::ColorConvertU32ToFloat4(palette.docking_preview);
 
     // Apply style tweaks
-    style.FrameRounding = 2.5f;
     style.FrameBorderSize = 1.0f;
     style.IndentSpacing = 11.0f;
+
+    // Global corner rounding
+    f32 rounding = 9.0f;
+    style.WindowRounding = rounding;    // Windows
+    style.ChildRounding = rounding;     // Child windows
+    style.FrameRounding = rounding;     // Frames (buttons, inputs, etc.)
+    style.PopupRounding = rounding;     // Popups and tooltips
+    style.ScrollbarRounding = rounding; // Scrollbars
+    style.GrabRounding = rounding;      // Grab handles (sliders)
+    style.TabRounding = rounding;       // Tabs
+
+    // Menu spacing
+    style.ItemSpacing = ImVec2(12.0f,
+        6.0f); // Horizontal between menu items, vertical in dropdowns
+    style.FramePadding = ImVec2(8.0f, 5.0f);    // Padding inside frames/window titles
+    style.WindowPadding = ImVec2(10.0f, 10.0f); // Padding inside popup menus
 }
 
 const char* ui_themes_get_name(UI_Theme theme) {

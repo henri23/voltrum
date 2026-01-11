@@ -18,6 +18,12 @@ struct Editor_Layer_State {
     b8 viewport_hovered;
     vec2 viewport_size;
     vec2 last_viewport_size;
+
+    // Metrics tracking
+    f32 fps;
+    f32 frame_time_ms;
+    f32 fps_accumulator;
+    u32 fps_frame_count;
 };
 
 void editor_layer_on_attach(

@@ -15,12 +15,23 @@ INTERNAL_FUNC b8 font_resource_load(struct Resource_Loader* self,
     const char* format_str = "%s/%s/%s%s";
     char full_file_path[512];
 
+    // Try .ttf first
     string_format(full_file_path,
         format_str,
         resource_system_base_path(),
         self->type_path,
         name,
         ".ttf");
+
+    // If .ttf doesn't exist, try .otf
+    if (!filesystem_exists(full_file_path)) {
+        string_format(full_file_path,
+            format_str,
+            resource_system_base_path(),
+            self->type_path,
+            name,
+            ".otf");
+    }
 
     out_resource->full_path = string_duplicate(full_file_path);
 

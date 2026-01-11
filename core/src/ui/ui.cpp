@@ -1,6 +1,6 @@
 #include "ui.hpp"
-#include "ui_context.hpp"
 #include "ui_titlebar.hpp"
+#include "icons.hpp"
 
 #include "core/logger.hpp"
 #include "systems/resource_system.hpp"
@@ -73,6 +73,21 @@ INTERNAL_FUNC b8 load_default_fonts(UI_Context* context) {
         "bold_normal",
         "bold_italic"};
 
+    // Store resources to keep data alive until Build() is called
+    Resource font_resources[(u8)Font_Style::MAX_COUNT] = {};
+    Resource icon_resource = {};
+    b8 icon_loaded = false;
+
+    // Load icon font once (will be merged with each text font)
+    if (resource_system_load("fontawesome/fontawesome_normal",
+            Resource_Type::FONT,
+            &icon_resource)) {
+        icon_loaded = true;
+        CORE_DEBUG("Loaded FontAwesome icon font");
+    } else {
+        CORE_WARN("Failed to load FontAwesome icon font");
+    }
+
     for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s) {
         char path[128];
         u32 i = 0;
@@ -86,8 +101,7 @@ INTERNAL_FUNC b8 load_default_fonts(UI_Context* context) {
 
         path[i] = '\0';
 
-        Resource resource = {};
-        if (!resource_system_load(path, Resource_Type::FONT, &resource)) {
+        if (!resource_system_load(path, Resource_Type::FONT, &font_resources[s])) {
             CORE_ERROR("Failed to load font: %s", path);
             context->fonts[s] = nullptr;
             continue;
@@ -96,24 +110,61 @@ INTERNAL_FUNC b8 load_default_fonts(UI_Context* context) {
         ImFontConfig config = {};
         config.FontDataOwnedByAtlas = false;
 
-        context->fonts[s] = io.Fonts->AddFontFromMemoryTTF(resource.data,
-            resource.data_size,
+        context->fonts[s] = io.Fonts->AddFontFromMemoryTTF(
+            font_resources[s].data,
+            font_resources[s].data_size,
             20.0f,
             &config);
-
-        resource_system_unload(&resource);
 
         if (context->fonts[s]) {
             CORE_DEBUG("Loaded font: %s at %.0fpt", path, 20.0f);
         }
+
+        // Merge icon font with this text font style
+        if (icon_loaded) {
+            ImFontConfig icon_config = {};
+            icon_config.MergeMode = true;
+            icon_config.PixelSnapH = true;
+            icon_config.FontDataOwnedByAtlas = false;
+            icon_config.GlyphMinAdvanceX = 20.0f;
+
+            static const ImWchar icon_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
+
+            io.Fonts->AddFontFromMemoryTTF(icon_resource.data,
+                icon_resource.data_size,
+                18.0f,
+                &icon_config,
+                icon_ranges);
+        }
     }
 
+    // Build font atlas - data must remain valid until this point
     if (!io.Fonts->Build()) {
         CORE_ERROR("Failed to build font atlas");
+        // Clean up resources before returning
+        for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s) {
+            if (font_resources[s].data) {
+                resource_system_unload(&font_resources[s]);
+            }
+        }
+        if (icon_loaded) {
+            resource_system_unload(&icon_resource);
+        }
         return false;
     }
 
+    // Now safe to unload font data - ImGui has copied what it needs
+    for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s) {
+        if (font_resources[s].data) {
+            resource_system_unload(&font_resources[s]);
+        }
+    }
+    if (icon_loaded) {
+        resource_system_unload(&icon_resource);
+    }
+
     io.FontDefault = context->fonts[(u8)Font_Style::NORMAL];
+    CORE_DEBUG("Font atlas built successfully with icon support");
 
     return true;
 }
@@ -177,7 +228,9 @@ ImDrawData* ui_draw_layers(UI_Context* context,
     ui_titlebar_draw(context);
     ui_dockspace_render(context);
 
-    ImGui::ShowDemoWindow();
+    if (context->show_demo_window) {
+        ImGui::ShowDemoWindow(&context->show_demo_window);
+    }
 
     for (u32 i = 0; i < layer_count; ++i) {
         UI_Layer* layer = &layers[i];
@@ -188,4 +241,14 @@ ImDrawData* ui_draw_layers(UI_Context* context,
     ImGui::Render();
 
     return ImGui::GetDrawData();
+}
+
+void ui_toggle_demo_window(UI_Context* context) {
+    if (context) {
+        context->show_demo_window = !context->show_demo_window;
+    }
+}
+
+b8 ui_is_demo_window_visible(UI_Context* context) {
+    return context ? context->show_demo_window : false;
 }

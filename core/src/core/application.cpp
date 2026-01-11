@@ -11,11 +11,29 @@
 #include "platform/platform.hpp"
 #include "renderer/renderer_frontend.hpp"
 
+#include "resources/resource_types.hpp"
 #include "systems/geometry_system.hpp"
 #include "systems/material_system.hpp"
 #include "systems/resource_system.hpp"
 #include "systems/texture_system.hpp"
 #include "ui/ui.hpp"
+
+INTERNAL_FUNC void application_set_window_icon() {
+    Resource icon_resource = {};
+    if (resource_system_load("voltrum", Resource_Type::ICON, &icon_resource)) {
+        Image_Resource_Data* icon_data =
+            static_cast<Image_Resource_Data*>(icon_resource.data);
+
+        platform_set_window_icon(icon_data->pixels,
+            icon_data->width,
+            icon_data->height);
+
+        resource_system_unload(&icon_resource);
+        CORE_DEBUG("Window icon set successfully");
+    } else {
+        CORE_WARN("Failed to load window icon");
+    }
+}
 
 // Application configuration
 constexpr u32 TARGET_FPS = 140;
@@ -74,7 +92,11 @@ INTERNAL_FUNC b8 app_on_debug_event(const Event* event) {
 
 void application_get_framebuffer_size(u32* width, u32* height) {
     *width = internal_state->width;
-    *width = internal_state->width;
+    *height = internal_state->height;
+}
+
+UI_Context* application_get_ui_context() {
+    return internal_state ? &internal_state->ui_context : nullptr;
 }
 
 INTERNAL_FUNC b8 app_on_resized_callback(const Event* event) {
@@ -154,6 +176,9 @@ b8 application_init(Client* client_state) {
         return false;
     }
 
+    // Set window icon using cross-platform SDL method
+    application_set_window_icon();
+
     if (!renderer_startup(client_state->config.name)) {
         CORE_FATAL("Failed to initialize renderer");
         return false;
@@ -204,8 +229,8 @@ b8 application_init(Client* client_state) {
     if (!ui_initialize(&internal_state->ui_context,
             internal_state->client->layers.data,
             internal_state->client->layers.length,
-            UI_Theme::CATPPUCCIN_MOCHA,
-            nullptr,
+            UI_Theme::CATPPUCCIN,
+            client_state->menu_callback,
             client_state->config.name,
             internal_state->plat_state.window)) {
         CORE_FATAL("Failed to initiliaze ui system");
