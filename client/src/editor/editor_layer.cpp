@@ -9,6 +9,34 @@
 #include <renderer/renderer_frontend.hpp>
 #include <ui/icons.hpp>
 
+struct Viewport_Camera {
+    vec3 position;
+    vec3 euler_angles;
+    mat4 view_matrix;
+    mat4 camera_matrix;
+    b8 view_dirty;
+};
+
+struct Editor_Layer_State {
+    Viewport_Camera camera;
+    b8 viewport_focused;
+    b8 viewport_hovered;
+    vec2 viewport_size;
+    vec2 last_viewport_size;
+
+    // Metrics tracking
+    f32 fps;
+    f32 frame_time_ms;
+    f32 fps_accumulator;
+    u32 fps_frame_count;
+
+    // Demo window
+    b8 show_demo_window;
+};
+
+// Static pointer to editor state for demo window control from menu callback
+internal_var Editor_Layer_State* editor_state = nullptr;
+
 INTERNAL_FUNC void viewport_camera_initialize(Viewport_Camera* camera,
     vec3 position = {0, 0, 10.0f});
 INTERNAL_FUNC void viewport_camera_recalculate_view(Viewport_Camera* camera);
@@ -30,6 +58,7 @@ void editor_layer_on_attach(UI_Layer* self) {
         memory_allocate(sizeof(Editor_Layer_State), Memory_Tag::CLIENT);
 
     Editor_Layer_State* state = (Editor_Layer_State*)self->state;
+    editor_state = state;
 
     viewport_camera_initialize(&state->camera, {0, 0, 10.0f});
     viewport_camera_recalculate_view(&state->camera);
@@ -44,6 +73,9 @@ void editor_layer_on_attach(UI_Layer* self) {
     state->fps_accumulator = 0.0f;
     state->fps_frame_count = 0;
 
+    // Demo window
+    state->show_demo_window = false;
+
     u32 width = 0;
     u32 height = 0;
     renderer_get_viewport_size(&width, &height);
@@ -54,6 +86,8 @@ void editor_layer_on_attach(UI_Layer* self) {
 }
 
 void editor_layer_on_detach(UI_Layer* self) {
+    editor_state = nullptr;
+
     if (self->state) {
         memory_deallocate(self->state,
             sizeof(Editor_Layer_State),
@@ -85,6 +119,10 @@ b8 editor_layer_on_render(UI_Layer* self, f32 delta_time) {
 
     render_viewport_window(state, delta_time);
     render_statistics_window(state, delta_time);
+
+    if (state->show_demo_window) {
+        ImGui::ShowDemoWindow(&state->show_demo_window);
+    }
 
     return true;
 }
@@ -245,7 +283,8 @@ INTERNAL_FUNC void render_statistics_window(Editor_Layer_State* state,
 
     if (state->fps_accumulator >= 0.5f) {
         state->fps = (f32)state->fps_frame_count / state->fps_accumulator;
-        state->frame_time_ms = (state->fps_accumulator / state->fps_frame_count) * 1000.0f;
+        state->frame_time_ms =
+            (state->fps_accumulator / state->fps_frame_count) * 1000.0f;
         state->fps_accumulator = 0.0f;
         state->fps_frame_count = 0;
     }
@@ -268,4 +307,14 @@ UI_Layer create_editor_layer() {
     layer.on_update = editor_layer_on_update;
     layer.on_render = editor_layer_on_render;
     return layer;
+}
+
+void editor_toggle_demo_window() {
+    if (editor_state) {
+        editor_state->show_demo_window = !editor_state->show_demo_window;
+    }
+}
+
+b8 editor_is_demo_window_visible() {
+    return editor_state ? editor_state->show_demo_window : false;
 }

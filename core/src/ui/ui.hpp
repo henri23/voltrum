@@ -23,6 +23,3 @@ VOLTRUM_API struct ImDrawData* ui_draw_layers(UI_Context* context,
     UI_Layer* layers,
     u32 layer_count,
     f32 delta_t);
-
-VOLTRUM_API void ui_toggle_demo_window(UI_Context* context);
-VOLTRUM_API b8 ui_is_demo_window_visible(UI_Context* context);

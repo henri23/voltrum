@@ -228,10 +228,6 @@ ImDrawData* ui_draw_layers(UI_Context* context,
     ui_titlebar_draw(context);
     ui_dockspace_render(context);
 
-    if (context->show_demo_window) {
-        ImGui::ShowDemoWindow(&context->show_demo_window);
-    }
-
     for (u32 i = 0; i < layer_count; ++i) {
         UI_Layer* layer = &layers[i];
         if (layer->on_render)
@@ -241,14 +237,4 @@ ImDrawData* ui_draw_layers(UI_Context* context,
     ImGui::Render();
 
     return ImGui::GetDrawData();
-}
-
-void ui_toggle_demo_window(UI_Context* context) {
-    if (context) {
-        context->show_demo_window = !context->show_demo_window;
-    }
-}
-
-b8 ui_is_demo_window_visible(UI_Context* context) {
-    return context ? context->show_demo_window : false;
 }

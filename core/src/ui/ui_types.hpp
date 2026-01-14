@@ -40,7 +40,6 @@ struct UI_Context {
     const char* app_name;
 
     b8 is_initialized;
-    b8 show_demo_window;
 
     ImFont* fonts[(u8)Font_Style::MAX_COUNT];
 

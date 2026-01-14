@@ -2,17 +2,13 @@
 #include "editor/editor_layer.hpp"
 
 // Interfaces from core library
-#include <core/application.hpp>
 #include <core/logger.hpp>
 #include <entry.hpp>
 #include <events/events.hpp>
 #include <input/input.hpp>
 #include <input/input_codes.hpp>
-#include <math/math.hpp>
 #include <memory/memory.hpp>
 #include <ui/icons.hpp>
-#include <ui/ui.hpp>
-#include <ui/ui_types.hpp>
 #include <ui/ui_widgets.hpp>
 
 // WARN: This is temporary, the renderer subsystem should not be
@@ -118,10 +114,9 @@ void client_menu_callback() {
         ui::MenuItem(ICON_FA_WINDOW_MAXIMIZE " Viewport");
         ui::MenuItem(ICON_FA_SLIDERS " Properties");
 
-        UI_Context* ui_ctx = application_get_ui_context();
-        b8 demo_visible = ui_is_demo_window_visible(ui_ctx);
+        b8 demo_visible = editor_is_demo_window_visible();
         if (ui::MenuItem(ICON_FA_CODE " ImGui Demo", nullptr, demo_visible)) {
-            ui_toggle_demo_window(ui_ctx);
+            editor_toggle_demo_window();
         }
         ui::EndMenu();
     }

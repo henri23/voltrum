@@ -95,10 +95,6 @@ void application_get_framebuffer_size(u32* width, u32* height) {
     *height = internal_state->height;
 }
 
-UI_Context* application_get_ui_context() {
-    return internal_state ? &internal_state->ui_context : nullptr;
-}
-
 INTERNAL_FUNC b8 app_on_resized_callback(const Event* event) {
 
     if (event->window_resize.width != internal_state->width ||
