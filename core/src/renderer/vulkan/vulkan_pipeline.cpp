@@ -4,20 +4,20 @@
 
 #include "core/logger.hpp"
 
-b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
-    Vulkan_Renderpass* renderpass,
+b8 vulkan_graphics_pipeline_create(Vulkan_Context *context,
+    Vulkan_Renderpass *renderpass,
     u32 stride,
     u32 attribute_count,
-    VkVertexInputAttributeDescription* attributes,
+    VkVertexInputAttributeDescription *attributes,
     u32 descriptor_set_layout_count,
-    VkDescriptorSetLayout* descriptor_set_layouts,
+    VkDescriptorSetLayout *descriptor_set_layouts,
     u32 stage_count,
-    VkPipelineShaderStageCreateInfo* stages,
+    VkPipelineShaderStageCreateInfo *stages,
     VkViewport viewport,
     VkRect2D scissor,
     b8 is_wireframe,
     b8 depth_test_enabled,
-    Vulkan_Pipeline* out_pipeline) {
+    Vulkan_Pipeline *out_pipeline) {
 
     // Viewport state creation
     VkPipelineViewportStateCreateInfo viewport_state = {
@@ -204,8 +204,8 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context* context,
     return false;
 }
 
-void vulkan_graphics_pipeline_destroy(Vulkan_Context* context,
-    Vulkan_Pipeline* pipeline) {
+void vulkan_graphics_pipeline_destroy(Vulkan_Context *context,
+    Vulkan_Pipeline *pipeline) {
 
     if (pipeline) {
         if (pipeline->handle) {
@@ -224,8 +224,8 @@ void vulkan_graphics_pipeline_destroy(Vulkan_Context* context,
     }
 }
 
-void vulkan_graphics_pipeline_bind(Vulkan_Command_Buffer* command_buffer,
+void vulkan_graphics_pipeline_bind(Vulkan_Command_Buffer *command_buffer,
     VkPipelineBindPoint bind_point,
-    Vulkan_Pipeline* pipeline) {
+    Vulkan_Pipeline *pipeline) {
     vkCmdBindPipeline(command_buffer->handle, bind_point, pipeline->handle);
 }

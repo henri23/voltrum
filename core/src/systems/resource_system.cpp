@@ -12,7 +12,7 @@
 
 struct Resource_System_State {
     Resource_System_Config config;
-    Resource_Loader* registered_loaders; // Array of registered laoders
+    Resource_Loader *registered_loaders; // Array of registered laoders
 };
 
 internal_var Resource_System_State state = {};
@@ -21,7 +21,7 @@ b8 resource_system_init(Resource_System_Config config) {
     state.config = config;
     u32 count = state.config.max_loader_count;
 
-    state.registered_loaders = static_cast<Resource_Loader*>(
+    state.registered_loaders = static_cast<Resource_Loader *>(
         memory_allocate(sizeof(Resource_Loader) * count, Memory_Tag::LOADER));
 
     for (u32 i = 0; i < count; ++i) {
@@ -53,7 +53,7 @@ VOLTRUM_API b8 resource_system_register_loader(Resource_Loader loader) {
     // First check whether this type has already a registered loader in the
     // registry
     for (u32 i = 0; i < count; ++i) {
-        Resource_Loader* present_loader = &state.registered_loaders[i];
+        Resource_Loader *present_loader = &state.registered_loaders[i];
         if (present_loader->id != INVALID_ID) {
             if (present_loader->type == loader.type) {
                 CORE_ERROR(
@@ -67,7 +67,7 @@ VOLTRUM_API b8 resource_system_register_loader(Resource_Loader loader) {
     }
 
     for (u32 i = 0; i < count; ++i) {
-        Resource_Loader* present_loader = &state.registered_loaders[i];
+        Resource_Loader *present_loader = &state.registered_loaders[i];
         if (present_loader->id == INVALID_ID) {
             *present_loader = loader;
             present_loader->id = i;
@@ -79,9 +79,9 @@ VOLTRUM_API b8 resource_system_register_loader(Resource_Loader loader) {
     return false;
 }
 
-VOLTRUM_API b8 resource_system_load(const char* name,
+VOLTRUM_API b8 resource_system_load(const char *name,
     Resource_Type type,
-    Resource* out_resource) {
+    Resource *out_resource) {
 
     if (!name) {
         CORE_ERROR("resource_system_load - Invalid name provided. Returning.");
@@ -95,10 +95,10 @@ VOLTRUM_API b8 resource_system_load(const char* name,
     }
 
     u32 count = state.config.max_loader_count;
-    Resource_Loader* loader = nullptr;
+    Resource_Loader *loader = nullptr;
 
     for (u32 i = 0; i < count; ++i) {
-        Resource_Loader* present_loader = &state.registered_loaders[i];
+        Resource_Loader *present_loader = &state.registered_loaders[i];
         if (present_loader->id != INVALID_ID && present_loader->type == type) {
             loader = present_loader;
             break;
@@ -117,9 +117,9 @@ VOLTRUM_API b8 resource_system_load(const char* name,
     return loader->load(loader, name, out_resource);
 }
 
-VOLTRUM_API void resource_system_unload(Resource* resource) {
+VOLTRUM_API void resource_system_unload(Resource *resource) {
     if (resource->loader_id != INVALID_ID) {
-        Resource_Loader* loader =
+        Resource_Loader *loader =
             &state.registered_loaders[resource->loader_id];
         if (loader->id != INVALID_ID && loader->unload) {
             loader->unload(loader, resource);
@@ -127,6 +127,6 @@ VOLTRUM_API void resource_system_unload(Resource* resource) {
     }
 }
 
-VOLTRUM_API const char* resource_system_base_path() {
+VOLTRUM_API const char *resource_system_base_path() {
     return state.config.asset_base_path;
 }

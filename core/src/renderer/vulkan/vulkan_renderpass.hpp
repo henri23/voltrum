@@ -25,8 +25,8 @@ enum class Renderpass_Clear_Flags : u32 {
 ENABLE_BITMASK(Renderpass_Clear_Flags);
 
 // Create renderpass based on type - dispatches to appropriate internal function
-void vulkan_renderpass_create(Vulkan_Context* context,
-    Vulkan_Renderpass* out_renderpass,
+void vulkan_renderpass_create(Vulkan_Context *context,
+    Vulkan_Renderpass *out_renderpass,
     vec4 render_area,
     vec4 clear_color,
     f32 depth,
@@ -35,12 +35,12 @@ void vulkan_renderpass_create(Vulkan_Context* context,
     b8 has_prev_pass,
     b8 has_next_pass);
 
-void vulkan_renderpass_destroy(Vulkan_Context* context,
-    Vulkan_Renderpass* renderpass);
+void vulkan_renderpass_destroy(Vulkan_Context *context,
+    Vulkan_Renderpass *renderpass);
 
-void vulkan_renderpass_begin(Vulkan_Command_Buffer* command_buffer,
-    Vulkan_Renderpass* renderpass,
+void vulkan_renderpass_begin(Vulkan_Command_Buffer *command_buffer,
+    Vulkan_Renderpass *renderpass,
     VkFramebuffer frame_buffer);
 
-void vulkan_renderpass_end(Vulkan_Command_Buffer* command_buffer,
-    Vulkan_Renderpass* renderpass);
+void vulkan_renderpass_end(Vulkan_Command_Buffer *command_buffer,
+    Vulkan_Renderpass *renderpass);

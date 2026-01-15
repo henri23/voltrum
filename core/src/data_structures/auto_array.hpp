@@ -13,12 +13,12 @@
 template <typename T> struct Auto_Array {
     u32 length;
     u32 capacity;
-    T* data;
+    T *data;
 
     // Provide standard typedefs but we don't use them ourselves.
     typedef T value_type;
-    typedef value_type* iterator;
-    typedef const value_type* const_iterator;
+    typedef value_type *iterator;
+    typedef const value_type *const_iterator;
 
     // Constructors, destructor
     FORCE_INLINE Auto_Array() {
@@ -31,12 +31,12 @@ template <typename T> struct Auto_Array {
         data = nullptr;
         reserve((u32)init.size());
 
-        for (const T& item : init) {
+        for (const T &item : init) {
             push_back(item);
         }
     }
 
-    FORCE_INLINE Auto_Array<T>& operator=(const Auto_Array<T>& src) {
+    FORCE_INLINE Auto_Array<T> &operator=(const Auto_Array<T> &src) {
         clear();
         resize(src.length);
         if (data && src.data)
@@ -44,10 +44,10 @@ template <typename T> struct Auto_Array {
         return *this;
     }
 
-    FORCE_INLINE Auto_Array<T>& operator=(std::initializer_list<T> init) {
+    FORCE_INLINE Auto_Array<T> &operator=(std::initializer_list<T> init) {
         clear();
         reserve((u32)init.size());
-        for (const T& item : init) {
+        for (const T &item : init) {
             push_back(item);
         }
         return *this;
@@ -74,49 +74,49 @@ template <typename T> struct Auto_Array {
     FORCE_INLINE u32 max_size() const { return 0x7FFFFFFF / (u32)sizeof(T); }
     FORCE_INLINE u32 cap() const { return capacity; }
 
-    FORCE_INLINE T& operator[](u32 i) {
+    FORCE_INLINE T &operator[](u32 i) {
         RUNTIME_ASSERT(i < length);
         return data[i];
     }
 
-    FORCE_INLINE const T& operator[](u32 i) const {
+    FORCE_INLINE const T &operator[](u32 i) const {
         RUNTIME_ASSERT(i < length);
         return data[i];
     }
 
-    FORCE_INLINE T* begin() { return data; }
-    FORCE_INLINE const T* begin() const { return data; }
-    FORCE_INLINE T* end() { return data + length; }
-    FORCE_INLINE const T* end() const { return data + length; }
+    FORCE_INLINE T *begin() { return data; }
+    FORCE_INLINE const T *begin() const { return data; }
+    FORCE_INLINE T *end() { return data + length; }
+    FORCE_INLINE const T *end() const { return data + length; }
 
-    FORCE_INLINE T& front() {
+    FORCE_INLINE T &front() {
         RUNTIME_ASSERT(length > 0);
         return data[0];
     }
 
-    FORCE_INLINE const T& front() const {
+    FORCE_INLINE const T &front() const {
         RUNTIME_ASSERT(length > 0);
         return data[0];
     }
 
-    FORCE_INLINE T& back() {
+    FORCE_INLINE T &back() {
         RUNTIME_ASSERT(length > 0);
         return data[length - 1];
     }
 
-    FORCE_INLINE const T& back() const {
+    FORCE_INLINE const T &back() const {
         RUNTIME_ASSERT(length > 0);
         return data[length - 1];
     }
 
-    FORCE_INLINE void swap(Auto_Array<T>& rhs) {
+    FORCE_INLINE void swap(Auto_Array<T> &rhs) {
         u32 rhs_size = rhs.length;
         rhs.length = length;
         length = rhs_size;
         u32 rhs_cap = rhs.capacity;
         rhs.capacity = capacity;
         capacity = rhs_cap;
-        T* rhs_data = rhs.data;
+        T *rhs_data = rhs.data;
         rhs.data = data;
         data = rhs_data;
     }
@@ -133,7 +133,7 @@ template <typename T> struct Auto_Array {
         length = new_size;
     }
 
-    FORCE_INLINE void resize(u32 new_size, const T& v) {
+    FORCE_INLINE void resize(u32 new_size, const T &v) {
         if (new_size > capacity)
             reserve(_grow_capacity(new_size));
 
@@ -153,7 +153,7 @@ template <typename T> struct Auto_Array {
         if (new_capacity <= capacity)
             return;
 
-        T* new_data = (T*)memory_allocate((u32)new_capacity * sizeof(T),
+        T *new_data = (T *)memory_allocate((u32)new_capacity * sizeof(T),
             Memory_Tag::DARRAY);
 
         if (data) {
@@ -176,7 +176,7 @@ template <typename T> struct Auto_Array {
                 (u32)capacity * sizeof(T),
                 Memory_Tag::DARRAY);
 
-        data = (T*)memory_allocate((u32)new_capacity * sizeof(T),
+        data = (T *)memory_allocate((u32)new_capacity * sizeof(T),
             Memory_Tag::DARRAY);
 
         capacity = new_capacity;
@@ -185,7 +185,7 @@ template <typename T> struct Auto_Array {
     // NB: It is illegal to call push_back/push_front/insert with a reference
     // pointing inside the Auto_Array data itself! e.g. v.push_back(v[10]) is
     // forbidden.
-    FORCE_INLINE void push_back(const T& v) {
+    FORCE_INLINE void push_back(const T &v) {
         if (length == capacity)
             reserve(_grow_capacity(length + 1));
 
@@ -199,14 +199,14 @@ template <typename T> struct Auto_Array {
         length--;
     }
 
-    FORCE_INLINE void push_front(const T& v) {
+    FORCE_INLINE void push_front(const T &v) {
         if (length == 0)
             push_back(v);
         else
             insert(data, v);
     }
 
-    FORCE_INLINE T* erase(const T* it) {
+    FORCE_INLINE T *erase(const T *it) {
         RUNTIME_ASSERT(it >= data && it < data + length);
 
         const u32 off = (u32)(it - data);
@@ -217,7 +217,7 @@ template <typename T> struct Auto_Array {
         return data + off;
     }
 
-    FORCE_INLINE T* erase(const T* it, const T* it_last) {
+    FORCE_INLINE T *erase(const T *it, const T *it_last) {
         RUNTIME_ASSERT(it >= data && it < data + length && it_last >= it &&
                        it_last <= data + length);
 
@@ -232,7 +232,7 @@ template <typename T> struct Auto_Array {
         return data + off;
     }
 
-    FORCE_INLINE T* erase_unsorted(const T* it) {
+    FORCE_INLINE T *erase_unsorted(const T *it) {
         RUNTIME_ASSERT(it >= data && it < data + length);
 
         const u32 off = (u32)(it - data);
@@ -244,7 +244,7 @@ template <typename T> struct Auto_Array {
         return data + off;
     }
 
-    FORCE_INLINE T* insert(const T* it, const T& v) {
+    FORCE_INLINE T *insert(const T *it, const T &v) {
         RUNTIME_ASSERT(it >= data && it <= data + length);
 
         const u32 off = (u32)(it - data);
@@ -261,9 +261,9 @@ template <typename T> struct Auto_Array {
         return data + off;
     }
 
-    FORCE_INLINE b8 contains(const T& v) const {
-        const T* ptr = data;
-        const T* data_end = data + length;
+    FORCE_INLINE b8 contains(const T &v) const {
+        const T *ptr = data;
+        const T *data_end = data + length;
 
         while (ptr < data_end)
             if (*ptr++ == v)
@@ -272,9 +272,9 @@ template <typename T> struct Auto_Array {
         return false;
     }
 
-    FORCE_INLINE T* find(const T& v) {
-        T* ptr = data;
-        const T* data_end = data + length;
+    FORCE_INLINE T *find(const T &v) {
+        T *ptr = data;
+        const T *data_end = data + length;
 
         while (ptr < data_end)
             if (*ptr == v)
@@ -285,9 +285,9 @@ template <typename T> struct Auto_Array {
         return ptr;
     }
 
-    FORCE_INLINE const T* find(const T& v) const {
-        const T* ptr = data;
-        const T* data_end = data + length;
+    FORCE_INLINE const T *find(const T &v) const {
+        const T *ptr = data;
+        const T *data_end = data + length;
 
         while (ptr < data_end)
             if (*ptr == v)
@@ -298,9 +298,9 @@ template <typename T> struct Auto_Array {
         return ptr;
     }
 
-    FORCE_INLINE u32 find_index(const T& v) const {
-        const T* data_end = data + length;
-        const T* it = find(v);
+    FORCE_INLINE u32 find_index(const T &v) const {
+        const T *data_end = data + length;
+        const T *it = find(v);
 
         if (it == data_end)
             return (u32)-1;
@@ -310,8 +310,8 @@ template <typename T> struct Auto_Array {
         return off;
     }
 
-    FORCE_INLINE b8 find_erase(const T& v) {
-        const T* it = find(v);
+    FORCE_INLINE b8 find_erase(const T &v) {
+        const T *it = find(v);
 
         if (it < data + length) {
             erase(it);
@@ -321,8 +321,8 @@ template <typename T> struct Auto_Array {
         return false;
     }
 
-    FORCE_INLINE b8 find_erase_unsorted(const T& v) {
-        const T* it = find(v);
+    FORCE_INLINE b8 find_erase_unsorted(const T &v) {
+        const T *it = find(v);
 
         if (it < data + length) {
             erase_unsorted(it);
@@ -332,7 +332,7 @@ template <typename T> struct Auto_Array {
         return false;
     }
 
-    FORCE_INLINE u32 index_from_ptr(const T* it) const {
+    FORCE_INLINE u32 index_from_ptr(const T *it) const {
         RUNTIME_ASSERT(it >= data && it < data + length);
         const u32 off = (u32)(it - data);
         return off;

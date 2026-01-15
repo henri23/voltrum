@@ -15,7 +15,7 @@ INTERNAL_FUNC void check_vk_result(VkResult err) {
     }
 }
 
-b8 vulkan_ui_backend_initialize(Vulkan_Context* context, void* window) {
+b8 vulkan_ui_backend_initialize(Vulkan_Context *context, void *window) {
 
     if (!window) {
         CORE_FATAL(
@@ -27,7 +27,7 @@ b8 vulkan_ui_backend_initialize(Vulkan_Context* context, void* window) {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO &io = ImGui::GetIO();
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -45,7 +45,7 @@ b8 vulkan_ui_backend_initialize(Vulkan_Context* context, void* window) {
 
     ImGui::StyleColorsDark();
 
-    ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiStyle &style = ImGui::GetStyle();
 
 #ifndef PLATFORM_APPLE
     // TODO: Setup scaling
@@ -53,7 +53,7 @@ b8 vulkan_ui_backend_initialize(Vulkan_Context* context, void* window) {
     // style.FontScaleDpi = main_scale;
 #endif
 
-    if (!ImGui_ImplSDL3_InitForVulkan((SDL_Window*)window)) {
+    if (!ImGui_ImplSDL3_InitForVulkan((SDL_Window *)window)) {
         CORE_ERROR("Failed to initialize ImGui SDL3 backend");
         return false;
     }
@@ -84,7 +84,7 @@ b8 vulkan_ui_backend_initialize(Vulkan_Context* context, void* window) {
     return true;
 }
 
-void vulkan_ui_backend_shutdown(Vulkan_Context* context) {
+void vulkan_ui_backend_shutdown(Vulkan_Context *context) {
     CORE_INFO("Shutting down ImGui UI backend...");
 
     vkDeviceWaitIdle(context->device.logical_device);

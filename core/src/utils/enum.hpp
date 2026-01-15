@@ -35,19 +35,22 @@ constexpr std::enable_if_t<enable_bitmask<E>::value, E> operator~(E a) {
 }
 
 template <typename E>
-constexpr std::enable_if_t<enable_bitmask<E>::value, E&> operator|=(E& a, E b) {
+constexpr std::enable_if_t<enable_bitmask<E>::value, E &> operator|=(E &a,
+    E b) {
     a = a | b;
     return a;
 }
 
 template <typename E>
-constexpr std::enable_if_t<enable_bitmask<E>::value, E&> operator&=(E& a, E b) {
+constexpr std::enable_if_t<enable_bitmask<E>::value, E &> operator&=(E &a,
+    E b) {
     a = a & b;
     return a;
 }
 
 template <typename E>
-constexpr std::enable_if_t<enable_bitmask<E>::value, E&> operator^=(E& a, E b) {
+constexpr std::enable_if_t<enable_bitmask<E>::value, E &> operator^=(E &a,
+    E b) {
     a = a ^ b;
     return a;
 }

@@ -1,20 +1,20 @@
 #include "vulkan_viewport.hpp"
 #include "core/logger.hpp"
 #include "renderer/vulkan/vulkan_device.hpp"
-#include "vulkan_image.hpp"
 #include "vulkan_command_buffer.hpp"
+#include "vulkan_image.hpp"
 
-void vulkan_viewport_create(Vulkan_Context* context,
+void vulkan_viewport_create(Vulkan_Context *context,
     u32 width,
     u32 height,
-    Vulkan_Viewport* out_viewport) {
+    Vulkan_Viewport *out_viewport) {
 
     // Read the format information already setup for the swapchain to remain
     // consistent with the image formats between the two
     // TODO: Make turn this into a function
     u32 swapchain_image_count = context->swapchain.image_count;
 
-    Vulkan_Swapchain_Support_Info* swapchain_info =
+    Vulkan_Swapchain_Support_Info *swapchain_info =
         &context->device.swapchain_info;
 
     b8 found = false;
@@ -55,8 +55,7 @@ void vulkan_viewport_create(Vulkan_Context* context,
 
     // Create color attachments for each swapchain image
     for (u32 i = 0; i < swapchain_image_count; ++i) {
-        vulkan_image_create(
-            context,
+        vulkan_image_create(context,
             VK_IMAGE_TYPE_2D,
             width,
             height,
@@ -74,29 +73,18 @@ void vulkan_viewport_create(Vulkan_Context* context,
     Vulkan_Command_Buffer temp_buffer;
     VkCommandPool pool = context->device.graphics_command_pool;
     VkQueue queue = context->device.graphics_queue;
-    vulkan_command_buffer_startup_single_use(
-        context,
-        pool,
-        &temp_buffer
-    );
+    vulkan_command_buffer_startup_single_use(context, pool, &temp_buffer);
 
     for (u32 i = 0; i < swapchain_image_count; ++i) {
-        vulkan_image_transition_layout(
-            context,
+        vulkan_image_transition_layout(context,
             &temp_buffer,
             &out_viewport->color_attachments[i],
             out_viewport->image_format.format,
             VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-        );
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     }
 
-    vulkan_command_buffer_end_single_use(
-        context,
-        pool,
-        &temp_buffer,
-        queue
-    );
+    vulkan_command_buffer_end_single_use(context, pool, &temp_buffer, queue);
 
     // Create depth buffer. The depth buffer is an image cotaining the depth
     // from the camera point of view
@@ -107,8 +95,7 @@ void vulkan_viewport_create(Vulkan_Context* context,
     }
 
     // Create depth attachment
-    vulkan_image_create(
-        context,
+    vulkan_image_create(context,
         VK_IMAGE_TYPE_2D,
         width,
         height,
@@ -123,8 +110,8 @@ void vulkan_viewport_create(Vulkan_Context* context,
     CORE_INFO("Vulkan viewport successfully created.");
 }
 
-void vulkan_viewport_destroy(Vulkan_Context* context,
-    Vulkan_Viewport* viewport) {
+void vulkan_viewport_destroy(Vulkan_Context *context,
+    Vulkan_Viewport *viewport) {
 
     u32 swapchain_image_count = context->swapchain.image_count;
 

@@ -26,7 +26,7 @@ struct Frontend_State {
 };
 
 // Memory debug callback function
-b8 client_memory_debug_callback(const Event* event) {
+b8 client_memory_debug_callback(const Event *event) {
     if (event->key.key_code == Key_Code::M && !event->key.repeat) {
         u64 allocation_count = memory_get_allocations_count();
         CLIENT_INFO("Current memory allocations: %llu", allocation_count);
@@ -35,7 +35,7 @@ b8 client_memory_debug_callback(const Event* event) {
 }
 
 // Client lifecycle callback implementations
-b8 client_initialize(Client* client_state) {
+b8 client_initialize(Client *client_state) {
 
 #if defined(PLATFORM_WINDOWS) && !defined(VOLTRUM_STATIC_LINKING)
     // Get ImGui context from core DLL for Windows compatibility
@@ -59,7 +59,7 @@ b8 client_initialize(Client* client_state) {
     return true;
 }
 
-b8 client_update(Client* client_state, f32 delta_time) {
+b8 client_update(Client *client_state, f32 delta_time) {
     static u64 alloc_count = 0;
     u64 prev_alloc_count = alloc_count;
 
@@ -83,16 +83,16 @@ b8 client_update(Client* client_state, f32 delta_time) {
     return true;
 }
 
-b8 client_render(Client* client_state, f32 delta_time) {
+b8 client_render(Client *client_state, f32 delta_time) {
     // Client render logic can go here
     return true;
 }
 
-void client_on_resize(Client* client_state, u32 width, u32 height) {
+void client_on_resize(Client *client_state, u32 width, u32 height) {
     // Handle resize events
 }
 
-void client_shutdown(Client* client_state) {
+void client_shutdown(Client *client_state) {
     // Clean up frontend state
     memory_deallocate(client_state->state,
         sizeof(Frontend_State),
@@ -133,7 +133,7 @@ void client_menu_callback() {
 }
 
 // Main client initialization function called by core
-b8 create_client(Client* client_state) {
+b8 create_client(Client *client_state) {
     // Set up client configuration
     client_state->config.name = "Voltrum EDA";
     client_state->config.width = 1600;

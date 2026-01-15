@@ -22,9 +22,9 @@ struct Vulkan_Buffer {
 struct Vulkan_Swapchain_Support_Info {
     VkSurfaceCapabilitiesKHR capabilities;
     u32 formats_count;
-    VkSurfaceFormatKHR* formats;
+    VkSurfaceFormatKHR *formats;
     u32 present_modes_count;
-    VkPresentModeKHR* present_modes;
+    VkPresentModeKHR *present_modes;
 };
 
 struct Vulkan_Device {
@@ -97,8 +97,8 @@ struct Vulkan_Swapchain {
     u32 max_in_flight_frames;
 
     u32 image_count;
-    VkImage* images;    // array of VkImages. Automatically created and cleaned
-    VkImageView* views; // array of Views, struct that lets us access the images
+    VkImage *images;    // array of VkImages. Automatically created and cleaned
+    VkImageView *views; // array of Views, struct that lets us access the images
 
     VkFramebuffer framebuffers[3];
 
@@ -258,7 +258,7 @@ struct Vulkan_Context {
 
     VkInstance instance;
     VkSurfaceKHR surface;
-    VkAllocationCallbacks* allocator;
+    VkAllocationCallbacks *allocator;
     VkPhysicalDevice
         physical_device; // Implicitly destroyed destroying VkInstance
 
@@ -299,7 +299,7 @@ struct Vulkan_Context {
 
     // Keep information about the fences of the images currently in flight.
     // The fences are not owned by this array
-    VkFence* images_in_flight[3];
+    VkFence *images_in_flight[3];
 
     u64 geometry_vertex_offset;
     u64 geometry_index_offset;
@@ -323,7 +323,7 @@ struct Vulkan_Physical_Device_Requirements {
     b8 transfer;
     b8 discrete_gpu;
     b8 sampler_anisotropy;
-    Auto_Array<const char*>* device_extension_names;
+    Auto_Array<const char *> *device_extension_names;
 };
 
 #define VK_DEVICE_LEVEL_FUNCTION(device, name)                                 \

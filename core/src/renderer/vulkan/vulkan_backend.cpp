@@ -36,23 +36,23 @@ internal_var u32 cached_viewport_fb_height = 0;
 VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
     VkDebugUtilsMessageTypeFlagsEXT message_types,
-    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-    void* user_data);
+    const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+    void *user_data);
 
 // Debug mode helper private functions
-INTERNAL_FUNC b8 vulkan_create_debug_logger(VkInstance* instance);
+INTERNAL_FUNC b8 vulkan_create_debug_logger(VkInstance *instance);
 INTERNAL_FUNC b8 vulkan_enable_validation_layers(
-    Auto_Array<const char*>* required_layers_array);
+    Auto_Array<const char *> *required_layers_array);
 
 // Needed for z-buffer image format sel/ection in vulkan_device
 INTERNAL_FUNC s32 find_memory_index(u32 type_filter, u32 property_flags);
-INTERNAL_FUNC b8 create_buffers(Vulkan_Context* context);
+INTERNAL_FUNC b8 create_buffers(Vulkan_Context *context);
 
 // Graphics presentation operations
-INTERNAL_FUNC void create_command_buffers(Vulkan_Context* context);
+INTERNAL_FUNC void create_command_buffers(Vulkan_Context *context);
 INTERNAL_FUNC void regenerate_framebuffers();
-INTERNAL_FUNC b8 present_frame(Renderer_Backend* backend);
-INTERNAL_FUNC b8 get_next_image_index(Renderer_Backend* backend);
+INTERNAL_FUNC b8 present_frame(Renderer_Backend *backend);
+INTERNAL_FUNC b8 get_next_image_index(Renderer_Backend *backend);
 
 // The recreate_swapchain function is called both when a window resize event
 // has ocurred and was published by the platform layer, or when a graphics ops.
@@ -61,18 +61,18 @@ INTERNAL_FUNC b8 get_next_image_index(Renderer_Backend* backend);
 // descriminates between these two cases and makes sure not to overwrite
 // renderpass size or read cached values, which are != 0 only when resize events
 // occur.
-INTERNAL_FUNC b8 recreate_swapchain(Renderer_Backend* backend,
+INTERNAL_FUNC b8 recreate_swapchain(Renderer_Backend *backend,
     b8 is_resized_event);
 
 // TODO: Temporary. Will move later
-INTERNAL_FUNC void upload_data_range(Vulkan_Context* context,
+INTERNAL_FUNC void upload_data_range(Vulkan_Context *context,
     VkCommandPool pool,
     VkFence fence,
     VkQueue queue,
-    Vulkan_Buffer* buffer,
+    Vulkan_Buffer *buffer,
     u64 offset,
     u64 size,
-    const void* data) {
+    const void *data) {
 
     VkBufferUsageFlags flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -101,11 +101,11 @@ INTERNAL_FUNC void upload_data_range(Vulkan_Context* context,
 }
 
 INTERNAL_FUNC void
-free_data_range(Vulkan_Buffer* buffer, u64 offset, u64 size) {
+free_data_range(Vulkan_Buffer *buffer, u64 offset, u64 size) {
     // NOTE: Empty because for now it is just a placeholder method
 }
 
-b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
+b8 vulkan_initialize(Renderer_Backend *backend, const char *app_name) {
     // Function pointer assignment
     context.find_memory_index = find_memory_index;
 
@@ -162,12 +162,12 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
     createInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #endif
 
-    Auto_Array<const char*> required_extensions_array;
+    Auto_Array<const char *> required_extensions_array;
 
     // Get platform specific extensions (includes VK_KHR_surface and others)
     platform_get_required_extensions(&required_extensions_array);
 
-    Auto_Array<const char*> required_layers_array;
+    Auto_Array<const char *> required_layers_array;
 
 // Only enable validation layer in debug builds
 #ifdef DEBUG_BUILD
@@ -201,7 +201,7 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
     vulkan_create_debug_logger(&context.instance);
 #endif
 
-    Auto_Array<const char*> device_level_extension_requirements;
+    Auto_Array<const char *> device_level_extension_requirements;
 
     // The swapchain is a device specific property (whether it supports it
     // or it doesn't) so we need to query specificly for the swapchain support
@@ -349,7 +349,7 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
     }
 
     // Initialize ImGui UI backend
-    SDL_Window* window = platform_get_window();
+    SDL_Window *window = platform_get_window();
     if (!vulkan_ui_backend_initialize(&context, window)) {
         CORE_ERROR("Failed to initialize ImGui UI backend");
         return false;
@@ -371,7 +371,7 @@ b8 vulkan_initialize(Renderer_Backend* backend, const char* app_name) {
     return true;
 }
 
-void vulkan_shutdown(Renderer_Backend* backend) {
+void vulkan_shutdown(Renderer_Backend *backend) {
     // NOTE:	We might get problems when trying to shutdown the renderer while
     //			there are graphic operation still going on. First, it is
     // better 			to wait until all operations have completed, so
@@ -470,7 +470,7 @@ void vulkan_shutdown(Renderer_Backend* backend) {
     CORE_DEBUG("Vulkan renderer shut down");
 }
 
-void vulkan_on_resized(Renderer_Backend* backend, u16 width, u16 height) {
+void vulkan_on_resized(Renderer_Backend *backend, u16 width, u16 height) {
 
     cached_swapchain_fb_width = width;
     cached_swapchain_fb_height = height;
@@ -487,11 +487,11 @@ void vulkan_on_resized(Renderer_Backend* backend, u16 width, u16 height) {
     // rewrite
 }
 
-b8 vulkan_begin_frame(Renderer_Backend* backend, f32 delta_t) {
+b8 vulkan_begin_frame(Renderer_Backend *backend, f32 delta_t) {
 
     context.frame_delta_time = delta_t;
 
-    Vulkan_Device* device = &context.device;
+    Vulkan_Device *device = &context.device;
 
     if (context.recreating_swapchain) {
         // TODO: Blocking operation. To be optimized
@@ -575,7 +575,7 @@ b8 vulkan_begin_frame(Renderer_Backend* backend, f32 delta_t) {
     }
 
     // Begin recording commands
-    Vulkan_Command_Buffer* cmd_buffer =
+    Vulkan_Command_Buffer *cmd_buffer =
         &context.command_buffers[context.image_index];
 
     vulkan_command_buffer_reset(cmd_buffer);
@@ -616,7 +616,7 @@ void vulkan_update_global_viewport_state(mat4 projection,
     vec3 view_position,
     vec4 ambient_colour,
     s32 mode) {
-    Vulkan_Command_Buffer* cmd_buffer =
+    Vulkan_Command_Buffer *cmd_buffer =
         &context.command_buffers[context.image_index];
 
     // Bind pipeline
@@ -632,10 +632,10 @@ void vulkan_update_global_viewport_state(mat4 projection,
         context.frame_delta_time);
 }
 
-b8 vulkan_end_frame(Renderer_Backend* backend, f32 delta_t) {
+b8 vulkan_end_frame(Renderer_Backend *backend, f32 delta_t) {
 
     // First, finish recording and submit the viewport command buffer
-    Vulkan_Command_Buffer* cmd_buffer =
+    Vulkan_Command_Buffer *cmd_buffer =
         &context.command_buffers[context.image_index];
 
     // End command buffer recording
@@ -699,12 +699,12 @@ b8 vulkan_end_frame(Renderer_Backend* backend, f32 delta_t) {
 }
 
 // TODO: Change name
-b8 vulkan_renderpass_start(Renderer_Backend* backend,
+b8 vulkan_renderpass_start(Renderer_Backend *backend,
     Renderpass_Type renderpass_type) {
-    Vulkan_Renderpass* renderpass = nullptr;
+    Vulkan_Renderpass *renderpass = nullptr;
 
     VkFramebuffer framebuffer = nullptr;
-    Vulkan_Command_Buffer* cmd_buffer =
+    Vulkan_Command_Buffer *cmd_buffer =
         &context.command_buffers[context.image_index];
 
     switch (renderpass_type) {
@@ -747,12 +747,12 @@ b8 vulkan_renderpass_start(Renderer_Backend* backend,
 }
 
 // TODO: Change name
-b8 vulkan_renderpass_finish(Renderer_Backend* backend,
+b8 vulkan_renderpass_finish(Renderer_Backend *backend,
     Renderpass_Type renderpass_type) {
 
-    Vulkan_Renderpass* renderpass = nullptr;
+    Vulkan_Renderpass *renderpass = nullptr;
 
-    Vulkan_Command_Buffer* cmd_buffer =
+    Vulkan_Command_Buffer *cmd_buffer =
         &context.command_buffers[context.image_index];
 
     switch (renderpass_type) {
@@ -777,7 +777,7 @@ b8 vulkan_renderpass_finish(Renderer_Backend* backend,
 // (TODO) move the check of availability of the required layers outside
 // this function
 b8 vulkan_enable_validation_layers(
-    Auto_Array<const char*>* required_layers_array) {
+    Auto_Array<const char *> *required_layers_array) {
 
     CORE_INFO("Vulkan validation layers enabled. Enumerating...");
 
@@ -823,7 +823,7 @@ b8 vulkan_enable_validation_layers(
     return true;
 }
 
-b8 vulkan_create_debug_logger(VkInstance* instance) {
+b8 vulkan_create_debug_logger(VkInstance *instance) {
 
     CORE_DEBUG("Creating Vulkan debug logger");
 
@@ -866,8 +866,8 @@ b8 vulkan_create_debug_logger(VkInstance* instance) {
 VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(
     VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
     VkDebugUtilsMessageTypeFlagsEXT message_types,
-    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-    void* user_data) {
+    const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+    void *user_data) {
 
     switch (message_severity) {
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
@@ -928,7 +928,7 @@ s32 find_memory_index(u32 type_filter, u32 requested_property_flags) {
     return -1;
 }
 
-void create_command_buffers(Vulkan_Context* context) {
+void create_command_buffers(Vulkan_Context *context) {
     // Create command buffers for main renderer off-screen rendering
     // Match swapchain image_count for synchronization with image_index
     if (!context->command_buffers.data) {
@@ -1019,7 +1019,7 @@ void regenerate_framebuffers() {
     }
 }
 
-b8 recreate_swapchain(Renderer_Backend* backend, b8 is_resized_event) {
+b8 recreate_swapchain(Renderer_Backend *backend, b8 is_resized_event) {
     if (context.recreating_swapchain) {
         CORE_DEBUG(
             "recreate_swapchain called when already recreating. Booting.");
@@ -1034,7 +1034,7 @@ b8 recreate_swapchain(Renderer_Backend* backend, b8 is_resized_event) {
         return false;
     }
 
-    const char* reason =
+    const char *reason =
         is_resized_event ? "resize event" : "non-optimal result";
     CORE_INFO("Recreating swapchain (%s)", reason);
 
@@ -1121,7 +1121,7 @@ b8 recreate_swapchain(Renderer_Backend* backend, b8 is_resized_event) {
     return true;
 }
 
-b8 get_next_image_index(Renderer_Backend* backend) {
+b8 get_next_image_index(Renderer_Backend *backend) {
 
     VkResult result = vkAcquireNextImageKHR(context.device.logical_device,
         context.swapchain.handle,
@@ -1145,7 +1145,7 @@ b8 get_next_image_index(Renderer_Backend* backend) {
     return true;
 }
 
-b8 present_frame(Renderer_Backend* backend) {
+b8 present_frame(Renderer_Backend *backend) {
 
     VkPresentInfoKHR present_info = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
     present_info.waitSemaphoreCount = 1;
@@ -1179,7 +1179,7 @@ b8 present_frame(Renderer_Backend* backend) {
     return true;
 }
 
-INTERNAL_FUNC b8 create_buffers(Vulkan_Context* context) {
+INTERNAL_FUNC b8 create_buffers(Vulkan_Context *context) {
 
     // When using device local memory, it means that this memory will not be
     // accesable from the host CPU, however we can copy from or copy to this
@@ -1227,14 +1227,14 @@ INTERNAL_FUNC b8 create_buffers(Vulkan_Context* context) {
     return true;
 }
 
-void vulkan_create_texture(const u8* pixels,
-    Texture* texture,
+void vulkan_create_texture(const u8 *pixels,
+    Texture *texture,
     b8 is_ui_texture) {
     texture->internal_data =
         memory_allocate(sizeof(Vulkan_Texture_Data), Memory_Tag::TEXTURE);
 
-    Vulkan_Texture_Data* data =
-        static_cast<Vulkan_Texture_Data*>(texture->internal_data);
+    Vulkan_Texture_Data *data =
+        static_cast<Vulkan_Texture_Data *>(texture->internal_data);
 
     data->ui_descriptor_set = VK_NULL_HANDLE;
     texture->is_ui_texture = is_ui_texture;
@@ -1345,11 +1345,11 @@ void vulkan_create_texture(const u8* pixels,
     texture->generation++;
 }
 
-void vulkan_destroy_texture(Texture* texture) {
+void vulkan_destroy_texture(Texture *texture) {
     vkDeviceWaitIdle(context.device.logical_device);
 
-    Vulkan_Texture_Data* data =
-        static_cast<Vulkan_Texture_Data*>(texture->internal_data);
+    Vulkan_Texture_Data *data =
+        static_cast<Vulkan_Texture_Data *>(texture->internal_data);
 
     if (data) {
         if (data->ui_descriptor_set != VK_NULL_HANDLE) {
@@ -1373,7 +1373,7 @@ void vulkan_destroy_texture(Texture* texture) {
     memory_zero(texture, sizeof(struct Texture));
 }
 
-b8 vulkan_create_material(struct Material* material) {
+b8 vulkan_create_material(struct Material *material) {
     if (material) {
         if (!vulkan_material_shader_pipeline_acquire_resource(&context,
                 &context.material_shader,
@@ -1391,7 +1391,7 @@ b8 vulkan_create_material(struct Material* material) {
     return false;
 }
 
-void vulkan_destroy_material(struct Material* material) {
+void vulkan_destroy_material(struct Material *material) {
     if (material) {
         if (material->internal_id != INVALID_ID) {
             vulkan_material_shader_pipeline_release_resource(&context,
@@ -1407,11 +1407,11 @@ void vulkan_destroy_material(struct Material* material) {
     }
 }
 
-b8 vulkan_create_geometry(Geometry* geometry,
+b8 vulkan_create_geometry(Geometry *geometry,
     u32 vertex_count,
-    const vertex_3d* vertices,
+    const vertex_3d *vertices,
     u32 index_count,
-    const u32* indices) {
+    const u32 *indices) {
     if (!vertex_count || !vertices) {
         CORE_ERROR(
             "vulkan_create_geometry requires vert data and none was provided, "
@@ -1426,7 +1426,7 @@ b8 vulkan_create_geometry(Geometry* geometry,
     b8 is_reupload = geometry->internal_id != INVALID_ID;
     Vulkan_Geometry_Data old_range;
 
-    Vulkan_Geometry_Data* internal_data = nullptr;
+    Vulkan_Geometry_Data *internal_data = nullptr;
 
     if (is_reupload) {
         internal_data = &context.registered_geometries[geometry->internal_id];
@@ -1512,11 +1512,11 @@ b8 vulkan_create_geometry(Geometry* geometry,
     return true;
 }
 
-void vulkan_destroy_geometry(Geometry* geometry) {
+void vulkan_destroy_geometry(Geometry *geometry) {
     if (geometry && geometry->internal_id != INVALID_ID) {
         vkDeviceWaitIdle(context.device.logical_device);
 
-        Vulkan_Geometry_Data* internal_data =
+        Vulkan_Geometry_Data *internal_data =
             &context.registered_geometries[geometry->internal_id];
 
         free_data_range(&context.object_vertex_buffer,
@@ -1540,10 +1540,10 @@ void vulkan_draw_geometry(Geometry_Render_Data data) {
         return;
     }
 
-    Vulkan_Geometry_Data* buffer_data =
+    Vulkan_Geometry_Data *buffer_data =
         &context.registered_geometries[data.geometry->internal_id];
 
-    Vulkan_Command_Buffer* cmd_buffer =
+    Vulkan_Command_Buffer *cmd_buffer =
         &context.command_buffers[context.image_index];
 
     // TODO: Check if this is needed
@@ -1596,22 +1596,22 @@ void vulkan_draw_ui(UI_Render_Data data) {
         data.draw_list);
 }
 
-void vulkan_render_viewport(Renderer_Backend* backend) {
+void vulkan_render_viewport(Renderer_Backend *backend) {
     // This function is called to ensure viewport is ready for rendering
     // Descriptor sets are created upfront, so nothing needed here currently
     // This provides a hook for future per-frame viewport operations
     (void)backend;
 }
 
-void* vulkan_get_rendered_viewport(Renderer_Backend* backend) {
+void *vulkan_get_rendered_viewport(Renderer_Backend *backend) {
     (void)backend;
 
     // Return the descriptor set for the current image index
     return (
-        void*)context.imgui_shader.viewport_descriptors[context.image_index];
+        void *)context.imgui_shader.viewport_descriptors[context.image_index];
 }
 
-void vulkan_resize_viewport(Renderer_Backend* backend, u32 width, u32 height) {
+void vulkan_resize_viewport(Renderer_Backend *backend, u32 width, u32 height) {
     // Ensure minimum size to avoid Vulkan errors
     width = width < 1 ? 1 : width;
     height = height < 1 ? 1 : height;
@@ -1655,9 +1655,9 @@ void vulkan_resize_viewport(Renderer_Backend* backend, u32 width, u32 height) {
     CORE_DEBUG("Viewport resized successfully");
 }
 
-void vulkan_get_viewport_size(Renderer_Backend* backend,
-    u32* width,
-    u32* height) {
+void vulkan_get_viewport_size(Renderer_Backend *backend,
+    u32 *width,
+    u32 *height) {
     if (width) {
         *width = context.viewport.framebuffer_width;
     }

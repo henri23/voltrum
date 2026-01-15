@@ -11,8 +11,8 @@
 
 #include <imgui_internal.h>
 
-void ui_titlebar_setup(UI_Context* context, const char* app_name) {
-    UI_Titlebar_State* state = &context->titlebar;
+void ui_titlebar_setup(UI_Context *context, const char *app_name) {
+    UI_Titlebar_State *state = &context->titlebar;
 
     state->title_text = app_name;
 
@@ -47,12 +47,12 @@ void ui_titlebar_setup(UI_Context* context, const char* app_name) {
     CORE_INFO("Titlebar icons loaded successfully");
 }
 
-void ui_titlebar_draw(UI_Context* context) {
-    UI_Titlebar_State* state = &context->titlebar;
-    const UI_Theme_Palette& palette =
+void ui_titlebar_draw(UI_Context *context) {
+    UI_Titlebar_State *state = &context->titlebar;
+    const UI_Theme_Palette &palette =
         ui_themes_get_palette(context->current_theme);
 
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGuiViewport *viewport = ImGui::GetMainViewport();
     ImVec2 window_pos = viewport->Pos;
     ImVec2 window_size = viewport->Size;
 
@@ -70,7 +70,7 @@ void ui_titlebar_draw(UI_Context* context) {
         ImGuiWindowFlags_NoBackground;
 
     // Draw titlebar background to background draw list (behind popups)
-    ImDrawList* bg_draw_list = ImGui::GetBackgroundDrawList(viewport);
+    ImDrawList *bg_draw_list = ImGui::GetBackgroundDrawList(viewport);
     f32 titlebar_width = state->titlebar_max.x - state->titlebar_min.x;
 
     bg_draw_list->AddRectFilled(state->titlebar_min,
@@ -106,7 +106,7 @@ void ui_titlebar_draw(UI_Context* context) {
 
     if (ImGui::Begin("##CustomTitlebar", nullptr, flags)) {
         ImGui::GetCurrentWindow()->DockNode = nullptr;
-        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        ImDrawList *draw_list = ImGui::GetWindowDrawList();
 
         // Menu bar
         {
@@ -115,7 +115,7 @@ void ui_titlebar_draw(UI_Context* context) {
             ImGui::SetCursorPos(ImVec2(menu_x, menu_y));
 
             ImVec2 menu_start = ImGui::GetCursorScreenPos();
-            ImGuiWindow* window = ImGui::GetCurrentWindow();
+            ImGuiWindow *window = ImGui::GetCurrentWindow();
             const ImVec2 padding = window->WindowPadding;
 
             // Setup menubar state (matching Walnut's BeginMenubar)
@@ -141,7 +141,8 @@ void ui_titlebar_draw(UI_Context* context) {
 
             if (context->menu_callback) {
                 // Push smaller horizontal padding for menu items
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.0f, 5.0f));
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
+                    ImVec2(5.0f, 5.0f));
                 context->menu_callback();
                 ImGui::PopStyleVar();
             }
@@ -227,7 +228,7 @@ void ui_titlebar_draw(UI_Context* context) {
         current_x -= button_spacing;
         current_x -= button_size;
         b8 is_maximized = platform_is_window_maximized();
-        Texture* max_icon = is_maximized ? state->restore_icon_texture
+        Texture *max_icon = is_maximized ? state->restore_icon_texture
                                          : state->maximize_icon_texture;
         ImVec2 max_pos = ImVec2(current_x, state->titlebar_min.y + top_padding);
         ImGui::SetCursorScreenPos(max_pos);
@@ -324,6 +325,6 @@ void ui_titlebar_draw(UI_Context* context) {
     ImGui::End();
 }
 
-b8 ui_is_titlebar_hovered(UI_Context* context) {
+b8 ui_is_titlebar_hovered(UI_Context *context) {
     return context->titlebar.is_titlebar_hovered;
 }

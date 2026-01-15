@@ -19,18 +19,18 @@ struct Geometry_System_State {
 
     // NOTE: We are not using the hashmap in the geometry system because we
     // are not going to do name lookups
-    Geometry_Reference* registered_geometries;
+    Geometry_Reference *registered_geometries;
 };
 
 internal_var Geometry_System_State state = {};
 
-INTERNAL_FUNC b8 create_default_geometry(Geometry_System_State* state);
-INTERNAL_FUNC b8 create_geometry(Geometry_System_State* state,
+INTERNAL_FUNC b8 create_default_geometry(Geometry_System_State *state);
+INTERNAL_FUNC b8 create_geometry(Geometry_System_State *state,
     Geometry_Config config,
-    Geometry* geometry);
+    Geometry *geometry);
 
-INTERNAL_FUNC void destroy_geometry(Geometry_System_State* state,
-    Geometry* geometry);
+INTERNAL_FUNC void destroy_geometry(Geometry_System_State *state,
+    Geometry *geometry);
 
 b8 geometry_system_init(Geometry_System_Config config) {
 
@@ -38,7 +38,7 @@ b8 geometry_system_init(Geometry_System_Config config) {
 
     u32 count = config.max_geometry_count;
 
-    state.registered_geometries = static_cast<Geometry_Reference*>(
+    state.registered_geometries = static_cast<Geometry_Reference *>(
         memory_allocate(sizeof(Geometry_Reference) * count,
             Memory_Tag::GEOMETRY));
 
@@ -70,7 +70,7 @@ void geometry_system_shutdown() {
         Memory_Tag::GEOMETRY);
 }
 
-Geometry* geometry_system_acquire_by_id(Geometry_ID id) {
+Geometry *geometry_system_acquire_by_id(Geometry_ID id) {
     // NOTE: No need to write the branch for the geometry not being present
     // because since we are querying by id, it means as some previous point we
     // must have acquired the geometry from config and received an id for it
@@ -86,10 +86,10 @@ Geometry* geometry_system_acquire_by_id(Geometry_ID id) {
     return nullptr;
 }
 
-Geometry* geometry_system_acquire_by_config(Geometry_Config config,
+Geometry *geometry_system_acquire_by_config(Geometry_Config config,
     b8 auto_release) {
 
-    Geometry* geometry = nullptr;
+    Geometry *geometry = nullptr;
 
     for (u32 i = 0; i < state.config.max_geometry_count; ++i) {
         if (state.registered_geometries[i].geometry.id == INVALID_ID) {
@@ -117,11 +117,11 @@ Geometry* geometry_system_acquire_by_config(Geometry_Config config,
     return geometry;
 }
 
-void geometry_release(Geometry* geometry) {
+void geometry_release(Geometry *geometry) {
     if (geometry->id != INVALID_ID) {
         u32 id = geometry->id;
 
-        Geometry_Reference* ref = &state.registered_geometries[id];
+        Geometry_Reference *ref = &state.registered_geometries[id];
         if (ref->geometry.id == id) {
             if (ref->reference_count > 0) {
                 ref->reference_count--;
@@ -143,7 +143,7 @@ void geometry_release(Geometry* geometry) {
         "geometry_release cannot load release invalid geometry. Skipping.");
 }
 
-Geometry* geometry_system_get_default() { return &state.default_geometry; }
+Geometry *geometry_system_get_default() { return &state.default_geometry; }
 
 // Creates configuration for plane geometries given the provided parameters.
 // WARN: The vertex and index arrays are dynamically allocated and should be
@@ -154,8 +154,8 @@ Geometry_Config geometry_system_generate_plane_config(f32 width,
     u32 y_segment_count,
     f32 tile_x,
     f32 tile_y,
-    const char* name,
-    const char* material_name) {
+    const char *name,
+    const char *material_name) {
     if (width == 0) {
         CORE_WARN("Width must be > 0. Defaulting to one");
         width = 1.0f;
@@ -191,12 +191,12 @@ Geometry_Config geometry_system_generate_plane_config(f32 width,
     Geometry_Config config;
     // 4 verts per quad segment
     config.vertex_count = x_segment_count * y_segment_count * 4;
-    config.vertices = static_cast<vertex_3d*>(
+    config.vertices = static_cast<vertex_3d *>(
         memory_allocate(sizeof(vertex_3d) * config.vertex_count,
             Memory_Tag::ARRAY));
     // 6 indices per segment
     config.index_count = x_segment_count * y_segment_count * 6;
-    config.indices = static_cast<u32*>(
+    config.indices = static_cast<u32 *>(
         memory_allocate(sizeof(u32) * config.index_count, Memory_Tag::ARRAY));
 
     f32 seg_width = width / x_segment_count;
@@ -219,10 +219,10 @@ Geometry_Config geometry_system_generate_plane_config(f32 width,
             f32 max_uvy = ((y + 1) / (f32)y_segment_count) * tile_y;
 
             u32 v_offset = ((y * x_segment_count) + x) * 4;
-            vertex_3d* v0 = &config.vertices[v_offset + 0];
-            vertex_3d* v1 = &config.vertices[v_offset + 1];
-            vertex_3d* v2 = &config.vertices[v_offset + 2];
-            vertex_3d* v3 = &config.vertices[v_offset + 3];
+            vertex_3d *v0 = &config.vertices[v_offset + 0];
+            vertex_3d *v1 = &config.vertices[v_offset + 1];
+            vertex_3d *v2 = &config.vertices[v_offset + 2];
+            vertex_3d *v3 = &config.vertices[v_offset + 3];
 
             v0->position.x = min_x;
             v0->position.y = min_y;
@@ -275,9 +275,9 @@ Geometry_Config geometry_system_generate_plane_config(f32 width,
     return config;
 }
 
-INTERNAL_FUNC b8 create_geometry(Geometry_System_State* state,
+INTERNAL_FUNC b8 create_geometry(Geometry_System_State *state,
     Geometry_Config config,
-    Geometry* geometry) {
+    Geometry *geometry) {
     if (!renderer_create_geometry(geometry,
             config.vertex_count,
             config.vertices,
@@ -307,8 +307,8 @@ INTERNAL_FUNC b8 create_geometry(Geometry_System_State* state,
     return true;
 }
 
-INTERNAL_FUNC void destroy_geometry(Geometry_System_State* state,
-    Geometry* geometry) {
+INTERNAL_FUNC void destroy_geometry(Geometry_System_State *state,
+    Geometry *geometry) {
     renderer_destroy_geometry(geometry);
     geometry->id = INVALID_ID;
     geometry->internal_id = INVALID_ID;
@@ -323,7 +323,7 @@ INTERNAL_FUNC void destroy_geometry(Geometry_System_State* state,
     }
 }
 
-INTERNAL_FUNC b8 create_default_geometry(Geometry_System_State* state) {
+INTERNAL_FUNC b8 create_default_geometry(Geometry_System_State *state) {
     vertex_3d verts[4];
     memory_zero(verts, sizeof(vertex_3d) * 4);
 

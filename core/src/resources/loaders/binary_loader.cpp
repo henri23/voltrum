@@ -4,9 +4,9 @@
 #include "platform/filesystem.hpp"
 #include "utils/string.hpp"
 
-INTERNAL_FUNC b8 binary_resource_load(struct Resource_Loader* self,
-    const char* name,
-    Resource* out_resource) {
+INTERNAL_FUNC b8 binary_resource_load(struct Resource_Loader *self,
+    const char *name,
+    Resource *out_resource) {
 
     if (!self || !name || !out_resource) {
         CORE_ERROR(
@@ -14,7 +14,7 @@ INTERNAL_FUNC b8 binary_resource_load(struct Resource_Loader* self,
         return false;
     }
 
-    const char* format_str = "%s/%s/%s%s";
+    const char *format_str = "%s/%s/%s%s";
     char full_file_path[512];
 
     string_format(full_file_path,
@@ -43,7 +43,7 @@ INTERNAL_FUNC b8 binary_resource_load(struct Resource_Loader* self,
         return false;
     }
 
-    u8* resource_data = static_cast<u8*>(
+    u8 *resource_data = static_cast<u8 *>(
         memory_allocate(sizeof(u8) * file_size, Memory_Tag::ARRAY));
 
     u64 read_size = 0;
@@ -63,8 +63,8 @@ INTERNAL_FUNC b8 binary_resource_load(struct Resource_Loader* self,
     return true;
 }
 
-INTERNAL_FUNC void binary_resource_unload(struct Resource_Loader* self,
-    Resource* resource) {
+INTERNAL_FUNC void binary_resource_unload(struct Resource_Loader *self,
+    Resource *resource) {
 
     if (!self || !resource) {
         CORE_WARN(

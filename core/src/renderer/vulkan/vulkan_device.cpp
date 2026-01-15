@@ -16,19 +16,19 @@ struct Device_Queue_Indices {
 
 INTERNAL_FUNC b8 is_device_suitable(VkPhysicalDevice device,
     VkSurfaceKHR surface,
-    const VkPhysicalDeviceProperties* properties,
-    const VkPhysicalDeviceFeatures* features,
-    const Vulkan_Physical_Device_Requirements* requirements,
-    Vulkan_Swapchain_Support_Info* out_swapchain_info,
-    Device_Queue_Indices* out_indices);
+    const VkPhysicalDeviceProperties *properties,
+    const VkPhysicalDeviceFeatures *features,
+    const Vulkan_Physical_Device_Requirements *requirements,
+    Vulkan_Swapchain_Support_Info *out_swapchain_info,
+    Device_Queue_Indices *out_indices);
 
-INTERNAL_FUNC b8 select_physical_device(Vulkan_Context* context,
-    Vulkan_Physical_Device_Requirements* requirements);
+INTERNAL_FUNC b8 select_physical_device(Vulkan_Context *context,
+    Vulkan_Physical_Device_Requirements *requirements);
 
-INTERNAL_FUNC b8 create_logical_device(Vulkan_Context* context);
+INTERNAL_FUNC b8 create_logical_device(Vulkan_Context *context);
 
-b8 vulkan_device_initialize(Vulkan_Context* context,
-    Vulkan_Physical_Device_Requirements* requirements) {
+b8 vulkan_device_initialize(Vulkan_Context *context,
+    Vulkan_Physical_Device_Requirements *requirements) {
 
     // Select physical device in the machine
     if (!select_physical_device(context, requirements)) {
@@ -46,7 +46,7 @@ b8 vulkan_device_initialize(Vulkan_Context* context,
 }
 
 // TODO: Get back to this method as it is not clear enough
-b8 vulkan_device_detect_depth_format(Vulkan_Device* device) {
+b8 vulkan_device_detect_depth_format(Vulkan_Device *device) {
 
     const u64 candidate_count = 3;
 
@@ -79,8 +79,8 @@ b8 vulkan_device_detect_depth_format(Vulkan_Device* device) {
     return false;
 }
 
-b8 select_physical_device(Vulkan_Context* context,
-    Vulkan_Physical_Device_Requirements* requirements) {
+b8 select_physical_device(Vulkan_Context *context,
+    Vulkan_Physical_Device_Requirements *requirements) {
     u32 physical_device_count = 0;
 
     // Retrieve the list of available GPUs with vulkan support
@@ -214,7 +214,7 @@ b8 select_physical_device(Vulkan_Context* context,
     return false;
 }
 
-b8 create_logical_device(Vulkan_Context* context) {
+b8 create_logical_device(Vulkan_Context *context) {
     CORE_INFO("Creating logical device...");
     // At least one for the graphics queue because otherwise
     // the GPU would not be eligible
@@ -300,7 +300,7 @@ b8 create_logical_device(Vulkan_Context* context) {
     logical_device_create_info.pEnabledFeatures = &device_features_to_request;
 
     // Request swapchain extension for physical device
-    Auto_Array<const char*> required_extensions = {
+    Auto_Array<const char *> required_extensions = {
         VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 
 #ifdef PLATFORM_APPLE
@@ -363,11 +363,11 @@ b8 create_logical_device(Vulkan_Context* context) {
 
 b8 is_device_suitable(VkPhysicalDevice device,
     VkSurfaceKHR surface,
-    const VkPhysicalDeviceProperties* properties,
-    const VkPhysicalDeviceFeatures* features,
-    const Vulkan_Physical_Device_Requirements* requirements,
-    Vulkan_Swapchain_Support_Info* out_swapchain_info,
-    Device_Queue_Indices* out_indices) {
+    const VkPhysicalDeviceProperties *properties,
+    const VkPhysicalDeviceFeatures *features,
+    const Vulkan_Physical_Device_Requirements *requirements,
+    Vulkan_Swapchain_Support_Info *out_swapchain_info,
+    Device_Queue_Indices *out_indices) {
 
     // Initialize the family index to a unreasonable value so that it is
     // evident whether or not a queue family that supports given commands
@@ -382,7 +382,7 @@ b8 is_device_suitable(VkPhysicalDevice device,
         &queue_family_count,
         nullptr);
 
-    auto queue_family_properties_array = static_cast<VkQueueFamilyProperties*>(
+    auto queue_family_properties_array = static_cast<VkQueueFamilyProperties *>(
         memory_allocate(sizeof(VkQueueFamilyProperties) * queue_family_count,
             Memory_Tag::RENDERER));
 
@@ -527,7 +527,7 @@ b8 is_device_suitable(VkPhysicalDevice device,
 
             // Allocate in heap because the data turned out to be large
             auto extension_properties =
-                static_cast<VkExtensionProperties*>(memory_allocate(
+                static_cast<VkExtensionProperties *>(memory_allocate(
                     sizeof(VkExtensionProperties) * available_extensions_count,
                     Memory_Tag::RENDERER));
 
@@ -581,7 +581,7 @@ b8 is_device_suitable(VkPhysicalDevice device,
 // that is already allocated
 void vulkan_device_query_swapchain_capabilities(VkPhysicalDevice device,
     VkSurfaceKHR surface,
-    Vulkan_Swapchain_Support_Info* out_swapchain_info) {
+    Vulkan_Swapchain_Support_Info *out_swapchain_info) {
 
     out_swapchain_info->formats_count = -1;
     out_swapchain_info->present_modes_count = -1;
@@ -599,7 +599,7 @@ void vulkan_device_query_swapchain_capabilities(VkPhysicalDevice device,
 
         if (!out_swapchain_info->formats) {
 
-            out_swapchain_info->formats = static_cast<VkSurfaceFormatKHR*>(
+            out_swapchain_info->formats = static_cast<VkSurfaceFormatKHR *>(
                 memory_allocate(sizeof(VkSurfaceFormatKHR) *
                                     out_swapchain_info->formats_count,
                     Memory_Tag::RENDERER));
@@ -619,7 +619,7 @@ void vulkan_device_query_swapchain_capabilities(VkPhysicalDevice device,
     if (out_swapchain_info->present_modes_count != 0) {
 
         if (!out_swapchain_info->present_modes) {
-            out_swapchain_info->present_modes = static_cast<VkPresentModeKHR*>(
+            out_swapchain_info->present_modes = static_cast<VkPresentModeKHR *>(
                 memory_allocate(sizeof(VkPresentModeKHR) *
                                     out_swapchain_info->present_modes_count,
                     Memory_Tag::RENDERER));
@@ -632,7 +632,7 @@ void vulkan_device_query_swapchain_capabilities(VkPhysicalDevice device,
     }
 }
 
-void vulkan_device_shutdown(Vulkan_Context* context) {
+void vulkan_device_shutdown(Vulkan_Context *context) {
 
     CORE_DEBUG("Destroying command pools...");
 

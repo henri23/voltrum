@@ -35,29 +35,29 @@ struct Editor_Layer_State {
 };
 
 // Static pointer to editor state for demo window control from menu callback
-internal_var Editor_Layer_State* editor_state = nullptr;
+internal_var Editor_Layer_State *editor_state = nullptr;
 
-INTERNAL_FUNC void viewport_camera_initialize(Viewport_Camera* camera,
+INTERNAL_FUNC void viewport_camera_initialize(Viewport_Camera *camera,
     vec3 position = {0, 0, 10.0f});
-INTERNAL_FUNC void viewport_camera_recalculate_view(Viewport_Camera* camera);
-INTERNAL_FUNC void viewport_camera_rotate_yaw(Viewport_Camera* camera,
+INTERNAL_FUNC void viewport_camera_recalculate_view(Viewport_Camera *camera);
+INTERNAL_FUNC void viewport_camera_rotate_yaw(Viewport_Camera *camera,
     f32 amount);
-INTERNAL_FUNC void viewport_camera_rotate_pitch(Viewport_Camera* camera,
+INTERNAL_FUNC void viewport_camera_rotate_pitch(Viewport_Camera *camera,
     f32 amount);
-INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera* camera,
+INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera *camera,
     f32 delta_time,
     b8 viewport_active);
 
-INTERNAL_FUNC void render_viewport_window(Editor_Layer_State* state,
+INTERNAL_FUNC void render_viewport_window(Editor_Layer_State *state,
     f32 delta_time);
-INTERNAL_FUNC void render_statistics_window(Editor_Layer_State* state,
+INTERNAL_FUNC void render_statistics_window(Editor_Layer_State *state,
     f32 delta_time);
 
-void editor_layer_on_attach(UI_Layer* self) {
+void editor_layer_on_attach(UI_Layer *self) {
     self->state =
         memory_allocate(sizeof(Editor_Layer_State), Memory_Tag::CLIENT);
 
-    Editor_Layer_State* state = (Editor_Layer_State*)self->state;
+    Editor_Layer_State *state = (Editor_Layer_State *)self->state;
     editor_state = state;
 
     viewport_camera_initialize(&state->camera, {0, 0, 10.0f});
@@ -85,7 +85,7 @@ void editor_layer_on_attach(UI_Layer* self) {
     CLIENT_INFO("Editor layer attached");
 }
 
-void editor_layer_on_detach(UI_Layer* self) {
+void editor_layer_on_detach(UI_Layer *self) {
     editor_state = nullptr;
 
     if (self->state) {
@@ -98,8 +98,8 @@ void editor_layer_on_detach(UI_Layer* self) {
     CLIENT_INFO("Editor layer detached");
 }
 
-b8 editor_layer_on_update(UI_Layer* self, f32 delta_time) {
-    Editor_Layer_State* state = (Editor_Layer_State*)self->state;
+b8 editor_layer_on_update(UI_Layer *self, f32 delta_time) {
+    Editor_Layer_State *state = (Editor_Layer_State *)self->state;
 
     b8 viewport_active = state->viewport_hovered;
     // b8 viewport_active = state->viewport_focused || state->viewport_hovered;
@@ -114,8 +114,8 @@ b8 editor_layer_on_update(UI_Layer* self, f32 delta_time) {
     return true;
 }
 
-b8 editor_layer_on_render(UI_Layer* self, f32 delta_time) {
-    Editor_Layer_State* state = (Editor_Layer_State*)self->state;
+b8 editor_layer_on_render(UI_Layer *self, f32 delta_time) {
+    Editor_Layer_State *state = (Editor_Layer_State *)self->state;
 
     render_viewport_window(state, delta_time);
     render_statistics_window(state, delta_time);
@@ -127,7 +127,7 @@ b8 editor_layer_on_render(UI_Layer* self, f32 delta_time) {
     return true;
 }
 
-INTERNAL_FUNC void viewport_camera_initialize(Viewport_Camera* camera,
+INTERNAL_FUNC void viewport_camera_initialize(Viewport_Camera *camera,
     vec3 position) {
     camera->position = position;
     camera->euler_angles = vec3_zero();
@@ -136,7 +136,7 @@ INTERNAL_FUNC void viewport_camera_initialize(Viewport_Camera* camera,
     camera->view_dirty = true;
 }
 
-INTERNAL_FUNC void viewport_camera_recalculate_view(Viewport_Camera* camera) {
+INTERNAL_FUNC void viewport_camera_recalculate_view(Viewport_Camera *camera) {
     if (camera->view_dirty) {
         mat4 rotation = mat4_euler_xyz(camera->euler_angles.x,
             camera->euler_angles.y,
@@ -148,13 +148,13 @@ INTERNAL_FUNC void viewport_camera_recalculate_view(Viewport_Camera* camera) {
     }
 }
 
-INTERNAL_FUNC void viewport_camera_rotate_yaw(Viewport_Camera* camera,
+INTERNAL_FUNC void viewport_camera_rotate_yaw(Viewport_Camera *camera,
     f32 amount) {
     camera->euler_angles.y += amount;
     camera->view_dirty = true;
 }
 
-INTERNAL_FUNC void viewport_camera_rotate_pitch(Viewport_Camera* camera,
+INTERNAL_FUNC void viewport_camera_rotate_pitch(Viewport_Camera *camera,
     f32 amount) {
     camera->euler_angles.x += amount;
     f32 limit = deg_to_rad(89.0f);
@@ -162,7 +162,7 @@ INTERNAL_FUNC void viewport_camera_rotate_pitch(Viewport_Camera* camera,
     camera->view_dirty = true;
 }
 
-INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera* camera,
+INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera *camera,
     f32 delta_time,
     b8 viewport_active) {
     b8 camera_moved = false;
@@ -235,7 +235,7 @@ INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera* camera,
     return camera_moved;
 }
 
-INTERNAL_FUNC void render_viewport_window(Editor_Layer_State* state,
+INTERNAL_FUNC void render_viewport_window(Editor_Layer_State *state,
     f32 delta_time) {
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::Begin(ICON_FA_EXPAND " Viewport");
@@ -275,7 +275,7 @@ INTERNAL_FUNC void render_viewport_window(Editor_Layer_State* state,
     ImGui::End();
 }
 
-INTERNAL_FUNC void render_statistics_window(Editor_Layer_State* state,
+INTERNAL_FUNC void render_statistics_window(Editor_Layer_State *state,
     f32 delta_time) {
     // Update FPS calculation - average over ~0.5 seconds for stability
     state->fps_accumulator += delta_time;

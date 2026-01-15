@@ -74,7 +74,7 @@ struct Event {
 };
 
 // Event callback type for consumers
-using PFN_event_callback = b8 (*)(const Event*);
+using PFN_event_callback = b8 (*)(const Event *);
 
 // Event callback priority levels (lower numbers = higher priority)
 enum class Event_Priority {
@@ -88,7 +88,7 @@ enum class Event_Priority {
 // Event callback entry with priority and listener support
 struct Event_Callback_Entry {
     PFN_event_callback callback;
-    void* listener; // Always nullptr for now, future extensibility
+    void *listener; // Always nullptr for now, future extensibility
     Event_Priority priority;
 };
 
@@ -107,4 +107,4 @@ VOLTRUM_API void events_unregister_callback(Event_Type event_type,
     PFN_event_callback callback);
 
 // Called by platform layer to dispatch events
-void events_dispatch(const Event* event);
+void events_dispatch(const Event *event);

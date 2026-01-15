@@ -5,7 +5,8 @@
 // Viewport Support Configuration
 // ------------------------------
 // SDL3 viewport support in ImGui is experimental and can cause crashes.
-// Enable this only if you need multi-viewport support and are willing to test stability.
+// Enable this only if you need multi-viewport support and are willing to test
+// stability.
 //
 // To enable viewports, uncomment the line below:
 // #define VOLTRUM_ENABLE_VIEWPORTS
@@ -23,9 +24,9 @@
 // - Experimental feature - use at your own risk
 
 #ifdef VOLTRUM_ENABLE_VIEWPORTS
-    #pragma message("ImGui viewports enabled - experimental SDL3 support")
+#    pragma message("ImGui viewports enabled - experimental SDL3 support")
 #else
-    #pragma message("ImGui viewports disabled - SDL3 safe mode")
+#    pragma message("ImGui viewports disabled - SDL3 safe mode")
 #endif
 
 // Future UI Configuration Options

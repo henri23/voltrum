@@ -126,7 +126,7 @@ FORCE_INLINE f32 vec2_length(vec2 a) {
     return math_sqrt(vec2_length_squared(a));
 }
 
-FORCE_INLINE void vec2_norm(vec2* a) {
+FORCE_INLINE void vec2_norm(vec2 *a) {
     const f32 length = vec2_length(*a);
     a->x /= length;
     a->y /= length;
@@ -246,7 +246,7 @@ FORCE_INLINE vec3 vec3_scale(vec3 a, f32 scalar) {
     return result;
 }
 
-FORCE_INLINE void vec3_norm(vec3* a) {
+FORCE_INLINE void vec3_norm(vec3 *a) {
     const f32 length = vec3_length(*a);
     a->x /= length;
     a->y /= length;
@@ -337,7 +337,7 @@ FORCE_INLINE f32 vec4_length(vec4 a) {
     return math_sqrt(vec4_length_squared(a));
 }
 
-FORCE_INLINE void vec4_norm(vec4* a) {
+FORCE_INLINE void vec4_norm(vec4 *a) {
     const f32 length = vec4_length(*a);
     a->x /= length;
     a->y /= length;
@@ -368,10 +368,10 @@ FORCE_INLINE mat4 mat4_identity() {
 INLINE_OPERATOR mat4 operator*(mat4 m1, mat4 m2) {
     mat4 out_matrix = mat4_identity();
 
-    const f32* matrix1 = m1.elements;
-    const f32* matrix2 = m2.elements;
+    const f32 *matrix1 = m1.elements;
+    const f32 *matrix2 = m2.elements;
 
-    f32* dest_matrix = out_matrix.elements;
+    f32 *dest_matrix = out_matrix.elements;
     for (u32 i = 0; i < 4; ++i) {
         for (u32 j = 0; j < 4; ++j) {
             *dest_matrix =
@@ -498,7 +498,7 @@ FORCE_INLINE mat4 mat4_transpose(mat4 matrix) {
 }
 
 FORCE_INLINE mat4 mat4_inv(mat4 matrix) {
-    const f32* m = matrix.elements;
+    const f32 *m = matrix.elements;
 
     f32 t0 = m[10] * m[15];
     f32 t1 = m[14] * m[11];
@@ -527,7 +527,7 @@ FORCE_INLINE mat4 mat4_inv(mat4 matrix) {
 
     mat4 out_matrix;
 
-    f32* o = out_matrix.elements;
+    f32 *o = out_matrix.elements;
 
     o[0] = (t0 * m[5] + t3 * m[9] + t4 * m[13]) -
            (t1 * m[5] + t2 * m[9] + t5 * m[13]);
@@ -797,7 +797,7 @@ FORCE_INLINE mat4 quat_to_rotation_matrix(quaternion q, vec3 center) {
 
     mat4 out_matrix;
 
-    f32* o = out_matrix.elements;
+    f32 *o = out_matrix.elements;
 
     o[0] = (q.qx * q.qx) - (q.qy * q.qy) - (q.qz * q.qz) + (q.qw * q.qw);
     o[1] = 2.0f * ((q.qx * q.qy) + (q.qz * q.qw));

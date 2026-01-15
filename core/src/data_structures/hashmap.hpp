@@ -2,10 +2,10 @@
 
 #include "core/asserts.hpp"
 #include "core/logger.hpp"
-#include "utils/string.hpp"
 #include "defines.hpp"
 #include "math/math.hpp"
 #include "memory/memory.hpp"
+#include "utils/string.hpp"
 // TODO: Use C++ 20 modules for exporting template data structures to avoid
 // parsing the classes for every translation unit
 
@@ -46,7 +46,7 @@ constexpr u64 HASHMAP_DEFAULT_CAPACITY = 2;
 template <typename T> struct Hashmap {
     u64 capacity; // The largest power of two that accomodates all elements
     u64 count;
-    Hashmap_Item<T>* memory;
+    Hashmap_Item<T> *memory;
 
     // TODO: Add custom allocator memory management
     // Allocator* allocator;
@@ -68,7 +68,7 @@ template <typename T> struct Hashmap {
         // Use the power of 2 ceiling value for hashmap size
         capacity = math_next_power_of_2(requested_capacity);
         count = 0;
-        memory = static_cast<Hashmap_Item<T>*>(
+        memory = static_cast<Hashmap_Item<T> *>(
             memory_allocate(sizeof(Hashmap_Item<T>) * capacity,
                 Memory_Tag::HASHMAP));
     }
@@ -87,7 +87,7 @@ template <typename T> struct Hashmap {
 
     FORCE_INLINE ~Hashmap() { free(); }
 
-    FORCE_INLINE b8 add(const char* key, const T* value, b8 overwrite = false) {
+    FORCE_INLINE b8 add(const char *key, const T *value, b8 overwrite = false) {
         if (memory == nullptr) {
             CORE_ERROR(
                 "Hashmap not initialized. Call init() before using add()");
@@ -159,7 +159,7 @@ template <typename T> struct Hashmap {
         return false;
     }
 
-    FORCE_INLINE b8 find_ptr(const char* key, T** out_ptr) {
+    FORCE_INLINE b8 find_ptr(const char *key, T **out_ptr) {
         if (memory == nullptr) {
             CORE_ERROR(
                 "Hashmap not initialized. Call init() before using find()");
@@ -196,7 +196,7 @@ template <typename T> struct Hashmap {
         return false;
     }
 
-    FORCE_INLINE b8 find(const char* key, T* out_copy) {
+    FORCE_INLINE b8 find(const char *key, T *out_copy) {
         if (memory == nullptr) {
             CORE_ERROR(
                 "Hashmap not initialized. Call init() before using find()");
@@ -233,7 +233,7 @@ template <typename T> struct Hashmap {
         return false;
     }
 
-    FORCE_INLINE b8 remove(const char* key) {
+    FORCE_INLINE b8 remove(const char *key) {
         if (memory == nullptr) {
             CORE_ERROR(
                 "Hashmap not initialized. Call init() before using remove()");
@@ -280,7 +280,7 @@ template <typename T> struct Hashmap {
             while (probe < capacity) {
                 // If the next element in line is already at the optimal
                 // location we stop
-                auto* next_item = &memory[next_address(address)];
+                auto *next_item = &memory[next_address(address)];
                 if (next_item->distance == 0 || !next_item->is_occupied) {
                     memory_zero(&memory[address], sizeof(Hashmap_Item<T>));
                     count--;
@@ -326,14 +326,14 @@ template <typename T> struct Hashmap {
             idx < capacity && printed < count;
             idx = next_occupied_index(idx + 1)) {
 
-            const auto* slot = &memory[idx];
+            const auto *slot = &memory[idx];
             CORE_INFO("%5llu | %4u | %-44s", idx, slot->distance, slot->key);
 
             ++printed;
         }
     }
 
-    FORCE_INLINE void swap(Hashmap_Item<T>* item1, Hashmap_Item<T>* item2) {
+    FORCE_INLINE void swap(Hashmap_Item<T> *item1, Hashmap_Item<T> *item2) {
         T temp_value = item1->value;
         char temp_key[50];
         string_copy(temp_key, item1->key);
@@ -357,7 +357,7 @@ template <typename T> struct Hashmap {
 
     FORCE_INLINE b8 full() { return count == capacity - 1; }
 
-    FORCE_INLINE u64 hash_function(const char* key) {
+    FORCE_INLINE u64 hash_function(const char *key) {
         // For the hash function I am using the Fowler-Noll-Vo hash function
         // Reference:
         // https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function

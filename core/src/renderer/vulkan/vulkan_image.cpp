@@ -10,7 +10,7 @@
 
 // Images are memory blocks allocated in the device that include information
 // about the content too. Contrary to buffers which are just chunks of data
-void vulkan_image_create(Vulkan_Context* context,
+void vulkan_image_create(Vulkan_Context *context,
     VkImageType image_type,
     u32 width,
     u32 height,
@@ -20,7 +20,7 @@ void vulkan_image_create(Vulkan_Context* context,
     VkMemoryPropertyFlags memory_flags,
     b32 create_view,
     VkImageAspectFlags view_aspect_flags,
-    Vulkan_Image* out_image) {
+    Vulkan_Image *out_image) {
 
     // Vulkan does not automatically allocate memory for images. Instead we:
     // 1. Create an image with vkCreateImage
@@ -145,9 +145,9 @@ void vulkan_image_create(Vulkan_Context* context,
     }
 }
 
-void vulkan_image_view_create(Vulkan_Context* context,
+void vulkan_image_view_create(Vulkan_Context *context,
     VkFormat format,
-    Vulkan_Image* image,
+    Vulkan_Image *image,
     VkImageAspectFlags aspect_flags) {
 
     VkImageViewCreateInfo view_create_info = {
@@ -169,7 +169,7 @@ void vulkan_image_view_create(Vulkan_Context* context,
         &image->view));
 }
 
-void vulkan_image_destroy(Vulkan_Context* context, Vulkan_Image* image) {
+void vulkan_image_destroy(Vulkan_Context *context, Vulkan_Image *image) {
 
     // Remove this log if the logger gets too crowded
     CORE_DEBUG("Destroying vulkan image...");
@@ -201,9 +201,9 @@ void vulkan_image_destroy(Vulkan_Context* context, Vulkan_Image* image) {
     CORE_DEBUG("Vulkan image destroyed");
 }
 
-void vulkan_image_transition_layout(Vulkan_Context* context,
-    Vulkan_Command_Buffer* command_buffer,
-    Vulkan_Image* image,
+void vulkan_image_transition_layout(Vulkan_Context *context,
+    Vulkan_Command_Buffer *command_buffer,
+    Vulkan_Image *image,
     VkFormat format,
     VkImageLayout old_layout,
     VkImageLayout new_layout) {
@@ -283,10 +283,10 @@ void vulkan_image_transition_layout(Vulkan_Context* context,
         &barrier);
 }
 
-void vulkan_image_copy_from_buffer(Vulkan_Context* context,
-    Vulkan_Image* image,
+void vulkan_image_copy_from_buffer(Vulkan_Context *context,
+    Vulkan_Image *image,
     VkBuffer buffer,
-    Vulkan_Command_Buffer* command_buffer) {
+    Vulkan_Command_Buffer *command_buffer) {
 
     VkBufferImageCopy region;
     memory_zero(&region, sizeof(VkBufferImageCopy));

@@ -5,12 +5,12 @@
 
 #include "vulkan_command_buffer.hpp"
 
-b8 vulkan_buffer_create(Vulkan_Context* context,
+b8 vulkan_buffer_create(Vulkan_Context *context,
     u64 size,
     VkBufferUsageFlags usage,
     u32 memory_property_flags,
     b8 bind_on_create,
-    Vulkan_Buffer* out_buffer) {
+    Vulkan_Buffer *out_buffer) {
 
     memory_zero(out_buffer, sizeof(Vulkan_Buffer));
     out_buffer->total_size = size;
@@ -70,7 +70,7 @@ b8 vulkan_buffer_create(Vulkan_Context* context,
     return true;
 }
 
-void vulkan_buffer_destroy(Vulkan_Context* context, Vulkan_Buffer* buffer) {
+void vulkan_buffer_destroy(Vulkan_Context *context, Vulkan_Buffer *buffer) {
     if (buffer->memory) {
         vkFreeMemory(context->device.logical_device,
             buffer->memory,
@@ -89,9 +89,9 @@ void vulkan_buffer_destroy(Vulkan_Context* context, Vulkan_Buffer* buffer) {
     buffer->is_locked = false;
 }
 
-b8 vulkan_buffer_resize(Vulkan_Context* context,
+b8 vulkan_buffer_resize(Vulkan_Context *context,
     u64 new_size,
-    Vulkan_Buffer* buffer,
+    Vulkan_Buffer *buffer,
     VkQueue queue,
     VkCommandPool pool) {
 
@@ -168,8 +168,8 @@ b8 vulkan_buffer_resize(Vulkan_Context* context,
     return true;
 }
 
-void vulkan_buffer_bind(Vulkan_Context* context,
-    Vulkan_Buffer* buffer,
+void vulkan_buffer_bind(Vulkan_Context *context,
+    Vulkan_Buffer *buffer,
     u64 offset) {
     VK_CHECK(vkBindBufferMemory(context->device.logical_device,
         buffer->handle,
@@ -179,13 +179,13 @@ void vulkan_buffer_bind(Vulkan_Context* context,
 
 // Basically we take whatever is stored in the buffer and map it to the return
 // value data
-void* vulkan_buffer_lock_memory(Vulkan_Context* context,
-    Vulkan_Buffer* buffer,
+void *vulkan_buffer_lock_memory(Vulkan_Context *context,
+    Vulkan_Buffer *buffer,
     u64 offset,
     u64 size,
     u32 flags) {
 
-    void* data;
+    void *data;
     VK_CHECK(vkMapMemory(context->device.logical_device,
         buffer->memory,
         offset,
@@ -196,20 +196,20 @@ void* vulkan_buffer_lock_memory(Vulkan_Context* context,
     return data;
 }
 
-void vulkan_buffer_unlock_memory(Vulkan_Context* context,
-    Vulkan_Buffer* buffer) {
+void vulkan_buffer_unlock_memory(Vulkan_Context *context,
+    Vulkan_Buffer *buffer) {
     vkUnmapMemory(context->device.logical_device, buffer->memory);
 }
 
 // Copy from the buffer's memory
-void vulkan_buffer_load_data(Vulkan_Context* context,
-    Vulkan_Buffer* buffer,
+void vulkan_buffer_load_data(Vulkan_Context *context,
+    Vulkan_Buffer *buffer,
     u64 offset,
     u64 size,
     u32 flags,
-    const void* data) {
+    const void *data) {
 
-    void* data_ptr;
+    void *data_ptr;
 
     VK_CHECK(vkMapMemory(context->device.logical_device,
         buffer->memory,
@@ -222,7 +222,7 @@ void vulkan_buffer_load_data(Vulkan_Context* context,
     vkUnmapMemory(context->device.logical_device, buffer->memory);
 }
 
-void vulkan_buffer_copy_to(Vulkan_Context* context,
+void vulkan_buffer_copy_to(Vulkan_Context *context,
     VkCommandPool pool,
     VkFence fence,
     VkQueue queue,

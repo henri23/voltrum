@@ -13,10 +13,10 @@ b8 material_system_init(Material_System_Config config);
 
 void material_system_shutdown();
 
-Material* material_system_acquire(const char* name);
+Material *material_system_acquire(const char *name);
 
-Material* material_system_acquire_from_config(Material_Config config);
+Material *material_system_acquire_from_config(Material_Config config);
 
-void material_system_release(const char* name);
+void material_system_release(const char *name);
 
-Material* material_system_get_default();
+Material *material_system_get_default();

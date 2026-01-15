@@ -38,8 +38,12 @@ void input_update() {
     }
 
     // Copy current state to previous state for edge detection
-    memory_copy(input_state.keys_prev, input_state.keys, sizeof(input_state.keys));
-    memory_copy(input_state.mouse_buttons_prev, input_state.mouse_buttons, sizeof(input_state.mouse_buttons));
+    memory_copy(input_state.keys_prev,
+        input_state.keys,
+        sizeof(input_state.keys));
+    memory_copy(input_state.mouse_buttons_prev,
+        input_state.mouse_buttons,
+        sizeof(input_state.mouse_buttons));
 
     // Update mouse delta
     input_state.mouse_delta_x = input_state.mouse_x - input_state.mouse_prev_x;
@@ -88,7 +92,7 @@ void input_process_mouse_wheel(f32 delta_x, f32 delta_y) {
     input_state.mouse_wheel_delta_y = delta_y;
 }
 
-Input_State* input_get_state() {
+Input_State *input_get_state() {
     if (!input_state.is_initialized) {
         return nullptr;
     }
@@ -112,14 +116,16 @@ b8 input_was_key_pressed(Key_Code key_code) {
     if (!input_state.is_initialized || (u32)key_code >= 512) {
         return false;
     }
-    return input_state.keys[(u32)key_code] && !input_state.keys_prev[(u32)key_code];
+    return input_state.keys[(u32)key_code] &&
+           !input_state.keys_prev[(u32)key_code];
 }
 
 b8 input_was_key_released(Key_Code key_code) {
     if (!input_state.is_initialized || (u32)key_code >= 512) {
         return false;
     }
-    return !input_state.keys[(u32)key_code] && input_state.keys_prev[(u32)key_code];
+    return !input_state.keys[(u32)key_code] &&
+           input_state.keys_prev[(u32)key_code];
 }
 
 b8 input_is_mouse_button_pressed(Mouse_Button button) {
@@ -137,12 +143,14 @@ b8 input_was_mouse_button_pressed(Mouse_Button button) {
     if (!input_state.is_initialized || (u8)button >= 8) {
         return false;
     }
-    return input_state.mouse_buttons[(u8)button] && !input_state.mouse_buttons_prev[(u8)button];
+    return input_state.mouse_buttons[(u8)button] &&
+           !input_state.mouse_buttons_prev[(u8)button];
 }
 
 b8 input_was_mouse_button_released(Mouse_Button button) {
     if (!input_state.is_initialized || (u8)button >= 8) {
         return false;
     }
-    return !input_state.mouse_buttons[(u8)button] && input_state.mouse_buttons_prev[(u8)button];
+    return !input_state.mouse_buttons[(u8)button] &&
+           input_state.mouse_buttons_prev[(u8)button];
 }

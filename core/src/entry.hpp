@@ -6,7 +6,7 @@
 #include "defines.hpp"
 
 // Client must implement this function to initialize their state
-extern b8 create_client(Client* client_state);
+extern b8 create_client(Client *client_state);
 
 int main() {
     // Stack-allocate client state (following koala_engine pattern)

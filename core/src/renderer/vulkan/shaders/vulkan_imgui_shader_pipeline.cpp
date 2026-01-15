@@ -9,8 +9,8 @@
 
 #include <imgui_impl_vulkan.h>
 
-b8 vulkan_imgui_shader_pipeline_create(Vulkan_Context* context,
-    Vulkan_ImGui_Shader_Pipeline* out_shader) {
+b8 vulkan_imgui_shader_pipeline_create(Vulkan_Context *context,
+    Vulkan_ImGui_Shader_Pipeline *out_shader) {
 
     // Keep ImGui texture descriptor and sampler setup, but skip custom pipeline
     // creation so ImGui manages its own pipeline.
@@ -91,8 +91,8 @@ b8 vulkan_imgui_shader_pipeline_create(Vulkan_Context* context,
     return true;
 }
 
-void vulkan_imgui_shader_pipeline_destroy(Vulkan_Context* context,
-    Vulkan_ImGui_Shader_Pipeline* shader) {
+void vulkan_imgui_shader_pipeline_destroy(Vulkan_Context *context,
+    Vulkan_ImGui_Shader_Pipeline *shader) {
 
     VkDevice logical_device = context->device.logical_device;
 
@@ -111,9 +111,9 @@ void vulkan_imgui_shader_pipeline_destroy(Vulkan_Context* context,
     vulkan_graphics_pipeline_destroy(context, &shader->pipeline);
 }
 
-void vulkan_imgui_shader_pipeline_draw(Vulkan_Context* context,
-    Vulkan_ImGui_Shader_Pipeline* shader,
-    ImDrawData* draw_data) {
+void vulkan_imgui_shader_pipeline_draw(Vulkan_Context *context,
+    Vulkan_ImGui_Shader_Pipeline *shader,
+    ImDrawData *draw_data) {
 
     (void)shader;
 
@@ -131,15 +131,15 @@ void vulkan_imgui_shader_pipeline_draw(Vulkan_Context* context,
         return;
     }
 
-    Vulkan_Command_Buffer* cmd_buffer =
+    Vulkan_Command_Buffer *cmd_buffer =
         &context->command_buffers[context->image_index];
 
     ImGui_ImplVulkan_RenderDrawData(draw_data, cmd_buffer->handle);
 }
 
 VkDescriptorSet vulkan_imgui_shader_pipeline_create_texture_descriptor(
-    Vulkan_Context* context,
-    Vulkan_ImGui_Shader_Pipeline* shader,
+    Vulkan_Context *context,
+    Vulkan_ImGui_Shader_Pipeline *shader,
     VkImageView image_view) {
     // Use the existing linear sampler from the shader
     VkDescriptorSet descriptor =
@@ -162,8 +162,8 @@ void vulkan_imgui_shader_pipeline_remove_texture_descriptor(
 }
 
 void vulkan_imgui_shader_pipeline_create_viewport_descriptors(
-    Vulkan_Context* context,
-    Vulkan_ImGui_Shader_Pipeline* shader) {
+    Vulkan_Context *context,
+    Vulkan_ImGui_Shader_Pipeline *shader) {
     // Create descriptor for each swapchain image's color attachment
     for (u32 i = 0; i < context->swapchain.image_count; ++i) {
         shader->viewport_descriptors[i] =
@@ -183,7 +183,7 @@ void vulkan_imgui_shader_pipeline_create_viewport_descriptors(
 }
 
 void vulkan_imgui_shader_pipeline_destroy_viewport_descriptors(
-    Vulkan_ImGui_Shader_Pipeline* shader) {
+    Vulkan_ImGui_Shader_Pipeline *shader) {
     for (u32 i = 0; i < 3; ++i) {
         if (shader->viewport_descriptors[i] != VK_NULL_HANDLE) {
             vulkan_imgui_shader_pipeline_remove_texture_descriptor(

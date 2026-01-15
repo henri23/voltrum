@@ -65,7 +65,7 @@ void events_register_callback(Event_Type event_type,
         return;
     }
 
-    Auto_Array<Event_Callback_Entry>& callbacks =
+    Auto_Array<Event_Callback_Entry> &callbacks =
         event_state.callbacks[(u32)event_type];
 
     // Create new callback entry
@@ -108,7 +108,7 @@ void events_unregister_callback(Event_Type event_type,
         return;
     }
 
-    Auto_Array<Event_Callback_Entry>& callbacks =
+    Auto_Array<Event_Callback_Entry> &callbacks =
         event_state.callbacks[(u32)event_type];
     for (u32 i = 0; i < callbacks.length; ++i) {
         if (callbacks[i].callback == callback) {
@@ -123,7 +123,7 @@ void events_unregister_callback(Event_Type event_type,
         (int)event_type);
 }
 
-void events_dispatch(const Event* event) {
+void events_dispatch(const Event *event) {
     if (!event_state.is_initialized) {
         return;
     }
@@ -133,7 +133,7 @@ void events_dispatch(const Event* event) {
         return;
     }
 
-    Auto_Array<Event_Callback_Entry>& callbacks =
+    Auto_Array<Event_Callback_Entry> &callbacks =
         event_state.callbacks[(u32)event->type];
 
     // Dispatch to all callbacks for this event type in priority order

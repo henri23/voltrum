@@ -13,8 +13,8 @@
 
 #define BUILTIN_SHADER_NAME_MATERIAL "Builtin.MaterialShader"
 
-b8 vulkan_material_shader_pipeline_create(Vulkan_Context* context,
-    Vulkan_Material_Shader_Pipeline* out_shader) {
+b8 vulkan_material_shader_pipeline_create(Vulkan_Context *context,
+    Vulkan_Material_Shader_Pipeline *out_shader) {
 
     char stage_type_strs[VULKAN_MATERIAL_SHADER_STAGE_COUNT][5] = {"vert",
         "frag"};
@@ -264,8 +264,8 @@ b8 vulkan_material_shader_pipeline_create(Vulkan_Context* context,
     return true;
 }
 
-void vulkan_material_shader_pipeline_destroy(Vulkan_Context* context,
-    Vulkan_Material_Shader_Pipeline* shader) {
+void vulkan_material_shader_pipeline_destroy(Vulkan_Context *context,
+    Vulkan_Material_Shader_Pipeline *shader) {
 
     VkDevice logical_device = context->device.logical_device;
 
@@ -303,8 +303,8 @@ void vulkan_material_shader_pipeline_destroy(Vulkan_Context* context,
     }
 }
 
-void vulkan_material_shader_pipeline_use(Vulkan_Context* context,
-    Vulkan_Material_Shader_Pipeline* shader) {
+void vulkan_material_shader_pipeline_use(Vulkan_Context *context,
+    Vulkan_Material_Shader_Pipeline *shader) {
     u32 image_index = context->image_index;
     vulkan_graphics_pipeline_bind(&context->command_buffers[image_index],
         VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -315,8 +315,8 @@ void vulkan_material_shader_pipeline_use(Vulkan_Context* context,
 // operation for the descriptor sets for instead I need to implement the updated
 // pattern, because nertheless I need to just bind once
 void vulkan_material_shader_pipeline_update_global_state(
-    Vulkan_Context* context,
-    Vulkan_Material_Shader_Pipeline* shader,
+    Vulkan_Context *context,
+    Vulkan_Material_Shader_Pipeline *shader,
     f32 delta_time) {
 
     u32 image_index = context->image_index;
@@ -372,8 +372,8 @@ void vulkan_material_shader_pipeline_update_global_state(
         0);
 }
 
-void vulkan_material_shader_pipeline_set_model(Vulkan_Context* context,
-    Vulkan_Material_Shader_Pipeline* shader,
+void vulkan_material_shader_pipeline_set_model(Vulkan_Context *context,
+    Vulkan_Material_Shader_Pipeline *shader,
     mat4 model) {
 
     if (context && shader) {
@@ -394,9 +394,9 @@ void vulkan_material_shader_pipeline_set_model(Vulkan_Context* context,
     }
 }
 
-void vulkan_material_shader_pipeline_apply_material(Vulkan_Context* context,
-    Vulkan_Material_Shader_Pipeline* shader,
-    Material* material) {
+void vulkan_material_shader_pipeline_apply_material(Vulkan_Context *context,
+    Vulkan_Material_Shader_Pipeline *shader,
+    Material *material) {
 
     if (!context || !shader)
         return;
@@ -406,7 +406,7 @@ void vulkan_material_shader_pipeline_apply_material(Vulkan_Context* context,
         context->command_buffers[image_index].handle;
 
     // Obtain material data
-    Vulkan_Material_Shader_Object_State* object_state =
+    Vulkan_Material_Shader_Object_State *object_state =
         &shader->object_states[material->internal_id];
 
     VkDescriptorSet object_descriptor_set =
@@ -435,7 +435,7 @@ void vulkan_material_shader_pipeline_apply_material(Vulkan_Context* context,
         0,
         &instance_ubo);
 
-    u32* global_ubo_generation =
+    u32 *global_ubo_generation =
         &object_state->descriptor_states[descriptor_index]
              .generations[image_index];
 
@@ -472,7 +472,7 @@ void vulkan_material_shader_pipeline_apply_material(Vulkan_Context* context,
         ++sampler_index) {
 
         Texture_Type use = shader->sampler_uses[sampler_index];
-        Texture* texture = nullptr;
+        Texture *texture = nullptr;
 
         switch (use) {
         case Texture_Type::MAP_DIFFUSE:
@@ -483,11 +483,11 @@ void vulkan_material_shader_pipeline_apply_material(Vulkan_Context* context,
             return;
         }
 
-        u32* descriptor_generation =
+        u32 *descriptor_generation =
             &object_state->descriptor_states[descriptor_index]
                  .generations[image_index];
 
-        u32* descriptor_id =
+        u32 *descriptor_id =
             &object_state->descriptor_states[descriptor_index].ids[image_index];
 
         // If the texture hasn't been loaded yet, use the default texture
@@ -502,8 +502,8 @@ void vulkan_material_shader_pipeline_apply_material(Vulkan_Context* context,
                            *descriptor_generation != texture->generation ||
                            *descriptor_generation == INVALID_ID)) {
 
-            Vulkan_Texture_Data* internal_data =
-                static_cast<Vulkan_Texture_Data*>(texture->internal_data);
+            Vulkan_Texture_Data *internal_data =
+                static_cast<Vulkan_Texture_Data *>(texture->internal_data);
             image_infos[sampler_index].imageLayout =
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
@@ -549,14 +549,14 @@ void vulkan_material_shader_pipeline_apply_material(Vulkan_Context* context,
         0);
 }
 
-b8 vulkan_material_shader_pipeline_acquire_resource(Vulkan_Context* context,
-    Vulkan_Material_Shader_Pipeline* shader,
-    Material* material) {
+b8 vulkan_material_shader_pipeline_acquire_resource(Vulkan_Context *context,
+    Vulkan_Material_Shader_Pipeline *shader,
+    Material *material) {
     // TODO: Change the memory management inside the gpu buffer to freelist
     material->internal_id = shader->object_uniform_buffer_index;
     shader->object_uniform_buffer_index++;
 
-    Vulkan_Material_Shader_Object_State* object_state =
+    Vulkan_Material_Shader_Object_State *object_state =
         &shader->object_states[material->internal_id];
 
     for (u32 i = 0; i < VULKAN_MATERIAL_SHADER_DESCRIPTOR_COUNT; ++i) {
@@ -591,9 +591,9 @@ b8 vulkan_material_shader_pipeline_acquire_resource(Vulkan_Context* context,
     return true;
 }
 
-void vulkan_material_shader_pipeline_release_resource(Vulkan_Context* context,
-    Vulkan_Material_Shader_Pipeline* shader,
-    Material* material) {
+void vulkan_material_shader_pipeline_release_resource(Vulkan_Context *context,
+    Vulkan_Material_Shader_Pipeline *shader,
+    Material *material) {
 
     constexpr u32 descriptor_set_count = 3;
 

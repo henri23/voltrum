@@ -8,10 +8,10 @@
 #include "renderer/vulkan/vulkan_device.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
-void create_swapchain(Vulkan_Context* context,
+void create_swapchain(Vulkan_Context *context,
     u32 width,
     u32 height,
-    Vulkan_Swapchain* out_swapchain) {
+    Vulkan_Swapchain *out_swapchain) {
 
     // To create the swapchain we need first to make 3 decisions:
     // 1. Choose the color format that we want
@@ -21,7 +21,7 @@ void create_swapchain(Vulkan_Context* context,
     // 	  size
 
     // Retrieve the device specific swapchain support info
-    Vulkan_Swapchain_Support_Info* swapchain_info =
+    Vulkan_Swapchain_Support_Info *swapchain_info =
         &context->device.swapchain_info;
 
     // Choose prefered format from available formats of the logical device
@@ -78,7 +78,7 @@ void create_swapchain(Vulkan_Context* context,
         selected_present_mode = VK_PRESENT_MODE_FIFO_KHR;
 
     // Log the selected presentation mode
-    const char* present_mode_name = "UNKNOWN";
+    const char *present_mode_name = "UNKNOWN";
     switch (selected_present_mode) {
     case VK_PRESENT_MODE_IMMEDIATE_KHR:
         present_mode_name = "IMMEDIATE (no vsync)";
@@ -189,13 +189,13 @@ void create_swapchain(Vulkan_Context* context,
         nullptr);
 
     if (!out_swapchain->images) {
-        out_swapchain->images = static_cast<VkImage*>(
+        out_swapchain->images = static_cast<VkImage *>(
             memory_allocate(sizeof(VkImage) * out_swapchain->image_count,
                 Memory_Tag::RENDERER));
     }
 
     if (!out_swapchain->views) {
-        out_swapchain->views = static_cast<VkImageView*>(
+        out_swapchain->views = static_cast<VkImageView *>(
             memory_allocate(sizeof(VkImageView) * out_swapchain->image_count,
                 Memory_Tag::RENDERER));
     }
@@ -259,18 +259,18 @@ void create_swapchain(Vulkan_Context* context,
     CORE_INFO("Vulkan swapchain successfully created.");
 }
 
-void vulkan_swapchain_create(Vulkan_Context* context,
+void vulkan_swapchain_create(Vulkan_Context *context,
     u32 width,
     u32 height,
-    Vulkan_Swapchain* out_swapchain) {
+    Vulkan_Swapchain *out_swapchain) {
 
     create_swapchain(context, width, height, out_swapchain);
 }
 
-void vulkan_swapchain_recreate(Vulkan_Context* context,
+void vulkan_swapchain_recreate(Vulkan_Context *context,
     u32 width,
     u32 height,
-    Vulkan_Swapchain* out_swapchain) {
+    Vulkan_Swapchain *out_swapchain) {
 
     CORE_DEBUG("Destroying previous swapchain...");
 
@@ -281,8 +281,8 @@ void vulkan_swapchain_recreate(Vulkan_Context* context,
     create_swapchain(context, width, height, out_swapchain);
 }
 
-void vulkan_swapchain_destroy(Vulkan_Context* context,
-    Vulkan_Swapchain* swapchain) {
+void vulkan_swapchain_destroy(Vulkan_Context *context,
+    Vulkan_Swapchain *swapchain) {
 
     vkDeviceWaitIdle(context->device.logical_device);
 

@@ -26,7 +26,7 @@ struct Memory_System_State {
 
 internal_var Memory_System_State state = {};
 
-internal_var const char* memory_tag_strings[(u64)Memory_Tag::MAX_ENTRIES] = {
+internal_var const char *memory_tag_strings[(u64)Memory_Tag::MAX_ENTRIES] = {
     "UNKNOWN  	:",
     "ARRAY   	:",
     "DARRAY   	:",
@@ -47,9 +47,9 @@ internal_var const char* memory_tag_strings[(u64)Memory_Tag::MAX_ENTRIES] = {
 
 void memory_init() {}
 
-void memory_shutdown(void* state) {}
+void memory_shutdown(void *state) {}
 
-void* memory_allocate(u64 size, Memory_Tag tag) {
+void *memory_allocate(u64 size, Memory_Tag tag) {
     if (tag == Memory_Tag::UNKNOWN) {
         CORE_WARN(
             "The memory is being initialized as UNKNOWN. Please allocated it "
@@ -61,14 +61,14 @@ void* memory_allocate(u64 size, Memory_Tag tag) {
     state.allocations_count++;
 
     // Every chunk of memory will be set to 0 automatically
-    void* block = platform_allocate(size, true);
+    void *block = platform_allocate(size, true);
 
     platform_zero_memory(block, size);
 
     return block;
 }
 
-void memory_deallocate(void* block, u64 size, Memory_Tag tag) {
+void memory_deallocate(void *block, u64 size, Memory_Tag tag) {
 
     state.stats.tagged_allocations[(u64)tag] -= size;
     state.stats.total_allocated -= size;
@@ -76,11 +76,11 @@ void memory_deallocate(void* block, u64 size, Memory_Tag tag) {
     return platform_free(block, true);
 }
 
-void* memory_zero(void* block, u64 size) {
+void *memory_zero(void *block, u64 size) {
     return platform_zero_memory(block, size);
 }
 
-void* memory_copy(void* destination, const void* source, u64 size) {
+void *memory_copy(void *destination, const void *source, u64 size) {
     b8 is_overlap = false;
 
     u64 dest_addr = reinterpret_cast<u64>(destination);
@@ -112,15 +112,15 @@ void* memory_copy(void* destination, const void* source, u64 size) {
     }
 }
 
-void* memory_move(void* destination, const void* source, u64 size) {
+void *memory_move(void *destination, const void *source, u64 size) {
     return platform_move_memory(destination, source, size);
 }
 
-void* memory_set(void* block, s32 value, u64 size) {
+void *memory_set(void *block, s32 value, u64 size) {
     return platform_set_memory(block, value, size);
 }
 
-void memory_get_current_usage(char* out_buf) {
+void memory_get_current_usage(char *out_buf) {
     char utilization_buffer[5000] = "Summary of allocated memory (tagged):\n";
 
     u64 offset = strlen(

@@ -9,11 +9,11 @@ struct ImGuiStyle;
  * Available UI themes
  */
 enum class UI_Theme {
-    DARK = 0,        // Current Walnut-inspired dark theme
-    LIGHT,           // Light theme
-    CATPPUCCIN,      // Catppuccin Mocha color scheme
-    TOKYO,           // Tokyo Night color scheme
-    COUNT            // Number of available themes
+    DARK = 0,   // Current Walnut-inspired dark theme
+    LIGHT,      // Light theme
+    CATPPUCCIN, // Catppuccin Mocha color scheme
+    TOKYO,      // Tokyo Night color scheme
+    COUNT       // Number of available themes
 };
 
 /**
@@ -33,7 +33,7 @@ struct UI_Theme_Palette {
     u32 window_bg;
     u32 property_field;
     u32 background_popup;
-    u32 clear_color;        // Window clear/background color
+    u32 clear_color; // Window clear/background color
 
     // Titlebar gradient colors
     u32 titlebar_gradient_start;
@@ -90,14 +90,14 @@ struct UI_Theme_Palette {
  * @param theme - Theme to apply
  * @param style - ImGui style to modify
  */
-void ui_themes_apply(UI_Theme theme, ImGuiStyle& style);
+void ui_themes_apply(UI_Theme theme, ImGuiStyle &style);
 
 /**
  * Get theme palette
  * @param theme - Theme to get palette for
  * @return Theme color palette
  */
-const UI_Theme_Palette& ui_themes_get_palette(UI_Theme theme);
+const UI_Theme_Palette &ui_themes_get_palette(UI_Theme theme);
 
 /**
  * Get clear color from theme palette as ImVec4

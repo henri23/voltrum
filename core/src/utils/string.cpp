@@ -10,11 +10,11 @@
 #    include <strings.h>
 #endif
 
-b8 string_check_equal(const char* str1, const char* str2) {
+b8 string_check_equal(const char *str1, const char *str2) {
     return strcmp(str1, str2) == 0;
 }
 
-b8 string_check_equal_insensitive(const char* str1, const char* str2) {
+b8 string_check_equal_insensitive(const char *str1, const char *str2) {
 #if defined(PLATFORM_WINDOWS)
     return _stricmp(str1, str2) == 0;
 #else
@@ -22,7 +22,7 @@ b8 string_check_equal_insensitive(const char* str1, const char* str2) {
 #endif
 }
 
-s32 string_format(char* dest, const char* format, ...) {
+s32 string_format(char *dest, const char *format, ...) {
     if (dest) {
 
         va_list arg_ptr; // Pointer to args
@@ -36,7 +36,7 @@ s32 string_format(char* dest, const char* format, ...) {
     return -1;
 }
 
-s32 string_format_v(char* dest, const char* format, va_list va_list) {
+s32 string_format_v(char *dest, const char *format, va_list va_list) {
     if (dest) {
         char buffer[32000];
         s32 written = vsnprintf(buffer, 32000, format, va_list);
@@ -49,7 +49,7 @@ s32 string_format_v(char* dest, const char* format, va_list va_list) {
     return -1;
 }
 
-char* string_empty(char* str) {
+char *string_empty(char *str) {
     if (str) {
         str[0] = '\0';
     }
@@ -57,7 +57,7 @@ char* string_empty(char* str) {
     return str;
 }
 
-u64 string_length(const char* string) {
+u64 string_length(const char *string) {
     u64 length = 0;
     // Continue to iterate inside the string until we find the
     // null terminator /0 whose ASCII value is 0
@@ -67,21 +67,21 @@ u64 string_length(const char* string) {
     return length;
 }
 
-char* string_copy(char* dest, const char* source) {
+char *string_copy(char *dest, const char *source) {
     return strcpy(dest, source);
 }
 
-char* string_ncopy(char* dest, const char* source, u64 max_length) {
+char *string_ncopy(char *dest, const char *source, u64 max_length) {
     return strncpy(dest, source, max_length);
 }
 
-char* string_duplicate(const char* source) {
+char *string_duplicate(const char *source) {
     if (!source) {
         return nullptr;
     }
 
     u64 length = string_length(source);
-    char* duplicate = static_cast<char*>(
+    char *duplicate = static_cast<char *>(
         memory_allocate((length + 1) * sizeof(char), Memory_Tag::STRING));
 
     if (duplicate) {
@@ -94,8 +94,8 @@ char* string_duplicate(const char* source) {
 // This method does not allocate memory, but instead it modifies the existing
 // string. If the string provided was dynamically allocated, the original
 // pointer must be kept, and used for memory deallocation.
-char* string_trim(char* str) {
-    char* end;
+char *string_trim(char *str) {
+    char *end;
 
     while (isspace((unsigned char)*str))
         str++;
@@ -116,7 +116,7 @@ char* string_trim(char* str) {
 // This method dynamically allocates a new substring with trimmed whitespaces
 // Must be deallocated by the called. It returns the length of the new allocated
 // string
-u64 string_trim_copy(const char* src_str, char* out_str) {
+u64 string_trim_copy(const char *src_str, char *out_str) {
     u64 length = 0;
 
     while (isspace((unsigned)*src_str))
@@ -126,14 +126,14 @@ u64 string_trim_copy(const char* src_str, char* out_str) {
         out_str = nullptr;
     }
 
-    const char* end = src_str + string_length(src_str) - 1;
+    const char *end = src_str + string_length(src_str) - 1;
     while (end > src_str && isspace((unsigned char)*end))
         end--;
 
     length = end - src_str;
 
     // WARN: Potential memory leak if not properly deallocate
-    out_str = static_cast<char*>(
+    out_str = static_cast<char *>(
         memory_allocate(length * sizeof(char), Memory_Tag::STRING));
 
     string_ncopy(out_str, src_str, length);
@@ -142,7 +142,7 @@ u64 string_trim_copy(const char* src_str, char* out_str) {
     return length;
 }
 
-void string_substr(char* dest, const char* source, s32 start, s32 length) {
+void string_substr(char *dest, const char *source, s32 start, s32 length) {
     if (length == 0)
         return;
 
@@ -169,7 +169,7 @@ void string_substr(char* dest, const char* source, s32 start, s32 length) {
     }
 }
 
-s32 string_index_of(char* str, char character) {
+s32 string_index_of(char *str, char character) {
     if (!str) {
         return -1;
     }
@@ -186,7 +186,7 @@ s32 string_index_of(char* str, char character) {
     return -1;
 }
 
-b8 string_to_vec4(char* str, vec4* out_vec4) {
+b8 string_to_vec4(char *str, vec4 *out_vec4) {
     if (!str || !out_vec4) {
         return false;
     }
@@ -201,7 +201,7 @@ b8 string_to_vec4(char* str, vec4* out_vec4) {
     return result == 4;
 }
 
-b8 string_to_vec3(char* str, vec3* out_vec3) {
+b8 string_to_vec3(char *str, vec3 *out_vec3) {
     if (!str || !out_vec3) {
         return false;
     }
@@ -212,7 +212,7 @@ b8 string_to_vec3(char* str, vec3* out_vec3) {
     return result == 3;
 }
 
-b8 string_to_vec2(char* str, vec2* out_vec2) {
+b8 string_to_vec2(char *str, vec2 *out_vec2) {
     if (!str || !out_vec2) {
         return false;
     }
@@ -222,7 +222,7 @@ b8 string_to_vec2(char* str, vec2* out_vec2) {
     return result == 2;
 }
 
-b8 string_to_f32(char* str, f32* out_float) {
+b8 string_to_f32(char *str, f32 *out_float) {
     if (!str || !out_float) {
         return false;
     }
@@ -232,7 +232,7 @@ b8 string_to_f32(char* str, f32* out_float) {
     return result == 1;
 }
 
-b8 string_to_f64(char* str, f64* out_double) {
+b8 string_to_f64(char *str, f64 *out_double) {
     if (!str || !out_double) {
         return false;
     }
@@ -242,7 +242,7 @@ b8 string_to_f64(char* str, f64* out_double) {
     return result == 1;
 }
 
-b8 string_to_bool(char* str, b8* out_bool) {
+b8 string_to_bool(char *str, b8 *out_bool) {
     if (!str || !out_bool) {
         return false;
     }

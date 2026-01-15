@@ -20,17 +20,17 @@ struct Material_System_State {
     Material default_material;
 
     Hashmap<Material_Reference> material_registry;
-    Material* registered_materials;
+    Material *registered_materials;
 };
 
 // TODO: Allocate with allocator
 internal_var Material_System_State state = {};
 
-INTERNAL_FUNC b8 create_default_material(Material_System_State* state);
-INTERNAL_FUNC void destroy_material(Material* material);
-INTERNAL_FUNC b8 load_material(Material_Config config, Material* material);
+INTERNAL_FUNC b8 create_default_material(Material_System_State *state);
+INTERNAL_FUNC void destroy_material(Material *material);
+INTERNAL_FUNC b8 load_material(Material_Config config, Material *material);
 
-Material* material_system_acquire_from_config(Material_Config config);
+Material *material_system_acquire_from_config(Material_Config config);
 
 b8 material_system_init(Material_System_Config config) {
     u32 count = config.max_material_count;
@@ -41,7 +41,7 @@ b8 material_system_init(Material_System_Config config) {
     state.material_registry.init(count);
 
     // Already zeroed out by the allocate function
-    state.registered_materials = static_cast<Material*>(
+    state.registered_materials = static_cast<Material *>(
         memory_allocate(sizeof(Material) * count, Memory_Tag::ARRAY));
 
     // Invalidate all ids present in the material array
@@ -63,7 +63,7 @@ void material_system_shutdown() {
     // Destroy all internal renderer-specific resources for texture that are
     // still valid in the registry
     for (u64 i = 0; i < max_count; ++i) {
-        Material* material = &state.registered_materials[i];
+        Material *material = &state.registered_materials[i];
 
         if (material->id != INVALID_ID) {
             char name[MATERIAL_NAME_MAX_LENGTH];
@@ -86,7 +86,7 @@ void material_system_shutdown() {
     memory_zero(&state, sizeof(Material_System_State));
 }
 
-Material* material_system_acquire(const char* name) {
+Material *material_system_acquire(const char *name) {
     Resource resource = {};
 
     if (!resource_system_load(name, Resource_Type::MATERIAL, &resource)) {
@@ -97,10 +97,10 @@ Material* material_system_acquire(const char* name) {
         return nullptr;
     }
 
-    Material* material = nullptr;
+    Material *material = nullptr;
     if (resource.data) {
         material = material_system_acquire_from_config(
-            *static_cast<Material_Config*>(resource.data));
+            *static_cast<Material_Config *>(resource.data));
     }
 
     resource_system_unload(&resource);
@@ -112,13 +112,13 @@ Material* material_system_acquire(const char* name) {
     return material;
 }
 
-Material* material_system_acquire_from_config(Material_Config config) {
+Material *material_system_acquire_from_config(Material_Config config) {
     if (string_check_equal_insensitive(config.name, DEFAULT_MATERIAL_NAME)) {
         return &state.default_material;
     }
 
     Material_Reference ref;
-    Material* material = nullptr;
+    Material *material = nullptr;
 
     if (state.material_registry.find(config.name, &ref)) {
         CORE_DEBUG(
@@ -168,7 +168,7 @@ Material* material_system_acquire_from_config(Material_Config config) {
     return material;
 }
 
-void material_system_release(const char* name) {
+void material_system_release(const char *name) {
 
     if (string_check_equal_insensitive(name, DEFAULT_MATERIAL_NAME)) {
         CORE_WARN(
@@ -212,7 +212,7 @@ void material_system_release(const char* name) {
     }
 }
 
-INTERNAL_FUNC b8 create_default_material(Material_System_State* state) {
+INTERNAL_FUNC b8 create_default_material(Material_System_State *state) {
     memory_zero(&state->default_material, sizeof(Material));
 
     state->default_material.id = INVALID_ID;
@@ -234,7 +234,7 @@ INTERNAL_FUNC b8 create_default_material(Material_System_State* state) {
     return true;
 }
 
-INTERNAL_FUNC void destroy_material(Material* material) {
+INTERNAL_FUNC void destroy_material(Material *material) {
     CORE_TRACE("Destroying material '%s'", material->name);
 
     if (material->diffuse_map.texture) {
@@ -248,7 +248,7 @@ INTERNAL_FUNC void destroy_material(Material* material) {
     material->internal_id = INVALID_ID;
 }
 
-INTERNAL_FUNC b8 load_material(Material_Config config, Material* material) {
+INTERNAL_FUNC b8 load_material(Material_Config config, Material *material) {
     memory_zero(material, sizeof(Material));
 
     string_ncopy(material->name, config.name, MATERIAL_NAME_MAX_LENGTH);
@@ -284,4 +284,4 @@ INTERNAL_FUNC b8 load_material(Material_Config config, Material* material) {
     return true;
 }
 
-Material* material_system_get_default() { return &state.default_material; }
+Material *material_system_get_default() { return &state.default_material; }

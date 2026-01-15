@@ -15,18 +15,18 @@
 #include <imgui_impl_sdl3.h>
 
 #ifdef PLATFORM_WINDOWS
-extern "C" void platform_enable_rounded_corners(void* hwnd);
+extern "C" void platform_enable_rounded_corners(void *hwnd);
 #endif
 
-internal_var Platform_State* state_ptr = nullptr;
+internal_var Platform_State *state_ptr = nullptr;
 
 // Hit test callback for native window dragging/resizing
-INTERNAL_FUNC SDL_HitTestResult platform_hit_test_callback(SDL_Window* win,
-    const SDL_Point* area,
-    void* data);
+INTERNAL_FUNC SDL_HitTestResult platform_hit_test_callback(SDL_Window *win,
+    const SDL_Point *area,
+    void *data);
 
-b8 platform_startup(Platform_State* state,
-    const char* application_name,
+b8 platform_startup(Platform_State *state,
+    const char *application_name,
     s32 width,
     s32 height) {
 
@@ -37,7 +37,7 @@ b8 platform_startup(Platform_State* state,
 #ifdef PLATFORM_LINUX
     // On Linux, prefer Wayland over X11 if Wayland is available
     // SDL will automatically fall back to X11 if Wayland is not available
-    const char* wayland_display = getenv("WAYLAND_DISPLAY");
+    const char *wayland_display = getenv("WAYLAND_DISPLAY");
     if (wayland_display && wayland_display[0] != '\0') {
         SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland,x11");
         CORE_DEBUG(
@@ -78,7 +78,7 @@ b8 platform_startup(Platform_State* state,
 
 #ifdef PLATFORM_WINDOWS
     // Enable Windows 11 rounded corners for borderless window
-    void* hwnd =
+    void *hwnd =
         SDL_GetPointerProperty(SDL_GetWindowProperties(state_ptr->window),
             SDL_PROP_WINDOW_WIN32_HWND_POINTER,
             nullptr);
@@ -256,17 +256,17 @@ b8 platform_message_pump() {
     return !quit_flagged;
 }
 
-void platform_get_vulkan_extensions(Auto_Array<const char*>* extensions) {
+void platform_get_vulkan_extensions(Auto_Array<const char *> *extensions) {
     uint32_t sdl_extensions_count = 0;
 
-    const char* const* sdl_extensions =
+    const char *const *sdl_extensions =
         SDL_Vulkan_GetInstanceExtensions(&sdl_extensions_count);
 
     for (uint32_t n = 0; n < sdl_extensions_count; n++)
         extensions->push_back(sdl_extensions[n]);
 }
 
-b8 platform_create_vulkan_surface(Vulkan_Context* context) {
+b8 platform_create_vulkan_surface(Vulkan_Context *context) {
 
     if (!state_ptr)
         return false;
@@ -282,9 +282,9 @@ b8 platform_create_vulkan_surface(Vulkan_Context* context) {
     return true;
 }
 
-SDL_Window* platform_get_window() { return state_ptr->window; }
+SDL_Window *platform_get_window() { return state_ptr->window; }
 
-b8 platform_get_window_details(u32* width, u32* height, f32* main_scale) {
+b8 platform_get_window_details(u32 *width, u32 *height, f32 *main_scale) {
 
     int w, h;
 
@@ -297,23 +297,23 @@ b8 platform_get_window_details(u32* width, u32* height, f32* main_scale) {
     return true;
 }
 
-void* platform_allocate(u64 size, b8 aligned) { return malloc(size); }
+void *platform_allocate(u64 size, b8 aligned) { return malloc(size); }
 
-void platform_free(void* block, b8 aligned) { free(block); }
+void platform_free(void *block, b8 aligned) { free(block); }
 
-void* platform_zero_memory(void* block, u64 size) {
+void *platform_zero_memory(void *block, u64 size) {
     return memset(block, 0, size);
 }
 
-void* platform_copy_memory(void* dest, const void* source, u64 size) {
+void *platform_copy_memory(void *dest, const void *source, u64 size) {
     return memcpy(dest, source, size);
 }
 
-void* platform_move_memory(void* dest, const void* source, u64 size) {
+void *platform_move_memory(void *dest, const void *source, u64 size) {
     return memmove(dest, source, size);
 }
 
-void* platform_set_memory(void* dest, s32 value, u64 size) {
+void *platform_set_memory(void *dest, s32 value, u64 size) {
     return memset(dest, value, size);
 }
 
@@ -324,7 +324,7 @@ f64 platform_get_absolute_time() {
 
 void platform_sleep(u64 ms) { SDL_Delay((u32)ms); }
 
-b8 platform_get_drawable_size(u32* width, u32* height) {
+b8 platform_get_drawable_size(u32 *width, u32 *height) {
     if (!state_ptr || !state_ptr->window)
         return false;
 
@@ -377,13 +377,13 @@ b8 platform_is_window_maximized() {
     return false;
 }
 
-void platform_set_window_icon(u8* pixels, u32 width, u32 height) {
+void platform_set_window_icon(u8 *pixels, u32 width, u32 height) {
     if (!state_ptr || !state_ptr->window || !pixels) {
         CORE_WARN("platform_set_window_icon: Invalid parameters");
         return;
     }
 
-    SDL_Surface* icon_surface = SDL_CreateSurfaceFrom(width,
+    SDL_Surface *icon_surface = SDL_CreateSurfaceFrom(width,
         height,
         SDL_PIXELFORMAT_RGBA32,
         pixels,
@@ -400,10 +400,10 @@ void platform_set_window_icon(u8* pixels, u32 width, u32 height) {
 }
 
 void platform_get_required_extensions(
-    Auto_Array<const char*>* required_extensions) {
+    Auto_Array<const char *> *required_extensions) {
     // Get the extensions needed by SDL3 for Vulkan
     Uint32 extension_count = 0;
-    const char* const* extensions =
+    const char *const *extensions =
         SDL_Vulkan_GetInstanceExtensions(&extension_count);
 
     if (!extensions) {
@@ -436,7 +436,7 @@ void platform_set_window_position(s32 x, s32 y) {
     }
 }
 
-void platform_get_window_position(s32* x, s32* y) {
+void platform_get_window_position(s32 *x, s32 *y) {
     if (state_ptr && state_ptr->window) {
         SDL_GetWindowPosition(state_ptr->window, x, y);
     } else {
@@ -451,7 +451,7 @@ void platform_set_window_size(s32 width, s32 height) {
     }
 }
 
-void platform_get_window_size(s32* width, s32* height) {
+void platform_get_window_size(s32 *width, s32 *height) {
     if (state_ptr && state_ptr->window) {
         SDL_GetWindowSize(state_ptr->window, width, height);
     } else {
@@ -464,9 +464,9 @@ void platform_set_titlebar_hovered(b8 hovered) {
     state_ptr->is_titlebar_hovered = hovered;
 }
 
-INTERNAL_FUNC SDL_HitTestResult platform_hit_test_callback(SDL_Window* win,
-    const SDL_Point* area,
-    void* data) {
+INTERNAL_FUNC SDL_HitTestResult platform_hit_test_callback(SDL_Window *win,
+    const SDL_Point *area,
+    void *data) {
 
     int window_width, window_height;
     SDL_GetWindowSize(win, &window_width, &window_height);

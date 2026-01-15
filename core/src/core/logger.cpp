@@ -12,7 +12,7 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 
 // Consistent log format for all loggers
-internal_var const char* LOG_PATTERN =
+internal_var const char *LOG_PATTERN =
     "%^[%Y-%m-%d %H:%M:%S.%e] [%-12n] [%-7l] %v%$";
 
 // Smart pointer loggers
@@ -21,7 +21,7 @@ internal_var std::shared_ptr<spdlog::logger> client_logger = nullptr;
 
 // Helper function to create logger with consistent format and file output
 INTERNAL_FUNC std::shared_ptr<spdlog::logger>
-create_logger(const char* logger_name, const char* file_name) {
+create_logger(const char *logger_name, const char *file_name) {
 
     // TODO: Change later and move away from <filesystem> library
     // Ensure logs directory exists
@@ -93,7 +93,7 @@ b8 log_init() {
         CORE_DEBUG("Log subsystem initialized.");
 
         return true;
-    } catch (const std::exception& ex) {
+    } catch (const std::exception &ex) {
         // Log initialization failure to default logger
         default_console_logger->error("Logger initialization failed: {}",
             ex.what());
@@ -125,7 +125,7 @@ void log_shutdown() {
     CORE_DEBUG("Logger shut down.");
 }
 
-void log_output(Log_Scope scope, Log_Level level, const char* message, ...) {
+void log_output(Log_Scope scope, Log_Level level, const char *message, ...) {
 
     // Select the appropriate logger based on scope
     std::shared_ptr<spdlog::logger> logger = nullptr;
@@ -182,9 +182,9 @@ void log_output(Log_Scope scope, Log_Level level, const char* message, ...) {
     }
 }
 
-VOLTRUM_API void report_assertion_failure(const char* expression,
-    const char* message,
-    const char* file,
+VOLTRUM_API void report_assertion_failure(const char *expression,
+    const char *message,
+    const char *file,
     s32 line) {
 
     default_console_logger->critical(

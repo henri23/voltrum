@@ -21,8 +21,8 @@
 INTERNAL_FUNC void application_set_window_icon() {
     Resource icon_resource = {};
     if (resource_system_load("voltrum", Resource_Type::ICON, &icon_resource)) {
-        Image_Resource_Data* icon_data =
-            static_cast<Image_Resource_Data*>(icon_resource.data);
+        Image_Resource_Data *icon_data =
+            static_cast<Image_Resource_Data *>(icon_resource.data);
 
         platform_set_window_icon(icon_data->pixels,
             icon_data->width,
@@ -40,7 +40,7 @@ constexpr u32 TARGET_FPS = 140;
 constexpr f64 TARGET_FRAME_TIME = 1 / (f64)TARGET_FPS;
 
 struct Internal_App_State {
-    Client* client;
+    Client *client;
     b8 is_running;
     b8 is_suspended;
     u16 width;
@@ -51,13 +51,13 @@ struct Internal_App_State {
 
     UI_Context ui_context;
 
-    Geometry* test_geometry;
+    Geometry *test_geometry;
 };
 
 // Internal pointer to application state for easy access
-internal_var Internal_App_State* internal_state = nullptr;
+internal_var Internal_App_State *internal_state = nullptr;
 
-INTERNAL_FUNC b8 app_escape_key_callback(const Event* event) {
+INTERNAL_FUNC b8 app_escape_key_callback(const Event *event) {
     if (event->key.key_code == Key_Code::ESCAPE && !event->key.repeat) {
         CORE_INFO("ESC key pressed - closing application");
         internal_state->is_running = false;
@@ -65,12 +65,12 @@ INTERNAL_FUNC b8 app_escape_key_callback(const Event* event) {
     return false; // Don't consume, let other callbacks process
 }
 
-INTERNAL_FUNC b8 app_on_debug_event(const Event* event) {
-    const char* names[3] = {"metal", "space_parallax", "yellow_track"};
+INTERNAL_FUNC b8 app_on_debug_event(const Event *event) {
+    const char *names[3] = {"metal", "space_parallax", "yellow_track"};
 
     local_persist s8 choice = 0;
 
-    const char* old_name = names[choice];
+    const char *old_name = names[choice];
 
     choice++;
     choice %= 3;
@@ -90,12 +90,12 @@ INTERNAL_FUNC b8 app_on_debug_event(const Event* event) {
     return true;
 }
 
-void application_get_framebuffer_size(u32* width, u32* height) {
+void application_get_framebuffer_size(u32 *width, u32 *height) {
     *width = internal_state->width;
     *height = internal_state->height;
 }
 
-INTERNAL_FUNC b8 app_on_resized_callback(const Event* event) {
+INTERNAL_FUNC b8 app_on_resized_callback(const Event *event) {
 
     if (event->window_resize.width != internal_state->width ||
         event->window_resize.height != internal_state->height) {
@@ -124,7 +124,7 @@ INTERNAL_FUNC b8 app_on_resized_callback(const Event* event) {
     return false;
 }
 
-b8 application_init(Client* client_state) {
+b8 application_init(Client *client_state) {
     RUNTIME_ASSERT_MSG(client_state, "Client state cannot be null");
 
     // Protect against multiple initialization
@@ -138,7 +138,7 @@ b8 application_init(Client* client_state) {
         memory_allocate(sizeof(Internal_App_State), Memory_Tag::APPLICATION);
 
     internal_state =
-        static_cast<Internal_App_State*>(client_state->internal_app_state);
+        static_cast<Internal_App_State *>(client_state->internal_app_state);
 
     internal_state->client = client_state;
 

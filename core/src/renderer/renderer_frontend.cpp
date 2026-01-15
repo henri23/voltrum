@@ -23,7 +23,7 @@ struct Renderer_System_State {
 
 internal_var Renderer_System_State state;
 
-b8 renderer_startup(const char* application_name) {
+b8 renderer_startup(const char *application_name) {
 
     if (!renderer_backend_initialize(Renderer_Backend_Type::VULKAN,
             &state.backend)) {
@@ -66,7 +66,7 @@ void renderer_on_resize(u16 width, u16 height) {
     state.backend.resized(&state.backend, width, height);
 }
 
-b8 renderer_draw_frame(Render_Packet* packet) {
+b8 renderer_draw_frame(Render_Packet *packet) {
     if (state.backend.begin_frame(&state.backend, packet->delta_time)) {
 
         if (!state.backend.start_renderpass(&state.backend,
@@ -132,44 +132,38 @@ b8 renderer_draw_frame(Render_Packet* packet) {
 
 void renderer_set_view(mat4 view) { state.view = view; }
 
-void renderer_create_texture(
-    const u8* pixels,
-    struct Texture* texture,
-    b8 is_ui_texture
-) {
-    state.backend.create_texture(
-        pixels,
-        texture,
-        is_ui_texture
-    );
+void renderer_create_texture(const u8 *pixels,
+    struct Texture *texture,
+    b8 is_ui_texture) {
+    state.backend.create_texture(pixels, texture, is_ui_texture);
 }
 
-void renderer_destroy_texture(struct Texture* texture) {
+void renderer_destroy_texture(struct Texture *texture) {
     state.backend.destroy_texture(texture);
 }
 
-void* renderer_get_texture_draw_data(struct Texture* texture) {
+void *renderer_get_texture_draw_data(struct Texture *texture) {
     if (!texture || !texture->internal_data) {
         return nullptr;
     }
 
-    Vulkan_Texture_Data* data = (Vulkan_Texture_Data*)texture->internal_data;
-    return (void*)(intptr_t)data->ui_descriptor_set;
+    Vulkan_Texture_Data *data = (Vulkan_Texture_Data *)texture->internal_data;
+    return (void *)(intptr_t)data->ui_descriptor_set;
 }
 
-b8 renderer_create_material(struct Material* material) {
+b8 renderer_create_material(struct Material *material) {
     return state.backend.create_material(material);
 }
 
-void renderer_destroy_material(struct Material* material) {
+void renderer_destroy_material(struct Material *material) {
     return state.backend.destroy_material(material);
 }
 
-b8 renderer_create_geometry(Geometry* geometry,
+b8 renderer_create_geometry(Geometry *geometry,
     u32 vertex_count,
-    const vertex_3d* vertices,
+    const vertex_3d *vertices,
     u32 index_count,
-    u32* indices) {
+    u32 *indices) {
 
     return state.backend.create_geometry(geometry,
         vertex_count,
@@ -178,7 +172,7 @@ b8 renderer_create_geometry(Geometry* geometry,
         indices);
 }
 
-void renderer_destroy_geometry(Geometry* geometry) {
+void renderer_destroy_geometry(Geometry *geometry) {
     state.backend.destroy_geometry(geometry);
 }
 
@@ -186,30 +180,22 @@ void renderer_render_viewport() {
     state.backend.render_viewport(&state.backend);
 }
 
-void* renderer_get_rendered_viewport() {
+void *renderer_get_rendered_viewport() {
     return state.backend.get_rendered_viewport(&state.backend);
 }
 
-void renderer_resize_viewport(
-    u32 width,
-    u32 height
-) {
+void renderer_resize_viewport(u32 width, u32 height) {
     state.backend.resize_viewport(&state.backend, width, height);
 
     // Update projection matrix for new aspect ratio
     if (height > 0) {
-        state.projection = mat4_project_perspective(
-            deg_to_rad(45.0f),
+        state.projection = mat4_project_perspective(deg_to_rad(45.0f),
             width / (f32)height,
             state.near_clip,
-            state.far_clip
-        );
+            state.far_clip);
     }
 }
 
-void renderer_get_viewport_size(
-    u32* width,
-    u32* height
-) {
+void renderer_get_viewport_size(u32 *width, u32 *height) {
     state.backend.get_viewport_size(&state.backend, width, height);
 }

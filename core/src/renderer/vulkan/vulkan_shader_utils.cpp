@@ -6,12 +6,12 @@
 #include "systems/resource_system.hpp"
 #include "utils/string.hpp"
 
-b8 create_shader_module(Vulkan_Context* context,
-    const char* name,
-    const char* type_str,
+b8 create_shader_module(Vulkan_Context *context,
+    const char *name,
+    const char *type_str,
     VkShaderStageFlagBits shader_stage_flag,
     u32 stage_index,
-    Vulkan_Shader_Stage* shader_stages) {
+    Vulkan_Shader_Stage *shader_stages) {
 
     char file_name[512];
     string_format(file_name, "shaders/%s.%s.spv", name, type_str);
@@ -31,7 +31,7 @@ b8 create_shader_module(Vulkan_Context* context,
         VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     shader_stages[stage_index].create_info.codeSize = binary_resource.data_size;
     shader_stages[stage_index].create_info.pCode =
-        static_cast<u32*>(binary_resource.data);
+        static_cast<u32 *>(binary_resource.data);
 
     VK_CHECK(vkCreateShaderModule(context->device.logical_device,
         &shader_stages[stage_index].create_info,

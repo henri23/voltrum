@@ -9,16 +9,16 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-INTERNAL_FUNC b8 image_loader_load(struct Resource_Loader* self,
-    const char* name,
-    Resource* out_resource) {
+INTERNAL_FUNC b8 image_loader_load(struct Resource_Loader *self,
+    const char *name,
+    Resource *out_resource) {
 
     if (!self || !name || !out_resource) {
         CORE_ERROR("image_loader_load - Ensure all pointers are not nullptr");
         return false;
     }
 
-    const char* format_str = "%s/%s/%s%s";
+    const char *format_str = "%s/%s/%s%s";
     const s32 required_channel_count = 4; // RGBA
 
     // NOTE: Most images are stored in a format where the data is actually
@@ -47,13 +47,13 @@ INTERNAL_FUNC b8 image_loader_load(struct Resource_Loader* self,
     // from stbi and using stbi_image_free to free the data so that we
     // completelly shift to the voltrum memory management system and do not have
     // inconsitencies when I potentially change the memory management system
-    u8* data = stbi_load(full_file_path,
+    u8 *data = stbi_load(full_file_path,
         &width,
         &height,
         &channel_count,
         required_channel_count);
 
-    const char* fail_reason = stbi_failure_reason();
+    const char *fail_reason = stbi_failure_reason();
     if (fail_reason) {
         CORE_ERROR("Image resource loader failed to load file '%s': '%s'",
             full_file_path,
@@ -79,8 +79,8 @@ INTERNAL_FUNC b8 image_loader_load(struct Resource_Loader* self,
     u32 pixel_data_size = width * height * required_channel_count;
 
     // Copy stbi data to our memory system
-    u8* pixels =
-        static_cast<u8*>(memory_allocate(pixel_data_size, Memory_Tag::TEXTURE));
+    u8 *pixels = static_cast<u8 *>(
+        memory_allocate(pixel_data_size, Memory_Tag::TEXTURE));
     memory_copy(pixels, data, pixel_data_size);
 
     // Free stbi allocated memory immediately
@@ -90,7 +90,7 @@ INTERNAL_FUNC b8 image_loader_load(struct Resource_Loader* self,
     out_resource->full_path = string_duplicate(full_file_path);
 
     // TODO: Allocator
-    Image_Resource_Data* resource_data = static_cast<Image_Resource_Data*>(
+    Image_Resource_Data *resource_data = static_cast<Image_Resource_Data *>(
         memory_allocate(sizeof(Image_Resource_Data), Memory_Tag::TEXTURE));
 
     resource_data->pixels = pixels;
@@ -105,8 +105,8 @@ INTERNAL_FUNC b8 image_loader_load(struct Resource_Loader* self,
     return true;
 }
 
-INTERNAL_FUNC void image_loader_unload(struct Resource_Loader* self,
-    Resource* resource) {
+INTERNAL_FUNC void image_loader_unload(struct Resource_Loader *self,
+    Resource *resource) {
     if (!self || !resource) {
         CORE_WARN(
             "image_loader_unload called with nullptr for self of resource.");
@@ -121,8 +121,8 @@ INTERNAL_FUNC void image_loader_unload(struct Resource_Loader* self,
     }
 
     if (resource->data) {
-        Image_Resource_Data* image_data =
-            static_cast<Image_Resource_Data*>(resource->data);
+        Image_Resource_Data *image_data =
+            static_cast<Image_Resource_Data *>(resource->data);
 
         // Free the pixel data first
         if (image_data->pixels) {

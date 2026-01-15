@@ -20,17 +20,17 @@ using Loader_ID = u32;
 // of the resource and deleting it
 struct Resource {
     Loader_ID loader_id;
-    const char* name;
-    char* full_path;
+    const char *name;
+    char *full_path;
     u64 data_size; // Size of the data stored in the opaque member void* data
-    void* data;
+    void *data;
 };
 
 struct Image_Resource_Data {
     u8 channel_count;
     u32 width;
     u32 height;
-    u8* pixels;
+    u8 *pixels;
 };
 
 using Texture_ID = u32;
@@ -45,7 +45,7 @@ struct Texture {
     b8 is_ui_texture;
     u32 generation;
     char name[TEXTURE_NAME_MAX_LENGTH];
-    void* internal_data;
+    void *internal_data;
 };
 
 // Bitmask
@@ -58,7 +58,7 @@ enum class Texture_Type {
 ENABLE_BITMASK(Texture_Type); // Enable c++ enum to be used as bitmask
 
 struct Texture_Map {
-    Texture* texture;
+    Texture *texture;
     Texture_Type type;
 };
 
@@ -89,5 +89,5 @@ struct Geometry {
     u32 internal_id;
     u32 generation;
     char name[GEOMETRY_NAME_MAX_LENGTH];
-    Material* material;
+    Material *material;
 };

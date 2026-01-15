@@ -5,16 +5,16 @@
 #include "platform/filesystem.hpp"
 #include "utils/string.hpp"
 
-INTERNAL_FUNC b8 material_resource_load(struct Resource_Loader* self,
-    const char* name,
-    Resource* out_resource) {
+INTERNAL_FUNC b8 material_resource_load(struct Resource_Loader *self,
+    const char *name,
+    Resource *out_resource) {
     if (!self || !name || !out_resource) {
         CORE_ERROR(
             "material_loader_load - Ensure all pointers are not nullptr");
         return false;
     }
 
-    const char* format_str = "%s/%s/%s%s";
+    const char *format_str = "%s/%s/%s%s";
     char full_file_path[512];
 
     string_format(full_file_path,
@@ -35,7 +35,7 @@ INTERNAL_FUNC b8 material_resource_load(struct Resource_Loader* self,
         return false;
     }
 
-    Material_Config* resource_data = static_cast<Material_Config*>(
+    Material_Config *resource_data = static_cast<Material_Config *>(
         memory_allocate(sizeof(Material_Config), Memory_Tag::MATERIAL));
     // Set default values
     resource_data->auto_release = true;
@@ -44,13 +44,13 @@ INTERNAL_FUNC b8 material_resource_load(struct Resource_Loader* self,
     string_ncopy(resource_data->name, name, MATERIAL_NAME_MAX_LENGTH);
 
     char line_buffer[512] = "";
-    char* p = &line_buffer[0];
+    char *p = &line_buffer[0];
 
     u64 line_length = 0;
     u32 line_number = 1;
 
     while (filesystem_read_line(&file, 511, &p, &line_length)) {
-        char* trimmed = string_trim(line_buffer);
+        char *trimmed = string_trim(line_buffer);
 
         line_length = string_length(trimmed);
 
@@ -74,7 +74,7 @@ INTERNAL_FUNC b8 material_resource_load(struct Resource_Loader* self,
         char raw_var_name[64];
         memory_zero(raw_var_name, sizeof(char) * 64);
         string_substr(raw_var_name, trimmed, 0, equal_index);
-        char* trimmed_var_name = string_trim(raw_var_name);
+        char *trimmed_var_name = string_trim(raw_var_name);
 
         // Assume a max line length of 511 - 64 (for the variable name)
         char raw_value[446];
@@ -83,7 +83,7 @@ INTERNAL_FUNC b8 material_resource_load(struct Resource_Loader* self,
             trimmed,
             equal_index + 1,
             -1); // Proceede until the end of the string
-        char* trimmed_value = string_trim(raw_value);
+        char *trimmed_value = string_trim(raw_value);
 
         if (string_check_equal_insensitive(trimmed_var_name, "version")) {
             // TODO: handle version
@@ -125,8 +125,8 @@ INTERNAL_FUNC b8 material_resource_load(struct Resource_Loader* self,
     return true;
 }
 
-INTERNAL_FUNC void material_resource_unload(struct Resource_Loader* self,
-    Resource* resource) {
+INTERNAL_FUNC void material_resource_unload(struct Resource_Loader *self,
+    Resource *resource) {
     if (!self || !resource) {
         CORE_WARN(
             "text_loader_unload called with nullptr for self of resource.");

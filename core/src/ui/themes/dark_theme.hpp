@@ -1,8 +1,8 @@
 #pragma once
 
 #include "defines.hpp"
-#include "ui/ui_themes.hpp"
 #include "imgui.h"
+#include "ui/ui_themes.hpp"
 
 // Dark theme palette (current Walnut-inspired theme) - C++17 compatible
 static const UI_Theme_Palette dark_palette = {

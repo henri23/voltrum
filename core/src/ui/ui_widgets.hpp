@@ -11,16 +11,16 @@
 namespace ui {
 
     // Rounded MenuItem - same API as ImGui::MenuItem but with rounded hover
-    inline bool MenuItem(const char* label,
-        const char* shortcut = nullptr,
+    inline bool MenuItem(const char *label,
+        const char *shortcut = nullptr,
         bool selected = false,
         bool enabled = true) {
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
+        ImGuiWindow *window = ImGui::GetCurrentWindow();
         if (window->SkipItems)
             return false;
 
-        ImGuiContext& g = *GImGui;
-        ImGuiStyle& style = g.Style;
+        ImGuiContext &g = *GImGui;
+        ImGuiStyle &style = g.Style;
         ImVec2 pos = window->DC.CursorPos;
         ImVec2 label_size = ImGui::CalcTextSize(label, nullptr, true);
 
@@ -48,7 +48,8 @@ namespace ui {
             &held,
             ImGuiButtonFlags_PressedOnRelease);
 
-        // Render rounded background on hover (use WindowRounding for consistency)
+        // Render rounded background on hover (use WindowRounding for
+        // consistency)
         if (hovered && enabled) {
             ImU32 col = ImGui::GetColorU32(
                 held ? ImGuiCol_HeaderActive : ImGuiCol_HeaderHovered);
@@ -100,21 +101,21 @@ namespace ui {
         ImRect active_menu_rect = {};
     };
 
-    inline MenuState& GetMenuState() {
+    inline MenuState &GetMenuState() {
         static MenuState state;
         return state;
     }
 
     // Rounded BeginMenu - hover-based menu with rounded corners
-    inline bool BeginMenu(const char* label, bool enabled = true) {
-        ImGuiWindow* window = ImGui::GetCurrentWindow();
+    inline bool BeginMenu(const char *label, bool enabled = true) {
+        ImGuiWindow *window = ImGui::GetCurrentWindow();
         if (window->SkipItems)
             return false;
 
-        ImGuiContext& g = *GImGui;
-        ImGuiStyle& style = g.Style;
+        ImGuiContext &g = *GImGui;
+        ImGuiStyle &style = g.Style;
         ImGuiID id = window->GetID(label);
-        MenuState& menu_state = GetMenuState();
+        MenuState &menu_state = GetMenuState();
 
         ImVec2 pos = window->DC.CursorPos;
         ImVec2 label_size = ImGui::CalcTextSize(label, nullptr, true);
@@ -122,8 +123,10 @@ namespace ui {
         // For menu bar items (horizontal layout)
         if (window->DC.LayoutType == ImGuiLayoutType_Horizontal) {
             // Custom padding for menu bar items
-            const float padding_x = 16.0f; // Horizontal padding from text to border
-            const float padding_y = 4.0f;  // Vertical padding from text to border
+            const float padding_x =
+                16.0f; // Horizontal padding from text to border
+            const float padding_y =
+                4.0f; // Vertical padding from text to border
 
             // Override item spacing to place rectangles adjacent
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, 0.0f));
@@ -149,7 +152,8 @@ namespace ui {
                 is_active_menu = true;
             }
 
-            // Render rounded background (use WindowRounding to match popup corners)
+            // Render rounded background (use WindowRounding to match popup
+            // corners)
             if (is_active_menu || item_hovered) {
                 ImU32 col =
                     ImGui::GetColorU32(is_active_menu ? ImGuiCol_HeaderActive
@@ -183,7 +187,7 @@ namespace ui {
 
                 if (ImGui::Begin(window_name, nullptr, flags)) {
                     // Check if mouse is outside both menu item and popup
-                    ImGuiWindow* popup_window = ImGui::GetCurrentWindow();
+                    ImGuiWindow *popup_window = ImGui::GetCurrentWindow();
                     ImRect popup_rect(popup_window->Pos,
                         popup_window->Pos + popup_window->Size);
 
