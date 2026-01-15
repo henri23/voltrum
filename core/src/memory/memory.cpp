@@ -131,15 +131,15 @@ void memory_get_current_usage(char* out_buf) {
         char usage_unit[4] = "XiB";
         f32 amount = 1.0f;
 
-        if (state.stats.tagged_allocations[i] >= GIB) {
+        if (state.stats.tagged_allocations[i] >= GiB) {
             usage_unit[0] = 'G';
-            amount = (float)state.stats.tagged_allocations[i] / GIB;
-        } else if (state.stats.tagged_allocations[i] >= MIB) {
+            amount = (float)state.stats.tagged_allocations[i] / GiB;
+        } else if (state.stats.tagged_allocations[i] >= MiB) {
             usage_unit[0] = 'M';
-            amount = (float)state.stats.tagged_allocations[i] / MIB;
-        } else if (state.stats.tagged_allocations[i] >= KIB) {
+            amount = (float)state.stats.tagged_allocations[i] / MiB;
+        } else if (state.stats.tagged_allocations[i] >= KiB) {
             usage_unit[0] = 'K';
-            amount = (float)state.stats.tagged_allocations[i] / KIB;
+            amount = (float)state.stats.tagged_allocations[i] / KiB;
         } else {
             usage_unit[0] = 'B';
             usage_unit[1] = 0; // Append a null termination character to

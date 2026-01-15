@@ -1,10 +1,10 @@
 #include "vulkan_device.hpp"
 
 #include "core/logger.hpp"
-#include "utils/string.hpp"
 #include "data_structures/auto_array.hpp"
 #include "memory/memory.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
+#include "utils/string.hpp"
 #include <vulkan/vulkan_core.h>
 
 struct Device_Queue_Indices {
@@ -162,7 +162,7 @@ b8 select_physical_device(Vulkan_Context* context,
 
             for (u32 j = 0; j < device_memory_properties.memoryHeapCount; ++j) {
                 f32 memory_size =
-                    device_memory_properties.memoryHeaps[j].size / (float)GIB;
+                    device_memory_properties.memoryHeaps[j].size / (float)GiB;
                 if (device_memory_properties.memoryHeaps[j].flags &
                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
                     CORE_DEBUG("Local GPU memory: %.2f GiB", memory_size);

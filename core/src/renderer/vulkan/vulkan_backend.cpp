@@ -558,7 +558,8 @@ b8 vulkan_begin_frame(Renderer_Backend* backend, f32 delta_t) {
 
     // At this point we have an image index that we can render to!vulkan_backend
 
-    // Make sure this specific image (and its command buffer) is not still in use
+    // Make sure this specific image (and its command buffer) is not still in
+    // use
     if (context.images_in_flight[context.image_index] != nullptr) {
         VkResult result = vkWaitForFences(context.device.logical_device,
             1,
@@ -1106,7 +1107,8 @@ b8 recreate_swapchain(Renderer_Backend* backend, b8 is_resized_event) {
     context.ui_renderpass.render_area.x = 0;
     context.ui_renderpass.render_area.y = 0;
 
-    // regenerate_framebuffers() handles both destruction and creation with proper NULL checks
+    // regenerate_framebuffers() handles both destruction and creation with
+    // proper NULL checks
     regenerate_framebuffers();
 
     // Recreate main renderer command buffers
