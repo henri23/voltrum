@@ -39,9 +39,9 @@ STATIC_ASSERT(sizeof(s64) == 8, "Expected s64 to be 8 bytes");
 STATIC_ASSERT(sizeof(f32) == 4, "Expected f32 to be 4 bytes");
 STATIC_ASSERT(sizeof(f64) == 8, "Expected f64 to be 8 bytes");
 
-constexpr u64 GIB(1 << 30);
-constexpr u64 MIB(1 << 20);
-constexpr u64 KIB(1 << 10);
+constexpr u64 GiB(1 << 30);
+constexpr u64 MiB(1 << 20);
+constexpr u64 KiB(1 << 10);
 
 #define local_persist static
 #define internal_var static

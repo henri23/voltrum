@@ -383,12 +383,16 @@ void platform_set_window_icon(u8* pixels, u32 width, u32 height) {
         return;
     }
 
-    SDL_Surface* icon_surface = SDL_CreateSurfaceFrom(
-        width, height, SDL_PIXELFORMAT_RGBA32, pixels, width * 4);
+    SDL_Surface* icon_surface = SDL_CreateSurfaceFrom(width,
+        height,
+        SDL_PIXELFORMAT_RGBA32,
+        pixels,
+        width * 4);
 
     if (icon_surface) {
         SDL_SetWindowIcon(state_ptr->window, icon_surface);
         SDL_DestroySurface(icon_surface);
+
         CORE_DEBUG("Window icon set successfully (%dx%d)", width, height);
     } else {
         CORE_WARN("Failed to create SDL surface for icon: %s", SDL_GetError());
