@@ -44,12 +44,12 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context *context,
     rasterizer_create_info.polygonMode =
         is_wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 
-    // Disable backface culling for now to ensure triangle is visible regardless
-    // of winding order
-    rasterizer_create_info.cullMode = VK_CULL_MODE_NONE;
+    // Enable backface culling
+    rasterizer_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
 
     // Decides what is considered the front face of a triangle
-    rasterizer_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    // CW because negative viewport height flips winding
+    rasterizer_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
     // Disables depth bias. Depth bias is used to tweak depth values to avoid
     // z-fighting. typically for decals or shadow mapping

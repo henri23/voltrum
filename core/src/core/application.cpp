@@ -228,37 +228,47 @@ b8 application_init(Client *client_state) {
         MATERIAL_NAME_MAX_LENGTH);
 
     f32 s = 1.0f; // half-size
-    // Front face (+Z)
-    g_config.vertices[0] = {{-s, -s, s}, {0, 1}};
-    g_config.vertices[1] = {{s, -s, s}, {1, 1}};
-    g_config.vertices[2] = {{s, s, s}, {1, 0}};
-    g_config.vertices[3] = {{-s, s, s}, {0, 0}};
-    // Back face (-Z)
-    g_config.vertices[4] = {{s, -s, -s}, {0, 1}};
-    g_config.vertices[5] = {{-s, -s, -s}, {1, 1}};
-    g_config.vertices[6] = {{-s, s, -s}, {1, 0}};
-    g_config.vertices[7] = {{s, s, -s}, {0, 0}};
-    // Top face (+Y)
-    g_config.vertices[8] = {{-s, s, s}, {0, 1}};
-    g_config.vertices[9] = {{s, s, s}, {1, 1}};
-    g_config.vertices[10] = {{s, s, -s}, {1, 0}};
-    g_config.vertices[11] = {{-s, s, -s}, {0, 0}};
-    // Bottom face (-Y)
-    g_config.vertices[12] = {{-s, -s, -s}, {0, 1}};
-    g_config.vertices[13] = {{s, -s, -s}, {1, 1}};
-    g_config.vertices[14] = {{s, -s, s}, {1, 0}};
-    g_config.vertices[15] = {{-s, -s, s}, {0, 0}};
-    // Right face (+X)
-    g_config.vertices[16] = {{s, -s, s}, {0, 1}};
-    g_config.vertices[17] = {{s, -s, -s}, {1, 1}};
-    g_config.vertices[18] = {{s, s, -s}, {1, 0}};
-    g_config.vertices[19] = {{s, s, s}, {0, 0}};
-    // Left face (-X)
-    g_config.vertices[20] = {{-s, -s, -s}, {0, 1}};
-    g_config.vertices[21] = {{-s, -s, s}, {1, 1}};
-    g_config.vertices[22] = {{-s, s, s}, {1, 0}};
-    g_config.vertices[23] = {{-s, s, -s}, {0, 0}};
-    // Indices (2 triangles per face)
+
+    // Vertices wound CLOCKWISE when viewed from outside each face
+    // (CW = front face with negative viewport height in Vulkan)
+
+    // Front face (+Z) - looking from +Z toward origin
+    g_config.vertices[0] = {{-s, -s, s}, {0, 1}};  // bottom-left
+    g_config.vertices[1] = {{-s, s, s}, {0, 0}};   // top-left
+    g_config.vertices[2] = {{s, s, s}, {1, 0}};    // top-right
+    g_config.vertices[3] = {{s, -s, s}, {1, 1}};   // bottom-right
+
+    // Back face (-Z) - looking from -Z toward origin
+    g_config.vertices[4] = {{s, -s, -s}, {0, 1}};  // bottom-left
+    g_config.vertices[5] = {{s, s, -s}, {0, 0}};   // top-left
+    g_config.vertices[6] = {{-s, s, -s}, {1, 0}};  // top-right
+    g_config.vertices[7] = {{-s, -s, -s}, {1, 1}}; // bottom-right
+
+    // Top face (+Y) - looking from +Y toward origin
+    g_config.vertices[8] = {{-s, s, s}, {0, 1}};   // bottom-left
+    g_config.vertices[9] = {{-s, s, -s}, {0, 0}};  // top-left
+    g_config.vertices[10] = {{s, s, -s}, {1, 0}};  // top-right
+    g_config.vertices[11] = {{s, s, s}, {1, 1}};   // bottom-right
+
+    // Bottom face (-Y) - looking from -Y toward origin
+    g_config.vertices[12] = {{-s, -s, -s}, {0, 1}}; // bottom-left
+    g_config.vertices[13] = {{-s, -s, s}, {0, 0}};  // top-left
+    g_config.vertices[14] = {{s, -s, s}, {1, 0}};   // top-right
+    g_config.vertices[15] = {{s, -s, -s}, {1, 1}};  // bottom-right
+
+    // Right face (+X) - looking from +X toward origin
+    g_config.vertices[16] = {{s, -s, s}, {0, 1}};  // bottom-left
+    g_config.vertices[17] = {{s, s, s}, {0, 0}};   // top-left
+    g_config.vertices[18] = {{s, s, -s}, {1, 0}};  // top-right
+    g_config.vertices[19] = {{s, -s, -s}, {1, 1}}; // bottom-right
+
+    // Left face (-X) - looking from -X toward origin
+    g_config.vertices[20] = {{-s, -s, -s}, {0, 1}}; // bottom-left
+    g_config.vertices[21] = {{-s, s, -s}, {0, 0}};  // top-left
+    g_config.vertices[22] = {{-s, s, s}, {1, 0}};   // top-right
+    g_config.vertices[23] = {{-s, -s, s}, {1, 1}};  // bottom-right
+
+    // Indices: two triangles per face (0,1,2) and (0,2,3)
     u32 base_idx[] = {0, 1, 2, 0, 2, 3};
     for (u32 f = 0; f < 6; ++f) {
         for (u32 i = 0; i < 6; ++i) {

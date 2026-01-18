@@ -425,11 +425,10 @@ FORCE_INLINE mat4 mat4_project_perspective(f32 fov_radians,
 
     out_matrix.elements[0] = 1.0f / (aspect_ratio * half_tan_fov);
     out_matrix.elements[5] = 1.0f / half_tan_fov;
-    out_matrix.elements[10] =
-        -((far_clip + near_clip) / (far_clip - near_clip));
+    // Vulkan depth range [0, 1]
+    out_matrix.elements[10] = far_clip / (near_clip - far_clip);
     out_matrix.elements[11] = -1.0f;
-    out_matrix.elements[14] =
-        -((2.0f * far_clip * near_clip) / (far_clip - near_clip));
+    out_matrix.elements[14] = (near_clip * far_clip) / (near_clip - far_clip);
 
     return out_matrix;
 }
