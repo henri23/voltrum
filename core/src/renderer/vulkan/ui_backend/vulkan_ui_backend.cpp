@@ -5,6 +5,7 @@
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
+#include <implot.h>
 
 INTERNAL_FUNC void check_vk_result(VkResult err) {
     if (err == VK_SUCCESS)
@@ -27,6 +28,7 @@ b8 vulkan_ui_backend_initialize(Vulkan_Context *context, void *window) {
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     ImGuiIO &io = ImGui::GetIO();
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -91,6 +93,7 @@ void vulkan_ui_backend_shutdown(Vulkan_Context *context) {
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
 
     CORE_INFO("ImGui UI backend shutdown complete");

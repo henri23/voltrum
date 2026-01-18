@@ -14,3 +14,11 @@ UI_Layer create_editor_layer();
 // Demo window control - accessible from menu callback
 void editor_toggle_demo_window();
 b8 editor_is_demo_window_visible();
+
+// ImPlot demo window control
+void editor_toggle_implot_demo_window();
+b8 editor_is_implot_demo_window_visible();
+
+// Signal analyzer panel control
+void editor_toggle_signal_analyzer();
+b8 editor_is_signal_analyzer_visible();

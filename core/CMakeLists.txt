@@ -94,3 +94,19 @@ target_link_libraries(imgui PUBLIC SDL3::SDL3 Vulkan::Vulkan)
 
 # Link imgui into core (PUBLIC so client can access ImGui headers)
 target_link_libraries(${PROJECT_NAME} PUBLIC imgui)
+
+# ImPlot setup (plotting library for ImGui)
+set(IMPLOT_DIR ${CMAKE_SOURCE_DIR}/external/implot)
+
+set(IMPLOT_SRC
+    ${IMPLOT_DIR}/implot.cpp
+    ${IMPLOT_DIR}/implot_items.cpp
+    ${IMPLOT_DIR}/implot_demo.cpp # optional
+)
+
+add_library(implot STATIC ${IMPLOT_SRC})
+target_include_directories(implot PUBLIC ${IMPLOT_DIR})
+target_link_libraries(implot PUBLIC imgui)
+
+# Link implot into core (PUBLIC so client can access ImPlot headers)
+target_link_libraries(${PROJECT_NAME} PUBLIC implot)

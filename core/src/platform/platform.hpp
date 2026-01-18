@@ -31,6 +31,7 @@ void *platform_set_memory(void *dest, s32 value, u64 size);
 // Virtual memory - OS lazily backs with physical pages on first access.
 // Pages are guaranteed to be zero-initialized when first accessed.
 void *platform_virtual_memory_reserve(u64 size);
+void *platform_virtual_memory_commit(void *memory);
 void platform_virtual_memory_release(void *block);
 u64 platform_query_page_size();
 

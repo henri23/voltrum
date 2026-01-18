@@ -9,6 +9,7 @@ echo.
 set LINKING_MODE=STATIC
 set RUN_TESTS=true
 set USE_ASAN=false
+set CLEAN_BUILD=false
 
 :parse_args
 if "%~1"=="" goto end_parse
@@ -27,16 +28,22 @@ if "%~1"=="--asan" (
     shift
     goto parse_args
 )
+if "%~1"=="--clean" (
+    set CLEAN_BUILD=true
+    shift
+    goto parse_args
+)
 if "%~1"=="/help" goto show_help
 if "%~1"=="--help" goto show_help
 echo Unknown option: %~1
 goto show_help
 
 :show_help
-echo Usage: %0 [--dynamic] [--skip-tests] [--asan]
+echo Usage: %0 [--dynamic] [--skip-tests] [--asan] [--clean]
 echo   --dynamic      Build with dynamic linking (DLL)
 echo   --skip-tests   Skip building and running tests
 echo   --asan         Enable AddressSanitizer for debugging
+echo   --clean        Remove build directory before configuring
 echo   (default)      Build with static linking and run tests
 exit /b 1
 
@@ -83,6 +90,14 @@ if "%USE_ASAN%"=="true" (
 ) else (
     set CMAKE_SANITIZER_FLAGS=
     echo AddressSanitizer: Disabled
+)
+
+:: Clean build directory if requested
+if "%CLEAN_BUILD%"=="true" (
+    if exist bin (
+        echo Removing existing build directory [clean build]...
+        rmdir /s /q bin
+    )
 )
 
 :: Ensure bin directory

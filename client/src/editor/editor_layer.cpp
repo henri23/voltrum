@@ -30,8 +30,13 @@ struct Editor_Layer_State {
     f32 fps_accumulator;
     u32 fps_frame_count;
 
-    // Demo window
+    // Demo windows
     b8 show_demo_window;
+    b8 show_implot_demo_window;
+
+    // Signal analyzer panel
+    b8 show_signal_analyzer;
+    f32 signal_time;
 };
 
 // Static pointer to editor state for demo window control from menu callback
@@ -51,6 +56,8 @@ INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera *camera,
 INTERNAL_FUNC void render_viewport_window(Editor_Layer_State *state,
     f32 delta_time);
 INTERNAL_FUNC void render_statistics_window(Editor_Layer_State *state,
+    f32 delta_time);
+INTERNAL_FUNC void render_signal_analyzer(Editor_Layer_State *state,
     f32 delta_time);
 
 void editor_layer_on_attach(UI_Layer *self) {
@@ -73,8 +80,13 @@ void editor_layer_on_attach(UI_Layer *self) {
     state->fps_accumulator = 0.0f;
     state->fps_frame_count = 0;
 
-    // Demo window
-    state->show_demo_window = false;
+    // Demo windows
+    state->show_demo_window = true;
+    state->show_implot_demo_window = true;
+
+    // Signal analyzer
+    state->show_signal_analyzer = true;
+    state->signal_time = 0.0f;
 
     u32 width = 0;
     u32 height = 0;
@@ -120,8 +132,16 @@ b8 editor_layer_on_render(UI_Layer *self, f32 delta_time) {
     render_viewport_window(state, delta_time);
     render_statistics_window(state, delta_time);
 
+    if (state->show_signal_analyzer) {
+        render_signal_analyzer(state, delta_time);
+    }
+
     if (state->show_demo_window) {
         ImGui::ShowDemoWindow(&state->show_demo_window);
+    }
+
+    if (state->show_implot_demo_window) {
+        ImPlot::ShowDemoWindow(&state->show_implot_demo_window);
     }
 
     return true;
@@ -299,6 +319,102 @@ INTERNAL_FUNC void render_statistics_window(Editor_Layer_State *state,
     ImGui::End();
 }
 
+INTERNAL_FUNC void render_signal_analyzer(Editor_Layer_State *state,
+    f32 delta_time) {
+    state->signal_time += delta_time;
+
+    ImGui::Begin(ICON_FA_BOLT " Signal Analyzer", &state->show_signal_analyzer);
+
+    ImGui::Text("Electrical Signal Analysis");
+    ImGui::Separator();
+
+    // Generate sample data for visualization
+    constexpr int sample_count = 512;
+    static f32 time_data[sample_count];
+    static f32 voltage_signal[sample_count];
+    static f32 current_signal[sample_count];
+    static f32 power_signal[sample_count];
+    static f32 pwm_signal[sample_count];
+
+    f32 base_time = state->signal_time;
+
+    for (int i = 0; i < sample_count; ++i) {
+        f32 t = (f32)i / (f32)sample_count * 0.1f;
+        time_data[i] = t * 1000.0f; // Convert to milliseconds
+
+        // AC Voltage signal (60Hz sine wave with harmonics)
+        f32 phase = base_time * 60.0f * math::PI_2;
+        voltage_signal[i] = 120.0f * math_sin(phase + t * 60.0f * math::PI_2);
+        voltage_signal[i] += 8.0f * math_sin(3.0f * (phase + t * 60.0f * math::PI_2)); // 3rd harmonic
+        voltage_signal[i] += 3.0f * math_sin(5.0f * (phase + t * 60.0f * math::PI_2)); // 5th harmonic
+
+        // Current signal (phase shifted, representing inductive load)
+        f32 current_phase = phase + t * 60.0f * math::PI_2 - math::PI / 6.0f;
+        current_signal[i] = 10.0f * math_sin(current_phase);
+
+        // Instantaneous power
+        power_signal[i] = voltage_signal[i] * current_signal[i] * 0.01f;
+
+        // PWM control signal (switching at 20kHz)
+        f32 pwm_val = (base_time + t) * 20000.0f;
+        f32 pwm_phase = pwm_val - (f32)(s32)pwm_val; // fmod equivalent for [0,1)
+        f32 duty_cycle = 0.5f + 0.3f * math_sin(base_time * math::PI);
+        pwm_signal[i] = pwm_phase < duty_cycle ? 5.0f : 0.0f;
+    }
+
+    // Voltage and Current waveforms
+    if (ImPlot::BeginPlot("##VoltageCurrentPlot", ImVec2(-1, 200))) {
+        ImPlot::SetupAxes("Time (ms)", "Amplitude");
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 10, ImGuiCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -150, 150, ImGuiCond_Always);
+        ImPlot::SetupLegend(ImPlotLocation_NorthEast);
+
+        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.9f, 0.4f, 0.1f, 1.0f));
+        ImPlot::PlotLine("Voltage (V)", time_data, voltage_signal, sample_count);
+        ImPlot::PopStyleColor();
+
+        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.2f, 0.7f, 0.9f, 1.0f));
+        ImPlot::PlotLine("Current (A x10)", time_data, current_signal, sample_count);
+        ImPlot::PopStyleColor();
+
+        ImPlot::EndPlot();
+    }
+
+    // Power waveform
+    if (ImPlot::BeginPlot("##PowerPlot", ImVec2(-1, 150))) {
+        ImPlot::SetupAxes("Time (ms)", "Power (W)");
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 10, ImGuiCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -15, 15, ImGuiCond_Always);
+
+        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.3f, 0.9f, 0.4f, 1.0f));
+        ImPlot::SetNextFillStyle(ImVec4(0.3f, 0.9f, 0.4f, 0.25f));
+        ImPlot::PlotShaded("Inst. Power", time_data, power_signal, sample_count);
+        ImPlot::PlotLine("Inst. Power", time_data, power_signal, sample_count);
+        ImPlot::PopStyleColor();
+
+        ImPlot::EndPlot();
+    }
+
+    // PWM Control Signal
+    if (ImPlot::BeginPlot("##PWMPlot", ImVec2(-1, 100))) {
+        ImPlot::SetupAxes("Time (ms)", "PWM (V)");
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 10, ImGuiCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -0.5, 6, ImGuiCond_Always);
+
+        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.9f, 0.2f, 0.6f, 1.0f));
+        ImPlot::PlotLine("PWM Control", time_data, pwm_signal, sample_count);
+        ImPlot::PopStyleColor();
+
+        ImPlot::EndPlot();
+    }
+
+    ImGui::Separator();
+    ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
+        "Simulated 60Hz AC with harmonics, inductive load, and PWM control");
+
+    ImGui::End();
+}
+
 UI_Layer create_editor_layer() {
     UI_Layer layer = {};
     layer.state = nullptr;
@@ -317,4 +433,25 @@ void editor_toggle_demo_window() {
 
 b8 editor_is_demo_window_visible() {
     return editor_state ? editor_state->show_demo_window : false;
+}
+
+void editor_toggle_implot_demo_window() {
+    if (editor_state) {
+        editor_state->show_implot_demo_window =
+            !editor_state->show_implot_demo_window;
+    }
+}
+
+b8 editor_is_implot_demo_window_visible() {
+    return editor_state ? editor_state->show_implot_demo_window : false;
+}
+
+void editor_toggle_signal_analyzer() {
+    if (editor_state) {
+        editor_state->show_signal_analyzer = !editor_state->show_signal_analyzer;
+    }
+}
+
+b8 editor_is_signal_analyzer_visible() {
+    return editor_state ? editor_state->show_signal_analyzer : false;
 }

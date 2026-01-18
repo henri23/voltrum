@@ -7,10 +7,7 @@
 #    include <unistd.h>
 
 void *platform_virtual_reserve(u64 size) {
-    // MAP_ANON: OS lazily backs pages on first access
-    // Pages are guaranteed zero-initialized by the kernel
-    auto block =
-        mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    auto block = mmap(NULL, size, PROT_NONE, MAP_PRIVATE | MAP_ANON, -1, 0);
     if (block == MAP_FAILED) {
         return nullptr;
     }

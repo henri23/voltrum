@@ -54,15 +54,17 @@ void ui_themes_apply(UI_Theme theme, ImGuiStyle &style) {
     colors[ImGuiCol_FrameBgActive] =
         ImGui::ColorConvertU32ToFloat4(palette.property_field);
 
-    // Tab colors - now theme-specific
-    colors[ImGuiCol_Tab] = ImGui::ColorConvertU32ToFloat4(palette.titlebar);
+    // Tab colors - theme-specific
+    colors[ImGuiCol_Tab] =
+        ImGui::ColorConvertU32ToFloat4(palette.background);
     colors[ImGuiCol_TabHovered] =
         ImGui::ColorConvertU32ToFloat4(palette.tab_hovered);
     colors[ImGuiCol_TabActive] =
         ImGui::ColorConvertU32ToFloat4(palette.tab_active);
     colors[ImGuiCol_TabUnfocused] =
-        ImGui::ColorConvertU32ToFloat4(palette.titlebar);
-    colors[ImGuiCol_TabUnfocusedActive] = colors[ImGuiCol_TabHovered];
+        ImGui::ColorConvertU32ToFloat4(palette.background);
+    colors[ImGuiCol_TabUnfocusedActive] =
+        ImGui::ColorConvertU32ToFloat4(palette.tab_active);
 
     colors[ImGuiCol_TitleBg] = ImGui::ColorConvertU32ToFloat4(palette.titlebar);
     colors[ImGuiCol_TitleBgActive] =

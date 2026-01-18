@@ -118,7 +118,7 @@ static const UI_Theme_Palette catppuccin_palette = {
     IM_COL32(203,
         166,
         247,
-        77), // tab_hovered (Mauve 30% alpha)
+        200), // tab_hovered (Mauve 78% alpha - brighter on hover)
     IM_COL32(203,
         166,
         247,

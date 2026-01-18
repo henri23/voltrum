@@ -7,4 +7,7 @@
 	branch = docking
 [submodule "external/spdlog"]
 	path = external/spdlog
-	url = https://github.com/gabime/spdlog.git
+	url = https://github.com/gabime/spdlog.gi
+[submodule "external/implot"]
+	path = external/implot
+	url = https://github.com/epezent/implot.git

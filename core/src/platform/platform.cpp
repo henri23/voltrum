@@ -101,6 +101,7 @@ b8 platform_startup(Platform_State *state,
     SDL_SetWindowPosition(state_ptr->window,
         SDL_WINDOWPOS_CENTERED,
         SDL_WINDOWPOS_CENTERED);
+
     SDL_ShowWindow(state_ptr->window);
 
     CORE_DEBUG("Window positioned and shown");

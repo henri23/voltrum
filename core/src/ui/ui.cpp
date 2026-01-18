@@ -2,6 +2,8 @@
 #include "icons.hpp"
 #include "ui_titlebar.hpp"
 
+#include <imgui_internal.h>
+
 #include "core/logger.hpp"
 #include "systems/resource_system.hpp"
 
@@ -52,7 +54,7 @@ INTERNAL_FUNC void ui_dockspace_render(UI_Context *context) {
         float minWinSizeX = style.WindowMinSize.x;
         style.WindowMinSize.x = 300.0f;
 
-        ImGui::DockSpace(dockspace->dockspace_id);
+        ImGui::DockSpace(dockspace->dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_NoWindowMenuButton);
 
         style.WindowMinSize.x = minWinSizeX;
     } else {

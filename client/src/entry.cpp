@@ -114,9 +114,23 @@ void client_menu_callback() {
         ui::MenuItem(ICON_FA_WINDOW_MAXIMIZE " Viewport");
         ui::MenuItem(ICON_FA_SLIDERS " Properties");
 
+        ImGui::Separator();
+
+        b8 signal_visible = editor_is_signal_analyzer_visible();
+        if (ui::MenuItem(ICON_FA_BOLT " Signal Analyzer", nullptr, !signal_visible)) {
+            editor_toggle_signal_analyzer();
+        }
+
+        ImGui::Separator();
+
         b8 demo_visible = editor_is_demo_window_visible();
-        if (ui::MenuItem(ICON_FA_CODE " ImGui Demo", nullptr, demo_visible)) {
+        if (ui::MenuItem(ICON_FA_CODE " ImGui Demo", nullptr, !demo_visible)) {
             editor_toggle_demo_window();
+        }
+
+        b8 implot_demo_visible = editor_is_implot_demo_window_visible();
+        if (ui::MenuItem(ICON_FA_CHART_LINE " ImPlot Demo", nullptr, !implot_demo_visible)) {
+            editor_toggle_implot_demo_window();
         }
         ui::EndMenu();
     }
