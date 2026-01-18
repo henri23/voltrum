@@ -17,6 +17,7 @@
 #include "systems/resource_system.hpp"
 #include "systems/texture_system.hpp"
 #include "ui/ui.hpp"
+#include "utils/string.hpp"
 
 INTERNAL_FUNC void application_set_window_icon() {
     Resource icon_resource = {};
@@ -36,7 +37,7 @@ INTERNAL_FUNC void application_set_window_icon() {
 }
 
 // Application configuration
-constexpr u32 TARGET_FPS = 140;
+constexpr u32 TARGET_FPS = 120;
 constexpr f64 TARGET_FRAME_TIME = 1 / (f64)TARGET_FPS;
 
 struct Internal_App_State {
@@ -52,6 +53,7 @@ struct Internal_App_State {
     UI_Context ui_context;
 
     Geometry *test_geometry;
+    f32 cube_rotation;
 };
 
 // Internal pointer to application state for easy access
@@ -200,15 +202,71 @@ b8 application_init(Client *client_state) {
 
     // TODO: Temp
     // internal_state->test_geometry = geometry_system_get_default();
-    // Load a plane config, and load a geometry from it
-    Geometry_Config g_config = geometry_system_generate_plane_config(10.0f,
-        5.0f,
-        5,
-        5,
-        5.0f,
-        2.0f,
-        "test geometry",
-        "test_material");
+
+    // -- PLANE GEOMETRY (commented out) --
+    // Geometry_Config g_config = geometry_system_generate_plane_config(10.0f,
+    //     5.0f,
+    //     5,
+    //     5,
+    //     5.0f,
+    //     2.0f,
+    //     "test geometry",
+    //     "test_material");
+
+    // -- CUBE GEOMETRY (delete later) --
+    Geometry_Config g_config;
+    g_config.vertex_count = 24;
+    g_config.vertices = static_cast<vertex_3d *>(
+        memory_allocate(sizeof(vertex_3d) * 24, Memory_Tag::ARRAY));
+    g_config.index_count = 36;
+    g_config.indices = static_cast<u32 *>(
+        memory_allocate(sizeof(u32) * 36, Memory_Tag::ARRAY));
+
+    string_ncopy(g_config.name, "test_cube", GEOMETRY_NAME_MAX_LENGTH);
+    string_ncopy(g_config.material_name,
+        "test_material",
+        MATERIAL_NAME_MAX_LENGTH);
+
+    f32 s = 1.0f; // half-size
+    // Front face (+Z)
+    g_config.vertices[0] = {{-s, -s, s}, {0, 1}};
+    g_config.vertices[1] = {{s, -s, s}, {1, 1}};
+    g_config.vertices[2] = {{s, s, s}, {1, 0}};
+    g_config.vertices[3] = {{-s, s, s}, {0, 0}};
+    // Back face (-Z)
+    g_config.vertices[4] = {{s, -s, -s}, {0, 1}};
+    g_config.vertices[5] = {{-s, -s, -s}, {1, 1}};
+    g_config.vertices[6] = {{-s, s, -s}, {1, 0}};
+    g_config.vertices[7] = {{s, s, -s}, {0, 0}};
+    // Top face (+Y)
+    g_config.vertices[8] = {{-s, s, s}, {0, 1}};
+    g_config.vertices[9] = {{s, s, s}, {1, 1}};
+    g_config.vertices[10] = {{s, s, -s}, {1, 0}};
+    g_config.vertices[11] = {{-s, s, -s}, {0, 0}};
+    // Bottom face (-Y)
+    g_config.vertices[12] = {{-s, -s, -s}, {0, 1}};
+    g_config.vertices[13] = {{s, -s, -s}, {1, 1}};
+    g_config.vertices[14] = {{s, -s, s}, {1, 0}};
+    g_config.vertices[15] = {{-s, -s, s}, {0, 0}};
+    // Right face (+X)
+    g_config.vertices[16] = {{s, -s, s}, {0, 1}};
+    g_config.vertices[17] = {{s, -s, -s}, {1, 1}};
+    g_config.vertices[18] = {{s, s, -s}, {1, 0}};
+    g_config.vertices[19] = {{s, s, s}, {0, 0}};
+    // Left face (-X)
+    g_config.vertices[20] = {{-s, -s, -s}, {0, 1}};
+    g_config.vertices[21] = {{-s, -s, s}, {1, 1}};
+    g_config.vertices[22] = {{-s, s, s}, {1, 0}};
+    g_config.vertices[23] = {{-s, s, -s}, {0, 0}};
+    // Indices (2 triangles per face)
+    u32 base_idx[] = {0, 1, 2, 0, 2, 3};
+    for (u32 f = 0; f < 6; ++f) {
+        for (u32 i = 0; i < 6; ++i) {
+            g_config.indices[f * 6 + i] = f * 4 + base_idx[i];
+        }
+    }
+    internal_state->cube_rotation = 0.0f;
+    // -- END CUBE GEOMETRY --
 
     internal_state->test_geometry =
         geometry_system_acquire_by_config(g_config, true);
@@ -291,6 +349,10 @@ void application_run() {
 
             f64 frame_start_time = platform_get_absolute_time();
             f64 delta_time = frame_start_time - last_time;
+            last_time = frame_start_time;
+
+            // DEBUG: Check frame timing consistency
+            // CORE_DEBUG("delta: %.4f ms", delta_time * 1000.0);
 
             if (internal_state->client->update) {
                 if (!internal_state->client->update(internal_state->client,
@@ -314,7 +376,11 @@ void application_run() {
             // TODO: temp - viewport geometry
             Geometry_Render_Data test_render;
             test_render.geometry = internal_state->test_geometry;
-            test_render.model = mat4_identity();
+            // Rotate cube over time
+            internal_state->cube_rotation += delta_time;
+            test_render.model = mat4_euler_xyz(internal_state->cube_rotation,
+                internal_state->cube_rotation * 0.7f,
+                0.0f);
 
             packet.geometry_count = 1;
             packet.geometries = &test_render;
@@ -349,9 +415,6 @@ void application_run() {
 
             // Update input state each frame
             input_update();
-
-            // Update last_time to include sleep for accurate frame timing
-            last_time = platform_get_absolute_time();
         }
     }
 

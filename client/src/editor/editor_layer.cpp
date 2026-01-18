@@ -188,7 +188,7 @@ INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera *camera,
     b8 camera_moved = false;
 
     if (viewport_active) {
-        f32 rotation_velocity = 100.0f;
+        f32 rotation_velocity = 1.5f;
         f32 rotation_delta = rotation_velocity * delta_time;
 
         if (input_is_key_pressed(Key_Code::A) ||
@@ -210,7 +210,7 @@ INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera *camera,
             camera_moved = true;
         }
 
-        f32 movement_speed = 0.5f;
+        f32 movement_speed = 5.0f;
         vec3 velocity = vec3_zero();
 
         if (input_is_key_pressed(Key_Code::W)) {
@@ -239,9 +239,10 @@ INTERNAL_FUNC b8 viewport_camera_update(Viewport_Camera *camera,
         vec3 zero = vec3_zero();
         if (!vec3_are_equal(zero, velocity, 0.0002f)) {
             vec3_norm(&velocity);
-            camera->position.x += velocity.x * movement_speed;
-            camera->position.y += velocity.y * movement_speed;
-            camera->position.z += velocity.z * movement_speed;
+            f32 move_delta = movement_speed * delta_time;
+            camera->position.x += velocity.x * move_delta;
+            camera->position.y += velocity.y * move_delta;
+            camera->position.z += velocity.z * move_delta;
             camera->view_dirty = true;
             camera_moved = true;
         }

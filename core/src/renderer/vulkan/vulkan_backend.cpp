@@ -707,18 +707,23 @@ b8 vulkan_renderpass_start(Renderer_Backend *backend,
     Vulkan_Command_Buffer *cmd_buffer =
         &context.command_buffers[context.image_index];
 
+    u32 fb_width = 0;
+    u32 fb_height = 0;
+
     switch (renderpass_type) {
     case Renderpass_Type::VIEWPORT: {
         renderpass = &context.viewport_renderpass;
         framebuffer = context.viewport.framebuffers[context.image_index];
-
+        fb_width = context.viewport.framebuffer_width;
+        fb_height = context.viewport.framebuffer_height;
         break;
     }
 
     case Renderpass_Type::UI: {
         renderpass = &context.ui_renderpass;
         framebuffer = context.swapchain.framebuffers[context.image_index];
-
+        fb_width = context.swapchain.framebuffer_width;
+        fb_height = context.swapchain.framebuffer_height;
         break;
     }
     default:
@@ -728,6 +733,23 @@ b8 vulkan_renderpass_start(Renderer_Backend *backend,
             (u8)renderpass_type);
         return false;
     };
+
+    // Set viewport and scissor to match the framebuffer being rendered to
+    VkViewport viewport;
+    viewport.x = 0.0f;
+    viewport.y = (f32)fb_height;
+    viewport.width = (f32)fb_width;
+    viewport.height = -(f32)fb_height;
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    VkRect2D scissor;
+    scissor.offset.x = scissor.offset.y = 0;
+    scissor.extent.width = fb_width;
+    scissor.extent.height = fb_height;
+
+    vkCmdSetViewport(cmd_buffer->handle, 0, 1, &viewport);
+    vkCmdSetScissor(cmd_buffer->handle, 0, 1, &scissor);
 
     vulkan_renderpass_begin(cmd_buffer, renderpass, framebuffer);
 

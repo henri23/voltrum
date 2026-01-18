@@ -54,15 +54,9 @@ void renderer_shutdown() {
     CORE_DEBUG("Renderer subsystem shutting down...");
 }
 
-// TODO: Add a method only for the viewport resize event because this captures
-// the window resize, we need to update the aspect ratio on the viewport resize
+// Window resize - only notify backend about swapchain resize
+// Projection matrix is updated by renderer_resize_viewport() based on viewport dimensions
 void renderer_on_resize(u16 width, u16 height) {
-
-    state.projection = mat4_project_perspective(deg_to_rad(45.0f),
-        width / (f32)height,
-        state.near_clip,
-        state.far_clip);
-
     state.backend.resized(&state.backend, width, height);
 }
 
@@ -189,8 +183,9 @@ void renderer_resize_viewport(u32 width, u32 height) {
 
     // Update projection matrix for new aspect ratio
     if (height > 0) {
+        f32 aspect = width / (f32)height;
         state.projection = mat4_project_perspective(deg_to_rad(45.0f),
-            width / (f32)height,
+            aspect,
             state.near_clip,
             state.far_clip);
     }
