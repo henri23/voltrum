@@ -323,6 +323,11 @@ INTERNAL_FUNC void render_statistics_window(Editor_Layer_State *state,
 INTERNAL_FUNC void render_signal_analyzer(Editor_Layer_State *state,
     f32 delta_time) {
     state->signal_time += delta_time;
+    // Wrap signal_time to make the simulation periodic (2 second period)
+    // This matches the PWM duty cycle variation period: sin(base_time * PI)
+    if (state->signal_time >= 2.0f) {
+        state->signal_time -= 2.0f;
+    }
 
     ImGui::Begin(ICON_FA_BOLT " Signal Analyzer", &state->show_signal_analyzer);
 
@@ -339,43 +344,41 @@ INTERNAL_FUNC void render_signal_analyzer(Editor_Layer_State *state,
 
     f32 base_time = state->signal_time;
 
+    // Slow frequencies for easy visual tracking (1 full cycle per 2 seconds)
+    f32 base_freq = 0.5f; // 0.5 Hz - completes 1 cycle in 2 seconds
+
     for (int i = 0; i < sample_count; ++i) {
-        f32 t = (f32)i / (f32)sample_count * 0.1f;
-        time_data[i] = t * 1000.0f; // Convert to milliseconds
+        // Time window shows 2 seconds of data
+        f32 t = (f32)i / (f32)sample_count * 2.0f;
+        time_data[i] = t; // Time in seconds
 
-        // AC Voltage signal (60Hz sine wave with harmonics)
-        f32 phase = base_time * 60.0f * math::PI_2;
-        voltage_signal[i] = 120.0f * math_sin(phase + t * 60.0f * math::PI_2);
-        voltage_signal[i] += 8.0f * math_sin(3.0f * (phase + t * 60.0f * math::PI_2)); // 3rd harmonic
-        voltage_signal[i] += 3.0f * math_sin(5.0f * (phase + t * 60.0f * math::PI_2)); // 5th harmonic
+        // Smooth sine wave (easy to track)
+        f32 phase = (base_time + t) * base_freq * math::PI_2;
+        voltage_signal[i] = 100.0f * math_sin(phase);
 
-        // Current signal (phase shifted, representing inductive load)
-        f32 current_phase = phase + t * 60.0f * math::PI_2 - math::PI / 6.0f;
-        current_signal[i] = 10.0f * math_sin(current_phase);
+        // Cosine wave (90 degree phase shift)
+        current_signal[i] = 100.0f * math_cos(phase);
 
-        // Instantaneous power
-        power_signal[i] = voltage_signal[i] * current_signal[i] * 0.01f;
+        // Smooth power envelope (always positive, slow variation)
+        power_signal[i] = 50.0f + 50.0f * math_sin(phase * 0.5f);
 
-        // PWM control signal (switching at 20kHz)
-        f32 pwm_val = (base_time + t) * 20000.0f;
-        f32 pwm_phase = pwm_val - (f32)(s32)pwm_val; // fmod equivalent for [0,1)
-        f32 duty_cycle = 0.5f + 0.3f * math_sin(base_time * math::PI);
-        pwm_signal[i] = pwm_phase < duty_cycle ? 5.0f : 0.0f;
+        // Smooth triangle-like wave using sine approximation
+        pwm_signal[i] = 2.5f + 2.5f * math_sin(phase * 2.0f);
     }
 
     // Voltage and Current waveforms
     if (ImPlot::BeginPlot("##VoltageCurrentPlot", ImVec2(-1, 200))) {
-        ImPlot::SetupAxes("Time (ms)", "Amplitude");
-        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 10, ImGuiCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -150, 150, ImGuiCond_Always);
+        ImPlot::SetupAxes("Time (s)", "Amplitude");
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 2, ImGuiCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -120, 120, ImGuiCond_Always);
         ImPlot::SetupLegend(ImPlotLocation_NorthEast);
 
         ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.9f, 0.4f, 0.1f, 1.0f));
-        ImPlot::PlotLine("Voltage (V)", time_data, voltage_signal, sample_count);
+        ImPlot::PlotLine("Sine", time_data, voltage_signal, sample_count);
         ImPlot::PopStyleColor();
 
         ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.2f, 0.7f, 0.9f, 1.0f));
-        ImPlot::PlotLine("Current (A x10)", time_data, current_signal, sample_count);
+        ImPlot::PlotLine("Cosine", time_data, current_signal, sample_count);
         ImPlot::PopStyleColor();
 
         ImPlot::EndPlot();
@@ -383,14 +386,14 @@ INTERNAL_FUNC void render_signal_analyzer(Editor_Layer_State *state,
 
     // Power waveform
     if (ImPlot::BeginPlot("##PowerPlot", ImVec2(-1, 150))) {
-        ImPlot::SetupAxes("Time (ms)", "Power (W)");
-        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 10, ImGuiCond_Always);
-        ImPlot::SetupAxisLimits(ImAxis_Y1, -15, 15, ImGuiCond_Always);
+        ImPlot::SetupAxes("Time (s)", "Value");
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 2, ImGuiCond_Always);
+        ImPlot::SetupAxisLimits(ImAxis_Y1, -10, 110, ImGuiCond_Always);
 
         ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.3f, 0.9f, 0.4f, 1.0f));
         ImPlot::SetNextFillStyle(ImVec4(0.3f, 0.9f, 0.4f, 0.25f));
-        ImPlot::PlotShaded("Inst. Power", time_data, power_signal, sample_count);
-        ImPlot::PlotLine("Inst. Power", time_data, power_signal, sample_count);
+        ImPlot::PlotShaded("Slow Wave", time_data, power_signal, sample_count);
+        ImPlot::PlotLine("Slow Wave", time_data, power_signal, sample_count);
         ImPlot::PopStyleColor();
 
         ImPlot::EndPlot();
@@ -398,12 +401,12 @@ INTERNAL_FUNC void render_signal_analyzer(Editor_Layer_State *state,
 
     // PWM Control Signal
     if (ImPlot::BeginPlot("##PWMPlot", ImVec2(-1, 100))) {
-        ImPlot::SetupAxes("Time (ms)", "PWM (V)");
-        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 10, ImGuiCond_Always);
+        ImPlot::SetupAxes("Time (s)", "Value");
+        ImPlot::SetupAxisLimits(ImAxis_X1, 0, 2, ImGuiCond_Always);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -0.5, 6, ImGuiCond_Always);
 
         ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.9f, 0.2f, 0.6f, 1.0f));
-        ImPlot::PlotLine("PWM Control", time_data, pwm_signal, sample_count);
+        ImPlot::PlotLine("Fast Wave", time_data, pwm_signal, sample_count);
         ImPlot::PopStyleColor();
 
         ImPlot::EndPlot();
@@ -411,7 +414,7 @@ INTERNAL_FUNC void render_signal_analyzer(Editor_Layer_State *state,
 
     ImGui::Separator();
     ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.6f, 1.0f),
-        "Simulated 60Hz AC with harmonics, inductive load, and PWM control");
+        "Smooth periodic signals (2 second cycle)");
 
     ImGui::End();
 }
