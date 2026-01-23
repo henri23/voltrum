@@ -11,6 +11,22 @@ struct Platform_State {
     b8 is_titlebar_hovered;
 };
 
+struct Platform_System_Info {
+    u32 logical_processor_count;
+    u64 page_size;
+    u64 large_page_size;
+    u64 allocation_granularity;
+    const char *machine_name;
+};
+
+struct Platform_Process_Info {
+    u32 pid;
+    b8 large_pages_allowed;
+    const char *binary_path;
+    const char *initial_path;
+    const char *user_program_data_path;
+};
+
 b8 platform_startup(Platform_State *state,
     const char *application_name,
     s32 width,
@@ -31,9 +47,10 @@ void *platform_set_memory(void *dest, s32 value, u64 size);
 // Virtual memory - OS lazily backs with physical pages on first access.
 // Pages are guaranteed to be zero-initialized when first accessed.
 void *platform_virtual_memory_reserve(u64 size);
-void *platform_virtual_memory_commit(void *memory);
-void platform_virtual_memory_release(void *block);
-u64 platform_query_page_size();
+void platform_virtual_memory_release(void *block, u64 size);
+b8 platform_virtual_memory_commit(void *block, u64 size);
+void platform_virtual_memory_decommit(void *block, u64 size);
+Platform_System_Info platform_query_system_info();
 
 f64 platform_get_absolute_time();
 void platform_sleep(u64 ms);

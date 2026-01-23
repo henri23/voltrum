@@ -43,11 +43,39 @@ constexpr u64 GiB(1 << 30);
 constexpr u64 MiB(1 << 20);
 constexpr u64 KiB(1 << 10);
 
+// Utility macros
+#define ARRAY_COUNT(array) (sizeof(array) / sizeof((array)[0]))
+
+#define IS_POW2(value) ((value != 0) && ((value & (value - 1)) == 0))
+#define ALIGN_UP_POW2(value, align) ((value) + (align) - 1) & (~((align) - 1))
+#define ALIGN_UP(value, align)                                                 \
+    ((value) + (align) - 1 - ((value) + (align) - 1) % (align))
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#define MAX(a, b) (((a) > (b)) ? (a) : (b))
+
+#define CLAMP_TOP(a, b) MIN(a, b)
+#define CLAMP_BOT(a, b) MAX(a, b)
+#define CLAMP(value, min, max)                                                 \
+    ((value > max) ? max : (value < min) ? min : value)
+
+// More descriptive keyword separation becased on scope and utilization purpose
 #define local_persist static
 #define internal_var static
 #define global_variable static
 
 #define INTERNAL_FUNC static
+
+// For thread local variables
+#if _MSC_VER
+#    define THREAD_STATIC __declspec(thread)
+#else
+#    define THREAD_STATIC __thread
+#endif
+
+#define C_LINKAGE_BEGIN extern "C" {
+#define C_LINKAGE_END }
+#define C_LINKAGE extern "C"
 
 // Platform detection
 #if defined(WIN32) || defined(_WIN32) || defined(__WIN32__)
@@ -113,9 +141,6 @@ constexpr u64 KiB(1 << 10);
 #    endif
 #endif
 
-#define CLAMP(value, min, max)                                                 \
-    ((value > max) ? max : (value < min) ? min : value)
-
 // Inlining - An inline function is substituted at compile time, by the compiler
 // to the location is has been called, but rather than storing the function in
 // memory and copying the result values into the destination, it completelly
@@ -126,7 +151,7 @@ constexpr u64 KiB(1 << 10);
 #    define FORCE_INLINE __forceinline
 #    define FORCE_NOT_INLINE __declspec(noinline)
 #else
-#    define FORCE_INLINE inline
+#    define FORCE_INLINE __attribute__((always_inline))
 #    define FORCE_NOT_INLINE
 #endif
 

@@ -7,6 +7,7 @@
 #include "events/events.hpp"
 #include "input/input.hpp"
 #include "math/math.hpp"
+#include "memory/arena.hpp"
 #include "memory/memory.hpp"
 #include "platform/platform.hpp"
 #include "renderer/renderer_frontend.hpp"
@@ -19,7 +20,8 @@
 #include "ui/ui.hpp"
 #include "utils/string.hpp"
 
-INTERNAL_FUNC void application_set_window_icon() {
+INTERNAL_FUNC void
+application_set_window_icon() {
     Resource icon_resource = {};
     if (resource_system_load("voltrum", Resource_Type::ICON, &icon_resource)) {
         Image_Resource_Data *icon_data =
@@ -54,12 +56,15 @@ struct Internal_App_State {
 
     Geometry *test_geometry;
     f32 cube_rotation;
+
+    Arena *persistent_arena;
 };
 
 // Internal pointer to application state for easy access
 internal_var Internal_App_State *internal_state = nullptr;
 
-INTERNAL_FUNC b8 app_escape_key_callback(const Event *event) {
+INTERNAL_FUNC b8
+app_escape_key_callback(const Event *event) {
     if (event->key.key_code == Key_Code::ESCAPE && !event->key.repeat) {
         CORE_INFO("ESC key pressed - closing application");
         internal_state->is_running = false;
@@ -67,7 +72,8 @@ INTERNAL_FUNC b8 app_escape_key_callback(const Event *event) {
     return false; // Don't consume, let other callbacks process
 }
 
-INTERNAL_FUNC b8 app_on_debug_event(const Event *event) {
+INTERNAL_FUNC b8
+app_on_debug_event(const Event *event) {
     const char *names[3] = {"metal", "space_parallax", "yellow_track"};
 
     local_persist s8 choice = 0;
@@ -92,12 +98,14 @@ INTERNAL_FUNC b8 app_on_debug_event(const Event *event) {
     return true;
 }
 
-void application_get_framebuffer_size(u32 *width, u32 *height) {
+void
+application_get_framebuffer_size(u32 *width, u32 *height) {
     *width = internal_state->width;
     *height = internal_state->height;
 }
 
-INTERNAL_FUNC b8 app_on_resized_callback(const Event *event) {
+INTERNAL_FUNC b8
+app_on_resized_callback(const Event *event) {
 
     if (event->window_resize.width != internal_state->width ||
         event->window_resize.height != internal_state->height) {
@@ -126,7 +134,8 @@ INTERNAL_FUNC b8 app_on_resized_callback(const Event *event) {
     return false;
 }
 
-b8 application_init(Client *client_state) {
+b8
+application_init(Client *client_state) {
     RUNTIME_ASSERT_MSG(client_state, "Client state cannot be null");
 
     // Protect against multiple initialization
@@ -136,13 +145,16 @@ b8 application_init(Client *client_state) {
     }
 
     // Allocate application state
-    client_state->internal_app_state =
-        memory_allocate(sizeof(Internal_App_State), Memory_Tag::APPLICATION);
+    // client_state->internal_app_state =
+    //     memory_allocate(sizeof(Internal_App_State), Memory_Tag::APPLICATION);
+    Arena *persistent_arena = arena_create();
+    client_state->internal_app_state = (Internal_App_State *)persistent_arena;
 
     internal_state =
         static_cast<Internal_App_State *>(client_state->internal_app_state);
 
     internal_state->client = client_state;
+    internal_state->persistent_arena = persistent_arena;
 
     if (!log_init()) {
         CORE_FATAL("Failed to initialize log subsystem");
@@ -233,10 +245,10 @@ b8 application_init(Client *client_state) {
     // (CW = front face with negative viewport height in Vulkan)
 
     // Front face (+Z) - looking from +Z toward origin
-    g_config.vertices[0] = {{-s, -s, s}, {0, 1}};  // bottom-left
-    g_config.vertices[1] = {{-s, s, s}, {0, 0}};   // top-left
-    g_config.vertices[2] = {{s, s, s}, {1, 0}};    // top-right
-    g_config.vertices[3] = {{s, -s, s}, {1, 1}};   // bottom-right
+    g_config.vertices[0] = {{-s, -s, s}, {0, 1}}; // bottom-left
+    g_config.vertices[1] = {{-s, s, s}, {0, 0}};  // top-left
+    g_config.vertices[2] = {{s, s, s}, {1, 0}};   // top-right
+    g_config.vertices[3] = {{s, -s, s}, {1, 1}};  // bottom-right
 
     // Back face (-Z) - looking from -Z toward origin
     g_config.vertices[4] = {{s, -s, -s}, {0, 1}};  // bottom-left
@@ -245,10 +257,10 @@ b8 application_init(Client *client_state) {
     g_config.vertices[7] = {{-s, -s, -s}, {1, 1}}; // bottom-right
 
     // Top face (+Y) - looking from +Y toward origin
-    g_config.vertices[8] = {{-s, s, s}, {0, 1}};   // bottom-left
-    g_config.vertices[9] = {{-s, s, -s}, {0, 0}};  // top-left
-    g_config.vertices[10] = {{s, s, -s}, {1, 0}};  // top-right
-    g_config.vertices[11] = {{s, s, s}, {1, 1}};   // bottom-right
+    g_config.vertices[8] = {{-s, s, s}, {0, 1}};  // bottom-left
+    g_config.vertices[9] = {{-s, s, -s}, {0, 0}}; // top-left
+    g_config.vertices[10] = {{s, s, -s}, {1, 0}}; // top-right
+    g_config.vertices[11] = {{s, s, s}, {1, 1}};  // bottom-right
 
     // Bottom face (-Y) - looking from -Y toward origin
     g_config.vertices[12] = {{-s, -s, -s}, {0, 1}}; // bottom-left
@@ -325,7 +337,8 @@ b8 application_init(Client *client_state) {
     return true;
 }
 
-void application_run() {
+void
+application_run() {
     if (!internal_state) {
         CORE_FATAL("Application not initialized");
         return;
@@ -431,7 +444,8 @@ void application_run() {
     application_shutdown();
 }
 
-void application_shutdown() {
+void
+application_shutdown() {
     if (!internal_state) {
         return;
     }
@@ -480,9 +494,10 @@ void application_shutdown() {
     log_shutdown();
 
     // Free application state
-    memory_deallocate(internal_state,
-        sizeof(Internal_App_State),
-        Memory_Tag::APPLICATION);
-
-    internal_state = nullptr;
+    // memory_deallocate(internal_state,
+    //     sizeof(Internal_App_State),
+    //     Memory_Tag::APPLICATION);
+    //
+    // internal_state = nullptr;
+    arena_release(internal_state->persistent_arena);
 }

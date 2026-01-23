@@ -3,14 +3,20 @@
 #include "client_types.hpp"
 #include "core/application.hpp"
 #include "core/logger.hpp"
+#include "core/thread_context.hpp"
 #include "defines.hpp"
 
 // Client must implement this function to initialize their state
 extern b8 create_client(Client *client_state);
 
-int main() {
+int
+main() {
     // Stack-allocate client state (following koala_engine pattern)
     Client client_state = {};
+
+    Thread_Context *thread_context = thread_context_allocate();
+    thread_context->thread_name = "Application thread";
+    thread_context_select(thread_context);
 
     // Let client initialize its state and configuration
     if (!create_client(&client_state)) {
@@ -34,6 +40,8 @@ int main() {
 
     // Run the application
     application_run();
+
+    thread_context_release(thread_context);
 
     return 0;
 }

@@ -12,6 +12,5 @@ AllowAllArgumentsOnNextLine: false
 BinPackArguments: false
 BinPackParameters: false
 AlignAfterOpenBracket: DontAlign
-AlwaysBreakAfterReturnType: None
-AlwaysBreakAfterDefinitionReturnType: None
+BreakAfterReturnType: AllDefinitions
 AlwaysBreakBeforeMultilineStrings: true
