@@ -2,10 +2,8 @@
 #include "core/logger.hpp"
 #include "memory/memory.hpp"
 
-// Internal input state
-internal_var Input_State input_state;
-
-void input_initialize() {
+void
+input_initialize() {
     CORE_DEBUG("Initializing input system...");
 
     if (input_state.is_initialized) {
@@ -20,7 +18,8 @@ void input_initialize() {
     CORE_INFO("Input system initialized successfully");
 }
 
-void input_shutdown() {
+void
+input_shutdown() {
     CORE_DEBUG("Shutting down input system...");
 
     if (!input_state.is_initialized) {
@@ -32,7 +31,8 @@ void input_shutdown() {
     CORE_DEBUG("Input system shut down");
 }
 
-void input_update() {
+void
+input_update() {
     if (!input_state.is_initialized) {
         return;
     }
@@ -58,7 +58,8 @@ void input_update() {
     input_state.mouse_wheel_delta_y = 0.0f;
 }
 
-void input_process_key(Key_Code key_code, b8 pressed) {
+void
+input_process_key(Key_Code key_code, b8 pressed) {
     if (!input_state.is_initialized || (u32)key_code >= 512) {
         return;
     }
@@ -66,7 +67,8 @@ void input_process_key(Key_Code key_code, b8 pressed) {
     input_state.keys[(u32)key_code] = pressed;
 }
 
-void input_process_mouse_button(Mouse_Button button, b8 pressed) {
+void
+input_process_mouse_button(Mouse_Button button, b8 pressed) {
     if (!input_state.is_initialized || (u8)button >= 8) {
         return;
     }
@@ -74,7 +76,8 @@ void input_process_mouse_button(Mouse_Button button, b8 pressed) {
     input_state.mouse_buttons[(u8)button] = pressed;
 }
 
-void input_process_mouse_move(s32 x, s32 y) {
+void
+input_process_mouse_move(s32 x, s32 y) {
     if (!input_state.is_initialized) {
         return;
     }
@@ -83,7 +86,8 @@ void input_process_mouse_move(s32 x, s32 y) {
     input_state.mouse_y = y;
 }
 
-void input_process_mouse_wheel(f32 delta_x, f32 delta_y) {
+void
+input_process_mouse_wheel(f32 delta_x, f32 delta_y) {
     if (!input_state.is_initialized) {
         return;
     }
@@ -92,7 +96,8 @@ void input_process_mouse_wheel(f32 delta_x, f32 delta_y) {
     input_state.mouse_wheel_delta_y = delta_y;
 }
 
-Input_State *input_get_state() {
+Input_State *
+input_get_state() {
     if (!input_state.is_initialized) {
         return nullptr;
     }
@@ -101,18 +106,21 @@ Input_State *input_get_state() {
 }
 
 // Utility functions for common input checks
-b8 input_is_key_pressed(Key_Code key_code) {
+b8
+input_is_key_pressed(Key_Code key_code) {
     if (!input_state.is_initialized || (u32)key_code >= 512) {
         return false;
     }
     return input_state.keys[(u32)key_code];
 }
 
-b8 input_is_key_released(Key_Code key_code) {
+b8
+input_is_key_released(Key_Code key_code) {
     return !input_is_key_pressed(key_code);
 }
 
-b8 input_was_key_pressed(Key_Code key_code) {
+b8
+input_was_key_pressed(Key_Code key_code) {
     if (!input_state.is_initialized || (u32)key_code >= 512) {
         return false;
     }
@@ -120,7 +128,8 @@ b8 input_was_key_pressed(Key_Code key_code) {
            !input_state.keys_prev[(u32)key_code];
 }
 
-b8 input_was_key_released(Key_Code key_code) {
+b8
+input_was_key_released(Key_Code key_code) {
     if (!input_state.is_initialized || (u32)key_code >= 512) {
         return false;
     }
@@ -128,18 +137,21 @@ b8 input_was_key_released(Key_Code key_code) {
            input_state.keys_prev[(u32)key_code];
 }
 
-b8 input_is_mouse_button_pressed(Mouse_Button button) {
+b8
+input_is_mouse_button_pressed(Mouse_Button button) {
     if (!input_state.is_initialized || (u8)button >= 8) {
         return false;
     }
     return input_state.mouse_buttons[(u8)button];
 }
 
-b8 input_is_mouse_button_released(Mouse_Button button) {
+b8
+input_is_mouse_button_released(Mouse_Button button) {
     return !input_is_mouse_button_pressed(button);
 }
 
-b8 input_was_mouse_button_pressed(Mouse_Button button) {
+b8
+input_was_mouse_button_pressed(Mouse_Button button) {
     if (!input_state.is_initialized || (u8)button >= 8) {
         return false;
     }
@@ -147,7 +159,8 @@ b8 input_was_mouse_button_pressed(Mouse_Button button) {
            !input_state.mouse_buttons_prev[(u8)button];
 }
 
-b8 input_was_mouse_button_released(Mouse_Button button) {
+b8
+input_was_mouse_button_released(Mouse_Button button) {
     if (!input_state.is_initialized || (u8)button >= 8) {
         return false;
     }

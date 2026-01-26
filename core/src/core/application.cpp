@@ -42,32 +42,39 @@ application_set_window_icon() {
 constexpr u32 TARGET_FPS = 120;
 constexpr f64 TARGET_FRAME_TIME = 1 / (f64)TARGET_FPS;
 
-struct Internal_App_State {
+struct Engine_State {
+    // Arenas
+    Arena *persistent_arena;
+
     Client *client;
     b8 is_running;
     b8 is_suspended;
     u16 width;
     u16 height;
 
-    Platform_State plat_state;
     Absolute_Clock clock;
+
+    // Subsystem state
+    Platform_State *plat_state;
+    Input_State *input_state;
+    Event_State *event_state;
+    Resource_System_State *resource_system_state;
+    Texture_System_State *texture_system_state;
 
     UI_Context ui_context;
 
     Geometry *test_geometry;
     f32 cube_rotation;
-
-    Arena *persistent_arena;
 };
 
 // Internal pointer to application state for easy access
-internal_var Internal_App_State *internal_state = nullptr;
+internal_var Engine_State *engine_state = nullptr;
 
 INTERNAL_FUNC b8
 app_escape_key_callback(const Event *event) {
     if (event->key.key_code == Key_Code::ESCAPE && !event->key.repeat) {
         CORE_INFO("ESC key pressed - closing application");
-        internal_state->is_running = false;
+        engine_state->is_running = false;
     }
     return false; // Don't consume, let other callbacks process
 }
@@ -83,12 +90,12 @@ app_on_debug_event(const Event *event) {
     choice++;
     choice %= 3;
 
-    if (internal_state->test_geometry) {
-        internal_state->test_geometry->material->diffuse_map.texture =
+    if (engine_state->test_geometry) {
+        engine_state->test_geometry->material->diffuse_map.texture =
             texture_system_acquire(names[choice], true);
-        if (!internal_state->test_geometry->material->diffuse_map.texture) {
+        if (!engine_state->test_geometry->material->diffuse_map.texture) {
             CORE_WARN("event_on_debug_event not nexture! using default");
-            internal_state->test_geometry->material->diffuse_map.texture =
+            engine_state->test_geometry->material->diffuse_map.texture =
                 texture_system_get_default_texture();
         }
 
@@ -100,35 +107,35 @@ app_on_debug_event(const Event *event) {
 
 void
 application_get_framebuffer_size(u32 *width, u32 *height) {
-    *width = internal_state->width;
-    *height = internal_state->height;
+    *width = engine_state->width;
+    *height = engine_state->height;
 }
 
 INTERNAL_FUNC b8
 app_on_resized_callback(const Event *event) {
 
-    if (event->window_resize.width != internal_state->width ||
-        event->window_resize.height != internal_state->height) {
+    if (event->window_resize.width != engine_state->width ||
+        event->window_resize.height != engine_state->height) {
 
-        internal_state->width = event->window_resize.width;
-        internal_state->height = event->window_resize.height;
+        engine_state->width = event->window_resize.width;
+        engine_state->height = event->window_resize.height;
 
         // Handle minimization
-        if (internal_state->width == 0 || internal_state->height == 0) {
+        if (engine_state->width == 0 || engine_state->height == 0) {
             CORE_INFO("Windows minimized, suspending application.");
-            internal_state->is_suspended = true;
+            engine_state->is_suspended = true;
             return true;
         } else {
-            if (internal_state->is_suspended) {
+            if (engine_state->is_suspended) {
                 CORE_INFO("Window restored, resuming application");
-                internal_state->is_suspended = false;
+                engine_state->is_suspended = false;
             }
 
-            internal_state->client->on_resize(internal_state->client,
-                internal_state->width,
-                internal_state->height);
+            engine_state->client->on_resize(engine_state->client,
+                engine_state->width,
+                engine_state->height);
 
-            renderer_on_resize(internal_state->width, internal_state->height);
+            renderer_on_resize(engine_state->width, engine_state->height);
         }
     }
     return false;
@@ -148,20 +155,20 @@ application_init(Client *client_state) {
     // client_state->internal_app_state =
     //     memory_allocate(sizeof(Internal_App_State), Memory_Tag::APPLICATION);
     Arena *persistent_arena = arena_create();
-    client_state->internal_app_state = (Internal_App_State *)persistent_arena;
+    client_state->internal_app_state = (Engine_State *)persistent_arena;
 
-    internal_state =
-        static_cast<Internal_App_State *>(client_state->internal_app_state);
+    engine_state =
+        static_cast<Engine_State *>(client_state->internal_app_state);
 
-    internal_state->client = client_state;
-    internal_state->persistent_arena = persistent_arena;
+    engine_state->client = client_state;
+    engine_state->persistent_arena = persistent_arena;
 
     if (!log_init()) {
         CORE_FATAL("Failed to initialize log subsystem");
         return false;
     }
 
-    if (!platform_startup(&internal_state->plat_state,
+    if (!platform_startup(&engine_state->plat_state,
             client_state->config.name,
             client_state->config.width,
             client_state->config.height)) {
@@ -287,10 +294,10 @@ application_init(Client *client_state) {
             g_config.indices[f * 6 + i] = f * 4 + base_idx[i];
         }
     }
-    internal_state->cube_rotation = 0.0f;
+    engine_state->cube_rotation = 0.0f;
     // -- END CUBE GEOMETRY --
 
-    internal_state->test_geometry =
+    engine_state->test_geometry =
         geometry_system_acquire_by_config(g_config, true);
 
     memory_deallocate(g_config.vertices,
@@ -302,13 +309,13 @@ application_init(Client *client_state) {
         Memory_Tag::ARRAY);
     // TODO: Temp
 
-    if (!ui_initialize(&internal_state->ui_context,
-            internal_state->client->layers.data,
-            internal_state->client->layers.length,
+    if (!ui_initialize(&engine_state->ui_context,
+            engine_state->client->layers.data,
+            engine_state->client->layers.length,
             UI_Theme::CATPPUCCIN,
             client_state->menu_callback,
             client_state->config.name,
-            internal_state->plat_state.window)) {
+            engine_state->plat_state.window)) {
         CORE_FATAL("Failed to initiliaze ui system");
         return false;
     }
@@ -324,8 +331,8 @@ application_init(Client *client_state) {
 
     events_register_callback(Event_Type::DEBUG0, app_on_debug_event);
 
-    internal_state->is_running = false;
-    internal_state->is_suspended = false;
+    engine_state->is_running = false;
+    engine_state->is_suspended = false;
 
     CORE_INFO("All subsystems initialized correctly.");
 
@@ -339,19 +346,19 @@ application_init(Client *client_state) {
 
 void
 application_run() {
-    if (!internal_state) {
+    if (!engine_state) {
         CORE_FATAL("Application not initialized");
         return;
     }
 
-    internal_state->is_running = true;
+    engine_state->is_running = true;
 
-    absolute_clock_start(&internal_state->clock);
-    absolute_clock_update(&internal_state->clock);
+    absolute_clock_start(&engine_state->clock);
+    absolute_clock_update(&engine_state->clock);
 
     // Call client initialize if provided
-    if (internal_state->client->initialize) {
-        if (!internal_state->client->initialize(internal_state->client)) {
+    if (engine_state->client->initialize) {
+        if (!engine_state->client->initialize(engine_state->client)) {
             CORE_ERROR("Client initialization failed");
             return;
         }
@@ -360,15 +367,15 @@ application_run() {
     // Frame rate limiting variables
     f64 last_time = platform_get_absolute_time();
 
-    while (internal_state->is_running) {
+    while (engine_state->is_running) {
 
         // Process platform events (will forward to UI via callback)
         if (!platform_message_pump()) {
-            internal_state->is_running = false;
+            engine_state->is_running = false;
         }
 
         // Frame
-        if (!internal_state->is_suspended) {
+        if (!engine_state->is_suspended) {
 
             f64 frame_start_time = platform_get_absolute_time();
             f64 delta_time = frame_start_time - last_time;
@@ -377,19 +384,19 @@ application_run() {
             // DEBUG: Check frame timing consistency
             // CORE_DEBUG("delta: %.4f ms", delta_time * 1000.0);
 
-            if (internal_state->client->update) {
-                if (!internal_state->client->update(internal_state->client,
+            if (engine_state->client->update) {
+                if (!engine_state->client->update(engine_state->client,
                         delta_time)) {
                     CORE_FATAL("Client update failed. Aborting...");
-                    internal_state->is_running = false;
+                    engine_state->is_running = false;
                 }
             }
 
-            if (internal_state->client->render) {
-                if (!internal_state->client->render(internal_state->client,
+            if (engine_state->client->render) {
+                if (!engine_state->client->render(engine_state->client,
                         delta_time)) {
                     CORE_FATAL("Client render failed. Aborting...");
-                    internal_state->is_running = false;
+                    engine_state->is_running = false;
                 }
             }
 
@@ -398,29 +405,28 @@ application_run() {
 
             // TODO: temp - viewport geometry
             Geometry_Render_Data test_render;
-            test_render.geometry = internal_state->test_geometry;
+            test_render.geometry = engine_state->test_geometry;
             // Rotate cube over time
-            internal_state->cube_rotation += delta_time;
-            test_render.model = mat4_euler_xyz(internal_state->cube_rotation,
-                internal_state->cube_rotation * 0.7f,
+            engine_state->cube_rotation += delta_time;
+            test_render.model = mat4_euler_xyz(engine_state->cube_rotation,
+                engine_state->cube_rotation * 0.7f,
                 0.0f);
 
             packet.geometry_count = 1;
             packet.geometries = &test_render;
 
-            ui_update_layers(&internal_state->ui_context,
-                internal_state->client->layers.data,
-                internal_state->client->layers.length,
+            ui_update_layers(&engine_state->ui_context,
+                engine_state->client->layers.data,
+                engine_state->client->layers.length,
                 packet.delta_time);
 
-            packet.ui_data.draw_list =
-                ui_draw_layers(&internal_state->ui_context,
-                    internal_state->client->layers.data,
-                    internal_state->client->layers.length,
-                    packet.delta_time);
+            packet.ui_data.draw_list = ui_draw_layers(&engine_state->ui_context,
+                engine_state->client->layers.data,
+                engine_state->client->layers.length,
+                packet.delta_time);
 
             if (!renderer_draw_frame(&packet)) {
-                internal_state->is_running = false;
+                engine_state->is_running = false;
             }
 
             // Frame rate limiting
@@ -446,25 +452,25 @@ application_run() {
 
 void
 application_shutdown() {
-    if (!internal_state) {
+    if (!engine_state) {
         return;
     }
 
     CORE_INFO("Starting application shutdown...");
 
     // Call client shutdown if provided
-    if (internal_state->client->shutdown) {
+    if (engine_state->client->shutdown) {
         CORE_DEBUG("Shutting down client...");
 
-        internal_state->client->shutdown(internal_state->client);
+        engine_state->client->shutdown(engine_state->client);
 
         CORE_DEBUG("Client shutdown complete.");
     }
 
     CORE_DEBUG("Shutting down UI subsystem...");
-    ui_shutdown(&internal_state->ui_context,
-        internal_state->client->layers.data,
-        internal_state->client->layers.length);
+    ui_shutdown(&engine_state->ui_context,
+        engine_state->client->layers.data,
+        engine_state->client->layers.length);
 
     CORE_DEBUG("Shutting down geometry subsystem...");
     geometry_system_shutdown();
@@ -499,5 +505,5 @@ application_shutdown() {
     //     Memory_Tag::APPLICATION);
     //
     // internal_state = nullptr;
-    arena_release(internal_state->persistent_arena);
+    arena_release(engine_state->persistent_arena);
 }

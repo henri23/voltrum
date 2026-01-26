@@ -1,5 +1,6 @@
 #pragma once
 
+#include "data_structures/hashmap.hpp"
 #include "defines.hpp"
 #include "resources/resource_types.hpp"
 
@@ -7,6 +8,20 @@
 
 struct Material_System_Config {
     u32 max_material_count;
+};
+
+struct Material_Reference {
+    Material_ID handle;
+    u64 reference_count;
+    b8 auto_release;
+};
+
+struct Material_System_State {
+    Material_System_Config config;
+    Material default_material;
+
+    Hashmap<Material_Reference> material_registry;
+    Material *registered_materials;
 };
 
 b8 material_system_init(Material_System_Config config);

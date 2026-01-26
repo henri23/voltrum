@@ -1,7 +1,9 @@
 #pragma once
 
+#include "data_structures/auto_array.hpp"
 #include "defines.hpp"
 #include "input/input_codes.hpp"
+#include "memory/arena.hpp"
 
 // Engine event types - platform agnostic
 enum class Event_Type : u32 {
@@ -92,8 +94,16 @@ struct Event_Callback_Entry {
     Event_Priority priority;
 };
 
+// Internal event state with multiple subscribers per event type
+struct Event_State {
+    // Static array for each event type, dynamic arrays for priority-ordered
+    // callbacks
+    Auto_Array<Event_Callback_Entry> callbacks[(u32)Event_Type::MAX_EVENTS];
+    b8 is_initialized;
+};
+
 // Event system functions - following your top-down pattern
-void events_initialize();
+Event_State *events_initialize(Arena *arena);
 void events_shutdown();
 
 // Register event callback for specific event type with priority (called by

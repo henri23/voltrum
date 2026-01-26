@@ -1,19 +1,9 @@
 #include "events.hpp"
 #include "core/logger.hpp"
-#include "data_structures/auto_array.hpp"
 #include "memory/memory.hpp"
 
-// Internal event state with multiple subscribers per event type
-struct Event_State {
-    // Static array for each event type, dynamic arrays for priority-ordered
-    // callbacks
-    Auto_Array<Event_Callback_Entry> callbacks[(u32)Event_Type::MAX_EVENTS];
-    b8 is_initialized;
-};
-
-internal_var Event_State event_state;
-
-void events_initialize() {
+void
+events_initialize() {
     CORE_DEBUG("Initializing event system...");
 
     if (event_state.is_initialized) {
@@ -34,7 +24,8 @@ void events_initialize() {
     CORE_INFO("Event system initialized successfully");
 }
 
-void events_shutdown() {
+void
+events_shutdown() {
     CORE_DEBUG("Shutting down event system...");
 
     if (!event_state.is_initialized) {
@@ -52,7 +43,8 @@ void events_shutdown() {
     CORE_DEBUG("Event system shut down");
 }
 
-void events_register_callback(Event_Type event_type,
+void
+events_register_callback(Event_Type event_type,
     PFN_event_callback callback,
     Event_Priority priority) {
     if (!event_state.is_initialized) {
@@ -96,8 +88,8 @@ void events_register_callback(Event_Type event_type,
         insertion_index);
 }
 
-void events_unregister_callback(Event_Type event_type,
-    PFN_event_callback callback) {
+void
+events_unregister_callback(Event_Type event_type, PFN_event_callback callback) {
     if (!event_state.is_initialized) {
         CORE_ERROR("Event system not initialized");
         return;
@@ -123,7 +115,8 @@ void events_unregister_callback(Event_Type event_type,
         (int)event_type);
 }
 
-void events_dispatch(const Event *event) {
+void
+events_dispatch(const Event *event) {
     if (!event_state.is_initialized) {
         return;
     }

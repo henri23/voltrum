@@ -9,35 +9,19 @@
 #include "renderer/renderer_frontend.hpp"
 #include "systems/resource_system.hpp"
 
-struct Texture_Reference {
-    Texture_ID handle;
-    u64 reference_count;
-    b8 auto_release;
-};
-
-struct Texture_System_State {
-    Texture_System_Config config;
-    Texture default_texture;
-
-    Hashmap<Texture_Reference> texture_registry;
-    Texture *registered_textures;
-};
-
-internal_var Texture_System_State state;
-
 INTERNAL_FUNC b8 create_default_textures(Texture_System_State *state);
 INTERNAL_FUNC void destroy_default_textures(Texture_System_State *state);
 
-INTERNAL_FUNC void create_texture(Texture *texture) {
+INTERNAL_FUNC void
+create_texture(Texture *texture) {
     memory_zero(texture, sizeof(Texture));
     texture->generation = INVALID_ID;
 }
 
 INTERNAL_FUNC void destroy_texture(Texture *texture);
 
-INTERNAL_FUNC b8 load_texture(const char *texture_name,
-    Texture *texture,
-    b8 is_ui_texture) {
+INTERNAL_FUNC b8
+load_texture(const char *texture_name, Texture *texture, b8 is_ui_texture) {
     Resource img_resource;
     if (!resource_system_load(texture_name,
             Resource_Type::IMAGE,
@@ -97,7 +81,8 @@ INTERNAL_FUNC b8 load_texture(const char *texture_name,
     return true;
 }
 
-b8 texture_system_init(Texture_System_Config config) {
+b8
+texture_system_init(Texture_System_Config config) {
 
     u32 count = config.max_texture_count;
     RUNTIME_ASSERT_MSG(count > 0,
@@ -121,7 +106,8 @@ b8 texture_system_init(Texture_System_Config config) {
     return true;
 }
 
-void texture_system_shutdown() {
+void
+texture_system_shutdown() {
 
     u32 max_count = state.config.max_texture_count;
 
@@ -215,7 +201,8 @@ texture_system_acquire(const char *name, b8 auto_release, b8 is_ui_texture) {
     return texture;
 }
 
-void texture_system_release(const char *name) {
+void
+texture_system_release(const char *name) {
 
     if (string_check_equal_insensitive(name, DEFAULT_TEXTURE_NAME)) {
         CORE_WARN(
@@ -263,7 +250,8 @@ void texture_system_release(const char *name) {
     }
 }
 
-INTERNAL_FUNC b8 create_default_textures(Texture_System_State *state) {
+INTERNAL_FUNC b8
+create_default_textures(Texture_System_State *state) {
 
     // NOTE: Create default texture to prevent runtime errors when texture was
     // not found from disk
@@ -312,13 +300,18 @@ INTERNAL_FUNC b8 create_default_textures(Texture_System_State *state) {
     return true;
 }
 
-Texture *texture_system_get_default_texture() { return &state.default_texture; }
+Texture *
+texture_system_get_default_texture() {
+    return &state.default_texture;
+}
 
-INTERNAL_FUNC void destroy_default_textures(Texture_System_State *state) {
+INTERNAL_FUNC void
+destroy_default_textures(Texture_System_State *state) {
     destroy_texture(&state->default_texture);
 }
 
-INTERNAL_FUNC void destroy_texture(Texture *texture) {
+INTERNAL_FUNC void
+destroy_texture(Texture *texture) {
     renderer_destroy_texture(texture);
 
     memory_zero(texture->name, sizeof(char) * TEXTURE_NAME_MAX_LENGTH);

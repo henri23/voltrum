@@ -32,10 +32,13 @@ Arena *_arena_create(const char *file,
 
 void arena_release(Arena *arena);
 
-#define arena_push_array(arena, type, count)                                   \
+#define push_struct(arena, type)                                               \
+    _arena_push((arena), sizeof(type), MAX(8, alignof(type)))
+
+#define push_array(arena, type, count)                                         \
     _arena_push((arena), sizeof(type) * count, MAX(8, alignof(type)))
 
-#define arena_push_array_aligned(arena, type, count, align)                    \
+#define push_array_aligned(arena, type, count, align)                          \
     _arena_push((arena), sizeof(type) * count, align)
 
 void *_arena_push(Arena *arena, u64 size, u64 align, b8 should_zero = true);
