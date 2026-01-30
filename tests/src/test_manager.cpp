@@ -1,7 +1,8 @@
 #include "test_manager.hpp"
-#include <data_structures/auto_array.hpp>
+#include <data_structures/dynamic_array.hpp>
 #include <core/absolute_clock.hpp>
 #include <core/logger.hpp>
+#include <memory/arena.hpp>
 #include <utils/string.hpp>
 
 struct Test_Entry {
@@ -9,10 +10,13 @@ struct Test_Entry {
     const char* desc;
 };
 
-static Auto_Array<Test_Entry> tests;
+static Arena *test_arena = nullptr;
+static Dynamic_Array<Test_Entry> tests;
 static const char* current_module_name = nullptr;
 
 void test_manager_init() {
+    test_arena = arena_create();
+    tests.init(test_arena);
 }
 
 void test_manager_register_test(
@@ -23,7 +27,7 @@ void test_manager_register_test(
     e.func = PFN_test;
     e.desc = desc;
 
-    tests.push_back(e);
+    tests.add(e);
 }
 
 void test_manager_begin_module(const char* module_name) {
@@ -35,7 +39,8 @@ void test_manager_begin_module(const char* module_name) {
 
 void test_manager_end_module() {
     current_module_name = nullptr;
-    tests.clear();
+    arena_clear(test_arena);
+    tests.init(test_arena);
 }
 
 void test_manager_run_tests() {
@@ -43,7 +48,7 @@ void test_manager_run_tests() {
     u32 failed = 0;
     u32 skipped = 0;
 
-    u32 count = tests.length;
+    u32 count = tests.size;
 
     Absolute_Clock total_time;
     absolute_clock_start(&total_time);

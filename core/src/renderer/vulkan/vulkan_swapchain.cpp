@@ -1,6 +1,7 @@
 #include "vulkan_swapchain.hpp"
 
 #include "core/logger.hpp"
+#include "memory/arena.hpp"
 #include "memory/memory.hpp"
 
 #include "defines.hpp"
@@ -55,7 +56,8 @@ void create_swapchain(Vulkan_Context *context,
     // From the time we get initially the swapchain support during device
     // selection, until the renderer comes here, the present modes may have
     // changed so we query a second time to get the most up-to-date properties
-    vulkan_device_query_swapchain_capabilities(context->device.physical_device,
+    vulkan_device_query_swapchain_capabilities(context->persistent_arena,
+        context->device.physical_device,
         context->surface,
         &context->device.swapchain_info);
 
@@ -189,15 +191,15 @@ void create_swapchain(Vulkan_Context *context,
         nullptr);
 
     if (!out_swapchain->images) {
-        out_swapchain->images = static_cast<VkImage *>(
-            memory_allocate(sizeof(VkImage) * out_swapchain->image_count,
-                Memory_Tag::RENDERER));
+        out_swapchain->images = push_array(context->persistent_arena,
+            VkImage,
+            out_swapchain->image_count);
     }
 
     if (!out_swapchain->views) {
-        out_swapchain->views = static_cast<VkImageView *>(
-            memory_allocate(sizeof(VkImageView) * out_swapchain->image_count,
-                Memory_Tag::RENDERER));
+        out_swapchain->views = push_array(context->persistent_arena,
+            VkImageView,
+            out_swapchain->image_count);
     }
 
     vkGetSwapchainImagesKHR(context->device.logical_device,
@@ -304,16 +306,7 @@ void vulkan_swapchain_destroy(Vulkan_Context *context,
 
     CORE_INFO("Destroying Vulkan swapchain...");
 
-    memory_deallocate(swapchain->views,
-        sizeof(VkImageView) * swapchain->image_count,
-        Memory_Tag::RENDERER);
-
-    swapchain->views = nullptr;
-
-    memory_deallocate(swapchain->images,
-        sizeof(VkImage) * swapchain->image_count,
-        Memory_Tag::RENDERER);
-
+    swapchain->views  = nullptr;
     swapchain->images = nullptr;
 
     vkDestroySwapchainKHR(context->device.logical_device,

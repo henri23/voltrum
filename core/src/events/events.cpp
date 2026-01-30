@@ -1,140 +1,148 @@
 #include "events.hpp"
+#include "core/asserts.hpp"
 #include "core/logger.hpp"
-#include "memory/memory.hpp"
 
-void
-events_initialize() {
+constexpr u32 DEFAULT_EVENT_CALLBACK_COUNT = 4;
+
+internal_var Event_State *state_ptr = nullptr;
+
+Event_State *
+events_init(Arena *allocator)
+{
+    constexpr u32 max_event_count = (u32)Event_Type::MAX_EVENTS;
+
     CORE_DEBUG("Initializing event system...");
 
-    if (event_state.is_initialized) {
-        CORE_WARN("Event system already initialized");
-        return;
-    }
-
-    // Zero out the state
-    memory_zero(&event_state, sizeof(Event_State));
+    Event_State *state = push_struct(allocator, Event_State);
 
     // Initialize callback arrays for each event type
-    for (u32 i = 0; i < (u32)Event_Type::MAX_EVENTS; ++i) {
-        event_state.callbacks[i] = Auto_Array<Event_Callback_Entry>();
-    }
+    for (u32 i = 0; i < max_event_count; ++i)
+    {
+        // Arena should guarantee this memory to be 0, but explicitly set is to
+        // 0 for safety
+        state->callback_buckets->count = 0;
 
-    event_state.is_initialized = true;
+        state->callback_buckets[i].listeners =
+            push_array(allocator, Event_Listener, DEFAULT_EVENT_CALLBACK_COUNT);
+    }
 
     CORE_INFO("Event system initialized successfully");
+
+    state_ptr = state;
+
+    return state;
 }
 
 void
-events_shutdown() {
-    CORE_DEBUG("Shutting down event system...");
+events_register_callback(Event_Type         event_type,
+                         PFN_event_callback callback,
+                         Event_Priority     priority)
+{
+    ENSURE(state_ptr);
 
-    if (!event_state.is_initialized) {
-        CORE_WARN("Event system not initialized");
-        return;
-    }
-
-    // Clear all callback arrays
-    for (u32 i = 0; i < (u32)Event_Type::MAX_EVENTS; ++i) {
-        event_state.callbacks[i].clear();
-    }
-
-    event_state.is_initialized = false;
-
-    CORE_DEBUG("Event system shut down");
-}
-
-void
-events_register_callback(Event_Type event_type,
-    PFN_event_callback callback,
-    Event_Priority priority) {
-    if (!event_state.is_initialized) {
-        CORE_ERROR("Event system not initialized");
-        return;
-    }
-
-    if ((u32)event_type >= (u32)Event_Type::MAX_EVENTS) {
+    if ((u32)event_type >= (u32)Event_Type::MAX_EVENTS)
+    {
         CORE_ERROR("Invalid event type: %d", (int)event_type);
         return;
     }
 
-    Auto_Array<Event_Callback_Entry> &callbacks =
-        event_state.callbacks[(u32)event_type];
+    Event_Callback_Bucket *bucket =
+        &state_ptr->callback_buckets[(u32)event_type];
+
+    RUNTIME_ASSERT_MSG(bucket->count < DEFAULT_EVENT_CALLBACK_COUNT,
+                       "events_register_callback - Cannot publish event "
+                       "because we are exceeding the limit of callbacks");
 
     // Create new callback entry
-    Event_Callback_Entry new_entry;
-    new_entry.callback = callback;
-    new_entry.listener = nullptr;
-    new_entry.priority = priority;
+    Event_Listener new_listener;
+    new_listener.callback = callback;
+    new_listener.listener = nullptr;
+    new_listener.priority = priority;
 
-    // Find insertion position to maintain ascending priority order (lower
-    // priority number = higher priority)
-    u32 insertion_index = 0;
-    for (u32 i = 0; i < callbacks.length; ++i) {
-        if ((u32)callbacks[i].priority > (u32)priority) {
+    // Insert at the first empty position
+    // NOTE: handle the priority when dispatching the event
+    u32 insertion_index = bucket->count; // Assume we will be writing here
+
+    for (u32 i = 0; i < DEFAULT_EVENT_CALLBACK_COUNT; ++i)
+    {
+        if (bucket->listeners[i].callback == nullptr)
+        {
             insertion_index = i;
             break;
         }
-        insertion_index = i + 1;
     }
 
-    // Insert at the correct position
-    callbacks.insert(callbacks.data + insertion_index, new_entry);
+    bucket->listeners[insertion_index] = new_listener;
 
-    CORE_DEBUG(
-        "Event callback registered for event type: %d with priority: %d at "
-        "index: %d",
-        (int)event_type,
-        (int)priority,
-        insertion_index);
+    ++bucket->count;
+
+    CORE_DEBUG("Event callback registered for event type: %d with priority: %d",
+               (int)event_type,
+               (int)priority);
 }
 
 void
-events_unregister_callback(Event_Type event_type, PFN_event_callback callback) {
-    if (!event_state.is_initialized) {
-        CORE_ERROR("Event system not initialized");
-        return;
-    }
+events_unregister_callback(Event_Type event_type, PFN_event_callback callback)
+{
+    ENSURE(state_ptr);
 
-    if ((u32)event_type >= (u32)Event_Type::MAX_EVENTS) {
-        CORE_ERROR("Invalid event type: %d", (int)event_type);
-        return;
-    }
+    RUNTIME_ASSERT((u32)event_type >= (u32)Event_Type::MAX_EVENTS);
 
-    Auto_Array<Event_Callback_Entry> &callbacks =
-        event_state.callbacks[(u32)event_type];
-    for (u32 i = 0; i < callbacks.length; ++i) {
-        if (callbacks[i].callback == callback) {
-            callbacks.erase(&callbacks[i]);
+    Event_Listener *listeners = state_ptr->callback_buckets->listeners;
+
+    for (u32 i = 0; i < DEFAULT_EVENT_CALLBACK_COUNT; ++i)
+    {
+        if (listeners[i].callback == callback)
+        {
+            listeners[i].callback = nullptr;
+            listeners[i].listener = nullptr;
+
             CORE_DEBUG("Event callback unregistered for event type: %d",
-                (int)event_type);
+                       (int)event_type);
             return;
         }
     }
 
     CORE_WARN("Callback not found for unregistration, event type: %d",
-        (int)event_type);
+              (int)event_type);
 }
 
 void
-events_dispatch(const Event *event) {
-    if (!event_state.is_initialized) {
-        return;
-    }
+events_queue_flush(Ring_Queue<Event> *event_queue)
+{
+    ENSURE(state_ptr);
 
-    if ((u32)event->type >= (u32)Event_Type::MAX_EVENTS) {
-        CORE_ERROR("Invalid event type in dispatch: %d", (int)event->type);
-        return;
-    }
+    Event event;
+    while (event_queue->dequeue(&event))
+    {
+        if ((u32)event.type >= (u32)Event_Type::MAX_EVENTS)
+        {
+            CORE_ERROR("Invalid event type in flush: %d", (int)event.type);
+            continue;
+        }
 
-    Auto_Array<Event_Callback_Entry> &callbacks =
-        event_state.callbacks[(u32)event->type];
+        Event_Callback_Bucket *bucket =
+            &state_ptr->callback_buckets[(u32)event.type];
 
-    // Dispatch to all callbacks for this event type in priority order
-    // If any callback returns true (consumed), stop propagation
-    for (u32 i = 0; i < callbacks.length; ++i) {
-        if (callbacks[i].callback(event)) {
-            // Event was consumed, stop propagation
-            return;
+        // Dispatch in priority order (lower enum value = higher priority)
+        b8 consumed = false;
+
+        for (u32 p = (u32)Event_Priority::HIGHEST;
+             p <= (u32)Event_Priority::LOWEST && !consumed;
+             ++p)
+        {
+            for (u32 i = 0; i < bucket->count && !consumed; ++i)
+            {
+                Event_Listener *listener = &bucket->listeners[i];
+
+                if (listener->callback == nullptr)
+                    continue;
+
+                if ((u32)listener->priority != p)
+                    continue;
+
+                consumed = listener->callback(&event);
+            }
         }
     }
 }

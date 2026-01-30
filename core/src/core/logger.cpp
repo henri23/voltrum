@@ -1,5 +1,4 @@
 #include "logger.hpp"
-#include "data_structures/auto_array.hpp"
 
 #include "spdlog/logger.h"
 #include "spdlog/spdlog.h"
@@ -45,10 +44,10 @@ create_logger(const char *logger_name, const char *file_name) {
     file_sink->set_pattern(LOG_PATTERN);
 
     // Create logger with both sinks
-    Auto_Array<spdlog::sink_ptr> sinks = {console_sink, file_sink};
+    spdlog::sink_ptr sinks[] = {console_sink, file_sink};
     auto logger = std::make_shared<spdlog::logger>(logger_name,
-        sinks.begin(),
-        sinks.end());
+        std::begin(sinks),
+        std::end(sinks));
 
     // Set level and register
     logger->set_level(spdlog::level::trace);

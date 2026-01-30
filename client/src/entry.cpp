@@ -71,14 +71,13 @@ b8 client_update(Client *client_state, f32 delta_time) {
             alloc_count - prev_alloc_count);
     }
 
-    // WARN: Temp code for testing texture loading
-    if (input_is_key_pressed(Key_Code::T) &&
-        input_was_key_pressed(Key_Code::T)) {
-        Event context = {};
-        context.type = Event_Type::DEBUG0;
-        events_dispatch(&context);
-    }
-    // WARN: Temp code end
+    // TODO: Re-enable when client_update receives Frame_Context*
+    // if (input_is_key_pressed(Key_Code::T) &&
+    //     input_was_key_pressed(Key_Code::T)) {
+    //     Event context = {};
+    //     context.type = Event_Type::DEBUG0;
+    //     frame_ctx->event_queue->enqueue(context);
+    // }
 
     return true;
 }
@@ -93,11 +92,6 @@ void client_on_resize(Client *client_state, u32 width, u32 height) {
 }
 
 void client_shutdown(Client *client_state) {
-    // Clean up frontend state
-    memory_deallocate(client_state->state,
-        sizeof(Frontend_State),
-        Memory_Tag::CLIENT);
-
     CLIENT_INFO("Client shutdown complete.")
 }
 
@@ -148,26 +142,30 @@ void client_menu_callback() {
 
 // Main client initialization function called by core
 b8 create_client(Client *client_state) {
+
+    client_state->arena = arena_create();
+
     // Set up client configuration
-    client_state->config.name = "Voltrum EDA";
-    client_state->config.width = 1600;
+    client_state->config.name   = "Voltrum EDA";
+    client_state->config.width  = 1600;
     client_state->config.height = 900;
-    client_state->config.theme = UI_Theme::CATPPUCCIN;
+    client_state->config.theme  = UI_Theme::CATPPUCCIN;
 
     // Set up lifecycle callbacks
     client_state->initialize = client_initialize;
-    client_state->update = client_update;
-    client_state->render = client_render;
-    client_state->on_resize = client_on_resize;
-    client_state->shutdown = client_shutdown;
+    client_state->update     = client_update;
+    client_state->render     = client_render;
+    client_state->on_resize  = client_on_resize;
+    client_state->shutdown   = client_shutdown;
 
     // Initialize state pointers
     client_state->state =
-        memory_allocate(sizeof(Frontend_State), Memory_Tag::CLIENT);
+        push_struct(client_state->arena, Frontend_State);
 
     // Create and register editor layer
+    client_state->layers.init(client_state->arena);
     UI_Layer editor_layer = create_editor_layer();
-    client_state->layers.push_back(editor_layer);
+    client_state->layers.add(editor_layer);
 
     // Set menu callback
     client_state->menu_callback = client_menu_callback;

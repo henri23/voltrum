@@ -5,11 +5,17 @@
 #include <core/logger.hpp>
 #include <data_structures/hashmap.hpp>
 #include <defines.hpp>
+#include <memory/arena.hpp>
+#include <memory/memory.hpp>
 #include <string.h>
 
-INTERNAL_FUNC u8 test_creation_and_deletion() {
+static Arena *test_arena = nullptr;
+
+INTERNAL_FUNC u8
+test_creation_and_deletion()
+{
     Hashmap<int> map;
-    map.init(3); // capacity should round up to 4
+    map.init(test_arena, 3); // capacity should round up to 4
 
     expect_should_be(4, map.capacity);
     expect_should_be(0, map.count);
@@ -24,9 +30,11 @@ INTERNAL_FUNC u8 test_creation_and_deletion() {
     return true;
 }
 
-INTERNAL_FUNC u8 test_add_find_remove() {
+INTERNAL_FUNC u8
+test_add_find_remove()
+{
     Hashmap<int> map;
-    map.init(4);
+    map.init(test_arena, 4);
 
     int v1 = 10;
     int v2 = 20;
@@ -36,7 +44,7 @@ INTERNAL_FUNC u8 test_add_find_remove() {
     expect_should_be(2, map.count);
 
     // Test find_ptr
-    int* out_ptr = nullptr;
+    int *out_ptr = nullptr;
     expect_should_be(true, map.find_ptr("a", &out_ptr));
     expect_should_be(v1, *out_ptr);
 
@@ -65,9 +73,11 @@ INTERNAL_FUNC u8 test_add_find_remove() {
     return true;
 }
 
-INTERNAL_FUNC u8 test_expected_warnings() {
+INTERNAL_FUNC u8
+test_expected_warnings()
+{
     Hashmap<int> map;
-    map.init(2);
+    map.init(test_arena, 2);
     int v = 7;
 
     expect_should_be(true, map.add("dup", &v));
@@ -91,9 +101,11 @@ INTERNAL_FUNC u8 test_expected_warnings() {
     return true;
 }
 
-INTERNAL_FUNC u8 test_full_hashmap_does_not_change_size() {
+INTERNAL_FUNC u8
+test_full_hashmap_does_not_change_size()
+{
     Hashmap<int> map;
-    map.init(4); // Should resolve to capacity 4
+    map.init(test_arena, 4); // Should resolve to capacity 4
 
     int values[5] = {10, 20, 30, 40, 50};
 
@@ -111,9 +123,11 @@ INTERNAL_FUNC u8 test_full_hashmap_does_not_change_size() {
     return true;
 }
 
-INTERNAL_FUNC u8 test_debug_log_showcase() {
+INTERNAL_FUNC u8
+test_debug_log_showcase()
+{
     Hashmap<int> map;
-    map.init(6);
+    map.init(test_arena, 6);
 
     int v1 = 1;
     int v2 = 2;
@@ -135,49 +149,54 @@ INTERNAL_FUNC u8 test_debug_log_showcase() {
     return true;
 }
 
-INTERNAL_FUNC u8 test_init_and_shutdown() {
+INTERNAL_FUNC u8
+test_init_and_shutdown()
+{
     Hashmap<int> map;
 
     // Verify initial state
     expect_should_be(0, map.capacity);
     expect_should_be(0, map.count);
-    expect_should_be(nullptr, map.memory);
+    expect_should_be(nullptr, map.items);
 
     // Initialize with capacity 5, should round to 8
-    map.init(5);
+    map.init(test_arena, 5);
     expect_should_be(8, map.capacity);
     expect_should_be(0, map.count);
-    expect_should_not_be(nullptr, map.memory);
+    expect_should_not_be(nullptr, map.items);
 
     // Add some data
     int value = 100;
     expect_should_be(true, map.add("test", &value));
     expect_should_be(1, map.count);
 
-    // Shutdown
-    map.free();
+    // Shutdown — arena manages memory, just zero the struct
+    memory_zero(&map, sizeof(map));
     expect_should_be(0, map.capacity);
     expect_should_be(0, map.count);
-    expect_should_be(nullptr, map.memory);
+    expect_should_be(nullptr, map.items);
 
     // Re-initialize with different capacity
-    map.init(3);
+    arena_clear(test_arena);
+    map.init(test_arena, 3);
     expect_should_be(4, map.capacity);
     expect_should_be(0, map.count);
-    expect_should_not_be(nullptr, map.memory);
+    expect_should_not_be(nullptr, map.items);
 
     return true;
 }
 
-INTERNAL_FUNC u8 test_find_ptr_vs_find() {
+INTERNAL_FUNC u8
+test_find_ptr_vs_find()
+{
     Hashmap<int> map;
-    map.init(4);
+    map.init(test_arena, 4);
 
     int original_value = 100;
     expect_should_be(true, map.add("test", &original_value));
 
     // Test find_ptr returns a pointer to the internal value
-    int* ptr_result = nullptr;
+    int *ptr_result = nullptr;
     expect_should_be(true, map.find_ptr("test", &ptr_result));
     expect_should_be(100, *ptr_result);
 
@@ -190,7 +209,7 @@ INTERNAL_FUNC u8 test_find_ptr_vs_find() {
     *ptr_result = 200;
 
     // Verify the hashmap value changed
-    int* ptr_check = nullptr;
+    int *ptr_check = nullptr;
     expect_should_be(true, map.find_ptr("test", &ptr_check));
     expect_should_be(200, *ptr_check);
 
@@ -203,19 +222,21 @@ INTERNAL_FUNC u8 test_find_ptr_vs_find() {
     expect_should_be(200, new_copy);
 
     // Modify the copy should NOT affect the hashmap
-    new_copy = 300;
-    int* final_ptr = nullptr;
+    new_copy       = 300;
+    int *final_ptr = nullptr;
     expect_should_be(true, map.find_ptr("test", &final_ptr));
     expect_should_be(200, *final_ptr);
 
     return true;
 }
 
-INTERNAL_FUNC u8 test_operations_before_init() {
+INTERNAL_FUNC u8
+test_operations_before_init()
+{
     Hashmap<int> map;
-    int value = 42;
-    int* out_ptr = nullptr;
-    int out_copy = 0;
+    int          value    = 42;
+    int         *out_ptr  = nullptr;
+    int          out_copy = 0;
 
     CORE_DEBUG("The next 4 errors about uninitialized hashmap are expected.");
 
@@ -234,10 +255,10 @@ INTERNAL_FUNC u8 test_operations_before_init() {
     // Verify map is still in uninitialized state
     expect_should_be(0, map.capacity);
     expect_should_be(0, map.count);
-    expect_should_be(nullptr, map.memory);
+    expect_should_be(nullptr, map.items);
 
     // Now properly initialize and verify operations work
-    map.init(4);
+    map.init(test_arena, 4);
     expect_should_be(true, map.add("key", &value));
     expect_should_be(true, map.find_ptr("key", &out_ptr));
     expect_should_be(value, *out_ptr);
@@ -249,19 +270,21 @@ INTERNAL_FUNC u8 test_operations_before_init() {
     return true;
 }
 
-INTERNAL_FUNC u8 test_add_with_overwrite() {
+INTERNAL_FUNC u8
+test_add_with_overwrite()
+{
     Hashmap<int> map;
-    map.init(4);
+    map.init(test_arena, 4);
 
     int original_value = 100;
-    int new_value = 200;
+    int new_value      = 200;
 
     // Add initial value
     expect_should_be(true, map.add("key", &original_value));
     expect_should_be(1, map.count);
 
     // Verify initial value
-    int* ptr_result = nullptr;
+    int *ptr_result = nullptr;
     expect_should_be(true, map.find_ptr("key", &ptr_result));
     expect_should_be(100, *ptr_result);
 
@@ -282,7 +305,8 @@ INTERNAL_FUNC u8 test_add_with_overwrite() {
     expect_should_be(true, map.find_ptr("key", &ptr_result));
     expect_should_be(200, *ptr_result);
 
-    // Test overwrite with a different key to ensure normal operation still works
+    // Test overwrite with a different key to ensure normal operation still
+    // works
     int another_value = 300;
     expect_should_be(true, map.add("another_key", &another_value, true));
     expect_should_be(2, map.count);
@@ -293,41 +317,27 @@ INTERNAL_FUNC u8 test_add_with_overwrite() {
     return true;
 }
 
-void hashmap_register_tests() {
-    test_manager_register_test(
-        test_creation_and_deletion,
-        "Hash_Map: creation and deletion"
-    );
-    test_manager_register_test(
-        test_add_find_remove,
-        "Hash_Map: add, find, remove"
-    );
-    test_manager_register_test(
-        test_expected_warnings,
-        "Hash_Map: expected warning scenarios"
-    );
-    test_manager_register_test(
-        test_debug_log_showcase,
-        "Hash_Map: debug log showcase"
-    );
-    test_manager_register_test(
-        test_full_hashmap_does_not_change_size,
-        "Hash_Map: full hashmap does not change size"
-    );
-    test_manager_register_test(
-        test_init_and_shutdown,
-        "Hash_Map: init and shutdown behavior"
-    );
-    test_manager_register_test(
-        test_find_ptr_vs_find,
-        "Hash_Map: find_ptr vs find behavior"
-    );
-    test_manager_register_test(
-        test_operations_before_init,
-        "Hash_Map: operations before initialization"
-    );
-    test_manager_register_test(
-        test_add_with_overwrite,
-        "Hash_Map: add with overwrite flag"
-    );
+void
+hashmap_register_tests()
+{
+    test_arena = arena_create();
+
+    test_manager_register_test(test_creation_and_deletion,
+                               "Hash_Map: creation and deletion");
+    test_manager_register_test(test_add_find_remove,
+                               "Hash_Map: add, find, remove");
+    test_manager_register_test(test_expected_warnings,
+                               "Hash_Map: expected warning scenarios");
+    test_manager_register_test(test_debug_log_showcase,
+                               "Hash_Map: debug log showcase");
+    test_manager_register_test(test_full_hashmap_does_not_change_size,
+                               "Hash_Map: full hashmap does not change size");
+    test_manager_register_test(test_init_and_shutdown,
+                               "Hash_Map: init and shutdown behavior");
+    test_manager_register_test(test_find_ptr_vs_find,
+                               "Hash_Map: find_ptr vs find behavior");
+    test_manager_register_test(test_operations_before_init,
+                               "Hash_Map: operations before initialization");
+    test_manager_register_test(test_add_with_overwrite,
+                               "Hash_Map: add with overwrite flag");
 }

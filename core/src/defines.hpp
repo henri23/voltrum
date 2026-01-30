@@ -151,8 +151,8 @@ constexpr u64 KiB(1 << 10);
 #    define FORCE_INLINE __forceinline
 #    define FORCE_NOT_INLINE __declspec(noinline)
 #else
-#    define FORCE_INLINE __attribute__((always_inline))
-#    define FORCE_NOT_INLINE
+#    define FORCE_INLINE inline __attribute__((always_inline))
+#    define FORCE_NOT_INLINE __attribute__((noinline))
 #endif
 
 // For operator overloading in headers - must use 'inline' (not __forceinline)

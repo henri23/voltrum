@@ -29,22 +29,29 @@ extern "C" void __builtin_debugtrap(void);
 // NOTE: Implemented in logger.cpp to keep the logging functionalities in one
 // place
 VOLTRUM_API void report_assertion_failure(const char *expression,
-    const char *message,
-    const char *file,
-    s32 line);
+                                          const char *message,
+                                          const char *file,
+                                          s32         line);
 
 #ifdef ASSERTIONS_ENABLED
 
 #    define RUNTIME_ASSERT_MSG(expr, message)                                  \
-        if (expr) {                                                            \
-        } else {                                                               \
+        if (expr)                                                              \
+        {                                                                      \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
             report_assertion_failure(#expr, message, __FILE__, __LINE__);      \
             debug_break();                                                     \
         }
 
 #    define RUNTIME_ASSERT(expr) RUNTIME_ASSERT_MSG(expr, "")
 
+#    define ENSURE(ptr)                                                        \
+        RUNTIME_ASSERT_MSG(ptr != nullptr, "Value cannot be nullptr")
+
 #else
 #    define RUNTIME_ASSERT_MSG(expr, message)
 #    define RUNTIME_ASSERT(expr)
+#    define ENSURE(ptr)
 #endif

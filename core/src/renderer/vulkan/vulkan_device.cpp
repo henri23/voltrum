@@ -1,7 +1,9 @@
 #include "vulkan_device.hpp"
 
 #include "core/logger.hpp"
-#include "data_structures/auto_array.hpp"
+#include "core/thread_context.hpp"
+#include "data_structures/dynamic_array.hpp"
+#include "memory/arena.hpp"
 #include "memory/memory.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 #include "utils/string.hpp"
@@ -14,7 +16,9 @@ struct Device_Queue_Indices {
     u32 compute_family_index;
 };
 
-INTERNAL_FUNC b8 is_device_suitable(VkPhysicalDevice device,
+INTERNAL_FUNC b8 is_device_suitable(Arena *persistent,
+    Arena *scratch,
+    VkPhysicalDevice device,
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties *properties,
     const VkPhysicalDeviceFeatures *features,
@@ -92,16 +96,14 @@ b8 select_physical_device(Vulkan_Context *context,
     if (physical_device_count == 0)
         return false;
 
-    // C++ compiler (in windows) does not allow for variable length arrays
-    // Allocate in heap and then deallocate to keep the compiler happy
-    // VkPhysicalDevice physical_devices_array[physical_device_count];
+    Scratch_Arena scratch = scratch_begin(nullptr, 0);
 
-    Auto_Array<VkPhysicalDevice> physical_devices_array;
-    physical_devices_array.resize(physical_device_count);
+    VkPhysicalDevice *physical_devices_array =
+        push_array(scratch.arena, VkPhysicalDevice, physical_device_count);
 
     vkEnumeratePhysicalDevices(context->instance,
         &physical_device_count,
-        physical_devices_array.data);
+        physical_devices_array);
 
     // Evaluate GPUs -> If mutliple GPUs are present in the machine,
     // we need to pick the most "qualified" one
@@ -121,7 +123,9 @@ b8 select_physical_device(Vulkan_Context *context,
         Device_Queue_Indices queue_indices;
 
         // Score the GPUs based on the properties they provide
-        b8 result = is_device_suitable(physical_devices_array[i],
+        b8 result = is_device_suitable(context->persistent_arena,
+            scratch.arena,
+            physical_devices_array[i],
             context->surface,
             &device_properties,
             &device_features,
@@ -207,6 +211,8 @@ b8 select_physical_device(Vulkan_Context *context,
         }
     }
 
+    scratch_end(scratch);
+
     if (context->device.physical_device) {
         return true;
     }
@@ -232,9 +238,10 @@ b8 create_logical_device(Vulkan_Context *context) {
     if (!does_present_share_queue)
         distinct_queue_family_indices_count++;
 
-    // u32 queue_family_indeces[distinct_queue_family_indices_count];
-    Auto_Array<u32> queue_family_indices;
-    queue_family_indices.resize(distinct_queue_family_indices_count);
+    Scratch_Arena scratch = scratch_begin(nullptr, 0);
+
+    u32 *queue_family_indices =
+        push_array(scratch.arena, u32, distinct_queue_family_indices_count);
 
     queue_family_indices[0] = context->device.graphics_queue_index;
 
@@ -245,8 +252,9 @@ b8 create_logical_device(Vulkan_Context *context) {
         queue_family_indices[2] = context->device.present_queue_index;
 
     // Information for the queues that we want to request
-    Auto_Array<VkDeviceQueueCreateInfo> queue_create_infos;
-    queue_create_infos.resize(distinct_queue_family_indices_count);
+    VkDeviceQueueCreateInfo *queue_create_infos = push_array(scratch.arena,
+        VkDeviceQueueCreateInfo,
+        distinct_queue_family_indices_count);
 
     u32 max_queue_count = 2;
 
@@ -258,12 +266,13 @@ b8 create_logical_device(Vulkan_Context *context) {
         &queue_family_count,
         nullptr);
 
-    Auto_Array<VkQueueFamilyProperties> queue_family_props;
-    queue_family_props.resize(queue_family_count);
+    VkQueueFamilyProperties *queue_family_props = push_array(scratch.arena,
+        VkQueueFamilyProperties,
+        queue_family_count);
 
     vkGetPhysicalDeviceQueueFamilyProperties(context->device.physical_device,
         &queue_family_count,
-        queue_family_props.data);
+        queue_family_props);
 
     f32 queue_priorities[2] = {1.0f, 1.0f};
     for (u32 i = 0; i < distinct_queue_family_indices_count; ++i) {
@@ -294,23 +303,23 @@ b8 create_logical_device(Vulkan_Context *context) {
     VkDeviceCreateInfo logical_device_create_info = {
         VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
 
-    logical_device_create_info.pQueueCreateInfos = queue_create_infos.data;
+    logical_device_create_info.pQueueCreateInfos = queue_create_infos;
     logical_device_create_info.queueCreateInfoCount =
         distinct_queue_family_indices_count;
     logical_device_create_info.pEnabledFeatures = &device_features_to_request;
 
     // Request swapchain extension for physical device
-    Auto_Array<const char *> required_extensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    const char *required_extensions[4] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+    u32         required_extensions_count = 1;
 
 #ifdef PLATFORM_APPLE
-    required_extensions.push_back("VK_KHR_portability_subset");
+    required_extensions[required_extensions_count++] =
+        "VK_KHR_portability_subset";
 #endif
 
-    logical_device_create_info.ppEnabledExtensionNames =
-        required_extensions.data;
+    logical_device_create_info.ppEnabledExtensionNames = required_extensions;
     logical_device_create_info.enabledExtensionCount =
-        required_extensions.length;
+        required_extensions_count;
 
     // Depracated, for clarity explicitly set them to uninitialized
     logical_device_create_info.enabledLayerCount = 0;
@@ -353,6 +362,8 @@ b8 create_logical_device(Vulkan_Context *context) {
 
     CORE_INFO("Graphics command pool created");
 
+    scratch_end(scratch);
+
     return true;
 }
 
@@ -361,7 +372,9 @@ b8 create_logical_device(Vulkan_Context *context) {
 // 			mulitple GPUs that can fulfill those requirements, the
 // 			first one gets selected, not necessarily the best
 
-b8 is_device_suitable(VkPhysicalDevice device,
+b8 is_device_suitable(Arena *persistent,
+    Arena *scratch,
+    VkPhysicalDevice device,
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties *properties,
     const VkPhysicalDeviceFeatures *features,
@@ -382,9 +395,9 @@ b8 is_device_suitable(VkPhysicalDevice device,
         &queue_family_count,
         nullptr);
 
-    auto queue_family_properties_array = static_cast<VkQueueFamilyProperties *>(
-        memory_allocate(sizeof(VkQueueFamilyProperties) * queue_family_count,
-            Memory_Tag::RENDERER));
+    auto queue_family_properties_array = push_array(scratch,
+        VkQueueFamilyProperties,
+        queue_family_count);
 
     vkGetPhysicalDeviceQueueFamilyProperties(device,
         &queue_family_count,
@@ -454,10 +467,6 @@ b8 is_device_suitable(VkPhysicalDevice device,
         }
     }
 
-    memory_deallocate(queue_family_properties_array,
-        sizeof(VkQueueFamilyProperties) * queue_family_count,
-        Memory_Tag::RENDERER);
-
     CORE_INFO("       %d |       %d |       %d |        %d | %s",
         out_indices->graphics_family_index,
         out_indices->present_family_index,
@@ -478,26 +487,13 @@ b8 is_device_suitable(VkPhysicalDevice device,
             (requirements->present &&
                 out_indices->present_family_index != -1))) {
 
-        vulkan_device_query_swapchain_capabilities(device,
+        vulkan_device_query_swapchain_capabilities(persistent,
+            device,
             surface,
             out_swapchain_info);
 
         if (out_swapchain_info->formats_count == -1 ||
             out_swapchain_info->present_modes_count == -1) {
-            if (out_swapchain_info->formats) {
-                memory_deallocate(out_swapchain_info->formats,
-                    sizeof(VkSurfaceFormatKHR) *
-                        out_swapchain_info->formats_count,
-                    Memory_Tag::RENDERER);
-            }
-
-            if (out_swapchain_info->present_modes) {
-                memory_deallocate(out_swapchain_info->present_modes,
-                    sizeof(VkPresentModeKHR) *
-                        out_swapchain_info->present_modes_count,
-                    Memory_Tag::RENDERER);
-            }
-
             CORE_DEBUG("Swapchain is not fully supported. Skipping device.");
             return false;
         }
@@ -517,7 +513,7 @@ b8 is_device_suitable(VkPhysicalDevice device,
 
         // Check whether the device supports all the required device level
         // extensions (namelly the swapchain extension)
-        if (requirements->device_extension_names->length > 0) {
+        if (requirements->device_extension_names->size > 0) {
             u32 available_extensions_count = 0;
 
             VK_CHECK(vkEnumerateDeviceExtensionProperties(device,
@@ -525,25 +521,24 @@ b8 is_device_suitable(VkPhysicalDevice device,
                 &available_extensions_count,
                 nullptr));
 
-            // Allocate in heap because the data turned out to be large
-            auto extension_properties =
-                static_cast<VkExtensionProperties *>(memory_allocate(
-                    sizeof(VkExtensionProperties) * available_extensions_count,
-                    Memory_Tag::RENDERER));
+            auto extension_properties = push_array(scratch,
+                VkExtensionProperties,
+                available_extensions_count);
 
             VK_CHECK(vkEnumerateDeviceExtensionProperties(device,
                 nullptr,
                 &available_extensions_count,
                 extension_properties));
 
-            for (u32 i = 0; i < requirements->device_extension_names->length;
+            for (u32 i = 0;
+                i < requirements->device_extension_names->size;
                 ++i) {
                 b8 found = false;
 
                 for (u32 j = 0; j < available_extensions_count; ++j) {
                     if (string_check_equal(
                             extension_properties[j].extensionName,
-                            requirements->device_extension_names->data[i])) {
+                            (*requirements->device_extension_names)[i])) {
                         found = true;
                         break;
                     }
@@ -553,21 +548,12 @@ b8 is_device_suitable(VkPhysicalDevice device,
                     CORE_INFO(
                         "Required extension not found: '%s', skipping device "
                         "'%s'",
-                        requirements->device_extension_names->data[i],
+                        (*requirements->device_extension_names)[i],
                         properties->deviceName);
-
-                    memory_deallocate(extension_properties,
-                        sizeof(VkExtensionProperties) *
-                            available_extensions_count,
-                        Memory_Tag::RENDERER);
 
                     return false;
                 }
             }
-
-            memory_deallocate(extension_properties,
-                sizeof(VkExtensionProperties) * available_extensions_count,
-                Memory_Tag::RENDERER);
         }
 
         return true;
@@ -576,11 +562,12 @@ b8 is_device_suitable(VkPhysicalDevice device,
     return false;
 }
 
-// This function could be called multiple times, but the memory is freed only
-// once during shutdown so we must be careful not to allocate again the memory
-// that is already allocated
-void vulkan_device_query_swapchain_capabilities(VkPhysicalDevice device,
-    VkSurfaceKHR surface,
+// This function could be called multiple times, but with arena allocation
+// only the first call actually pushes — subsequent calls reuse the pointer
+void vulkan_device_query_swapchain_capabilities(
+    Arena                        *allocator,
+    VkPhysicalDevice              device,
+    VkSurfaceKHR                  surface,
     Vulkan_Swapchain_Support_Info *out_swapchain_info) {
 
     out_swapchain_info->formats_count = -1;
@@ -598,11 +585,9 @@ void vulkan_device_query_swapchain_capabilities(VkPhysicalDevice device,
     if (out_swapchain_info->formats_count != 0) {
 
         if (!out_swapchain_info->formats) {
-
-            out_swapchain_info->formats = static_cast<VkSurfaceFormatKHR *>(
-                memory_allocate(sizeof(VkSurfaceFormatKHR) *
-                                    out_swapchain_info->formats_count,
-                    Memory_Tag::RENDERER));
+            out_swapchain_info->formats = push_array(allocator,
+                VkSurfaceFormatKHR,
+                out_swapchain_info->formats_count);
         }
 
         VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device,
@@ -619,10 +604,9 @@ void vulkan_device_query_swapchain_capabilities(VkPhysicalDevice device,
     if (out_swapchain_info->present_modes_count != 0) {
 
         if (!out_swapchain_info->present_modes) {
-            out_swapchain_info->present_modes = static_cast<VkPresentModeKHR *>(
-                memory_allocate(sizeof(VkPresentModeKHR) *
-                                    out_swapchain_info->present_modes_count,
-                    Memory_Tag::RENDERER));
+            out_swapchain_info->present_modes = push_array(allocator,
+                VkPresentModeKHR,
+                out_swapchain_info->present_modes_count);
         }
 
         VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device,
@@ -647,25 +631,10 @@ void vulkan_device_shutdown(Vulkan_Context *context) {
         context->device.logical_device = nullptr;
     }
 
-    if (context->device.swapchain_info.formats) {
-        memory_deallocate(context->device.swapchain_info.formats,
-            sizeof(VkSurfaceFormatKHR) *
-                context->device.swapchain_info.formats_count,
-            Memory_Tag::RENDERER);
-
-        context->device.swapchain_info.formats = nullptr;
-        context->device.swapchain_info.formats_count = 0;
-    }
-
-    if (context->device.swapchain_info.present_modes) {
-        memory_deallocate(context->device.swapchain_info.present_modes,
-            sizeof(VkPresentModeKHR) *
-                context->device.swapchain_info.present_modes_count,
-            Memory_Tag::RENDERER);
-
-        context->device.swapchain_info.present_modes = nullptr;
-        context->device.swapchain_info.present_modes_count = 0;
-    }
+    context->device.swapchain_info.formats = nullptr;
+    context->device.swapchain_info.formats_count = 0;
+    context->device.swapchain_info.present_modes = nullptr;
+    context->device.swapchain_info.present_modes_count = 0;
 
     context->device.presentation_queue = nullptr;
     context->device.graphics_queue = nullptr;

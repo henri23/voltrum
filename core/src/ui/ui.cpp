@@ -2,28 +2,30 @@
 #include "icons.hpp"
 #include "ui_titlebar.hpp"
 
-#include <imgui_internal.h>
-
 #include "core/logger.hpp"
 #include "systems/resource_system.hpp"
 
 #include <SDL3/SDL.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
+#include <imgui_internal.h>
 
-INTERNAL_FUNC void ui_dockspace_render(UI_Context *context) {
-    UI_Dockspace_State *dockspace = &context->dockspace;
+INTERNAL_FUNC void
+ui_dockspace_render(UI_State *state)
+{
+    UI_Dockspace_State *dockspace = &state->dockspace;
 
     dockspace->window_began = false;
 
-    if (dockspace->dockspace_id == 0) {
+    if (dockspace->dockspace_id == 0)
+    {
         dockspace->dockspace_id = ImGui::GetID("MainDockspace");
         CORE_DEBUG("Generated dockspace ID: %u", dockspace->dockspace_id);
     }
 
-    const ImGuiViewport *viewport = ImGui::GetMainViewport();
-    ImVec2 work_pos = viewport->WorkPos;
-    ImVec2 work_size = viewport->WorkSize;
+    const ImGuiViewport *viewport  = ImGui::GetMainViewport();
+    ImVec2               work_pos  = viewport->WorkPos;
+    ImVec2               work_size = viewport->WorkSize;
 
     work_pos.y += TITLEBAR_HEIGHT;
     work_size.y -= TITLEBAR_HEIGHT;
@@ -49,50 +51,62 @@ INTERNAL_FUNC void ui_dockspace_render(UI_Context *context) {
     ImGui::PopStyleVar(3);
 
     ImGuiIO &io = ImGui::GetIO();
-    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-        ImGuiStyle &style = ImGui::GetStyle();
-        float minWinSizeX = style.WindowMinSize.x;
-        style.WindowMinSize.x = 300.0f;
+    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+    {
+        ImGuiStyle &style       = ImGui::GetStyle();
+        float       minWinSizeX = style.WindowMinSize.x;
+        style.WindowMinSize.x   = 300.0f;
 
-        ImGui::DockSpace(dockspace->dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_NoWindowMenuButton);
+        ImGui::DockSpace(dockspace->dockspace_id,
+                         ImVec2(0.0f, 0.0f),
+                         ImGuiDockNodeFlags_NoWindowMenuButton);
 
         style.WindowMinSize.x = minWinSizeX;
-    } else {
+    }
+    else
+    {
         CORE_ERROR("ImGui docking is not enabled!");
     }
 
-    if (dockspace->window_began) {
+    if (dockspace->window_began)
+    {
         ImGui::End();
         dockspace->window_began = false;
     }
 }
 
-INTERNAL_FUNC b8 load_default_fonts(UI_Context *context) {
+INTERNAL_FUNC b8
+load_default_fonts(UI_State *state)
+{
     ImGuiIO &io = ImGui::GetIO();
 
     constexpr const char *style_names[] = {"normal",
-        "italic",
-        "bold_normal",
-        "bold_italic"};
+                                           "italic",
+                                           "bold_normal",
+                                           "bold_italic"};
 
     // Store resources to keep data alive until Build() is called
     Resource font_resources[(u8)Font_Style::MAX_COUNT] = {};
-    Resource icon_resource = {};
-    b8 icon_loaded = false;
+    Resource icon_resource                             = {};
+    b8       icon_loaded                               = false;
 
     // Load icon font once (will be merged with each text font)
     if (resource_system_load("fontawesome/fontawesome_normal",
-            Resource_Type::FONT,
-            &icon_resource)) {
+                             Resource_Type::FONT,
+                             &icon_resource))
+    {
         icon_loaded = true;
         CORE_DEBUG("Loaded FontAwesome icon font");
-    } else {
+    }
+    else
+    {
         CORE_WARN("Failed to load FontAwesome icon font");
     }
 
-    for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s) {
+    for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s)
+    {
         char path[128];
-        u32 i = 0;
+        u32  i = 0;
 
         const char *prefix = "jetbrains/jetbrains_";
         for (u32 j = 0; prefix[j] != '\0'; ++j)
@@ -104,138 +118,153 @@ INTERNAL_FUNC b8 load_default_fonts(UI_Context *context) {
         path[i] = '\0';
 
         if (!resource_system_load(path,
-                Resource_Type::FONT,
-                &font_resources[s])) {
+                                  Resource_Type::FONT,
+                                  &font_resources[s]))
+        {
             CORE_ERROR("Failed to load font: %s", path);
-            context->fonts[s] = nullptr;
+            state->fonts[s] = nullptr;
             continue;
         }
 
-        ImFontConfig config = {};
+        ImFontConfig config         = {};
         config.FontDataOwnedByAtlas = false;
 
-        context->fonts[s] =
+        state->fonts[s] =
             io.Fonts->AddFontFromMemoryTTF(font_resources[s].data,
-                font_resources[s].data_size,
-                20.0f,
-                &config);
+                                           font_resources[s].data_size,
+                                           20.0f,
+                                           &config);
 
-        if (context->fonts[s]) {
+        if (state->fonts[s])
+        {
             CORE_DEBUG("Loaded font: %s at %.0fpt", path, 20.0f);
         }
 
         // Merge icon font with this text font style
-        if (icon_loaded) {
-            ImFontConfig icon_config = {};
-            icon_config.MergeMode = true;
-            icon_config.PixelSnapH = true;
+        if (icon_loaded)
+        {
+            ImFontConfig icon_config         = {};
+            icon_config.MergeMode            = true;
+            icon_config.PixelSnapH           = true;
             icon_config.FontDataOwnedByAtlas = false;
-            icon_config.GlyphMinAdvanceX = 20.0f;
+            icon_config.GlyphMinAdvanceX     = 20.0f;
 
             static const ImWchar icon_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
 
             io.Fonts->AddFontFromMemoryTTF(icon_resource.data,
-                icon_resource.data_size,
-                18.0f,
-                &icon_config,
-                icon_ranges);
+                                           icon_resource.data_size,
+                                           18.0f,
+                                           &icon_config,
+                                           icon_ranges);
         }
     }
 
     // Build font atlas - data must remain valid until this point
-    if (!io.Fonts->Build()) {
+    if (!io.Fonts->Build())
+    {
         CORE_ERROR("Failed to build font atlas");
         // Clean up resources before returning
-        for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s) {
-            if (font_resources[s].data) {
+        for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s)
+        {
+            if (font_resources[s].data)
+            {
                 resource_system_unload(&font_resources[s]);
             }
         }
-        if (icon_loaded) {
+        if (icon_loaded)
+        {
             resource_system_unload(&icon_resource);
         }
         return false;
     }
 
     // Now safe to unload font data - ImGui has copied what it needs
-    for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s) {
-        if (font_resources[s].data) {
+    for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s)
+    {
+        if (font_resources[s].data)
+        {
             resource_system_unload(&font_resources[s]);
         }
     }
-    if (icon_loaded) {
+    if (icon_loaded)
+    {
         resource_system_unload(&icon_resource);
     }
 
-    io.FontDefault = context->fonts[(u8)Font_Style::NORMAL];
+    io.FontDefault = state->fonts[(u8)Font_Style::NORMAL];
     CORE_DEBUG("Font atlas built successfully with icon support");
 
     return true;
 }
 
-b8 ui_initialize(UI_Context *context,
-    UI_Layer *layers,
-    u32 layer_count,
-    UI_Theme theme,
-    PFN_menu_callback menu_callback,
-    const char *app_name,
-    SDL_Window *window) {
+UI_State *
+ui_init(Arena                   *allocator,
+        Dynamic_Array<UI_Layer> *layers,
+        UI_Theme                 theme,
+        PFN_menu_callback        menu_callback,
+        const char              *app_name,
+        Platform_State          *plat_state)
+{
+    UI_State *state = push_struct(allocator, UI_State);
 
-    context->current_theme = theme;
-    context->menu_callback = menu_callback;
-    context->app_name = app_name;
-    context->is_initialized = true;
+    state->current_theme  = theme;
+    state->menu_callback  = menu_callback;
+    state->app_name       = app_name;
+    state->is_initialized = true;
+    state->platform       = plat_state;
+    state->layers         = layers;
 
-    load_default_fonts(context);
+    load_default_fonts(state);
 
     ImGuiStyle &style = ImGui::GetStyle();
-    ui_themes_apply(context->current_theme, style);
 
-    ui_titlebar_setup(context, app_name);
+    ui_themes_apply(state->current_theme, style);
 
-    for (u32 i = 0; i < layer_count; ++i) {
-        UI_Layer *layer = &layers[i];
-        if (layer->on_attach)
-            layer->on_attach(layer);
+    ui_titlebar_setup(state, app_name);
+
+    for (UI_Layer &layer : *layers)
+    {
+        if (layer.on_attach)
+            layer.on_attach(&layer);
     }
 
-    return true;
+    return state;
 }
 
-void ui_shutdown(UI_Context *context, UI_Layer *layers, u32 layer_count) {
-    for (u32 i = 0; i < layer_count; ++i) {
-        UI_Layer *layer = &layers[i];
-        if (layer->on_detach)
-            layer->on_detach(layer);
-    }
-}
-
-void ui_update_layers(UI_Context *context,
-    UI_Layer *layers,
-    u32 layer_count,
-    f32 delta_t) {
-    for (u32 i = 0; i < layer_count; ++i) {
-        UI_Layer *layer = &layers[i];
-        if (layer->on_update)
-            layer->on_update(layer, delta_t);
+void
+ui_shutdown_layers(UI_State *state)
+{
+    for (auto &layer : *state->layers)
+    {
+        if (layer.on_detach)
+            layer.on_detach(&layer);
     }
 }
 
-ImDrawData *ui_draw_layers(UI_Context *context,
-    UI_Layer *layers,
-    u32 layer_count,
-    f32 delta_t) {
+void
+ui_update_layers(UI_State *state, f32 delta_t)
+{
+    for (auto &layer : *state->layers)
+    {
+        if (layer.on_update)
+            layer.on_update(&layer, delta_t);
+    }
+}
+
+ImDrawData *
+ui_draw_layers(UI_State *state, f32 delta_t)
+{
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    ui_titlebar_draw(context);
-    ui_dockspace_render(context);
+    ui_titlebar_draw(state);
+    ui_dockspace_render(state);
 
-    for (u32 i = 0; i < layer_count; ++i) {
-        UI_Layer *layer = &layers[i];
-        if (layer->on_render)
-            layer->on_render(layer, delta_t);
+    for (auto &layer : *state->layers)
+    {
+        if (layer.on_render)
+            layer.on_render(&layer, delta_t);
     }
 
     ImGui::Render();

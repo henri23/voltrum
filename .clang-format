@@ -2,7 +2,7 @@ BasedOnStyle: LLVM
 IndentWidth: 4
 ColumnLimit: 80
 NamespaceIndentation: All
-BreakBeforeBraces: Attach
+BreakBeforeBraces: Allman
 PointerAlignment: Right
 IndentPPDirectives: AfterHash
 
@@ -11,6 +11,9 @@ AllowAllParametersOfDeclarationOnNextLine: false
 AllowAllArgumentsOnNextLine: false
 BinPackArguments: false
 BinPackParameters: false
-AlignAfterOpenBracket: DontAlign
+AlignAfterOpenBracket: Align
 BreakAfterReturnType: AllDefinitions
 AlwaysBreakBeforeMultilineStrings: true
+AlwaysBreakTemplateDeclarations: Yes
+AlignConsecutiveDeclarations: Consecutive
+AlignConsecutiveAssignments: Consecutive

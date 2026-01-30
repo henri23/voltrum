@@ -1,169 +1,152 @@
 #include "input.hpp"
+#include "core/asserts.hpp"
 #include "core/logger.hpp"
 #include "memory/memory.hpp"
 
-void
-input_initialize() {
-    CORE_DEBUG("Initializing input system...");
-
-    if (input_state.is_initialized) {
-        CORE_WARN("Input system already initialized");
-        return;
-    }
-
-    // Zero out the state
-    memory_zero(&input_state, sizeof(Input_State));
-    input_state.is_initialized = true;
-
-    CORE_INFO("Input system initialized successfully");
-}
-
-void
-input_shutdown() {
-    CORE_DEBUG("Shutting down input system...");
-
-    if (!input_state.is_initialized) {
-        CORE_WARN("Input system not initialized");
-        return;
-    }
-
-    input_state.is_initialized = false;
-    CORE_DEBUG("Input system shut down");
-}
-
-void
-input_update() {
-    if (!input_state.is_initialized) {
-        return;
-    }
-
-    // Copy current state to previous state for edge detection
-    memory_copy(input_state.keys_prev,
-        input_state.keys,
-        sizeof(input_state.keys));
-    memory_copy(input_state.mouse_buttons_prev,
-        input_state.mouse_buttons,
-        sizeof(input_state.mouse_buttons));
-
-    // Update mouse delta
-    input_state.mouse_delta_x = input_state.mouse_x - input_state.mouse_prev_x;
-    input_state.mouse_delta_y = input_state.mouse_y - input_state.mouse_prev_y;
-
-    // Store previous mouse position
-    input_state.mouse_prev_x = input_state.mouse_x;
-    input_state.mouse_prev_y = input_state.mouse_y;
-
-    // Reset wheel delta (it's only valid for one frame)
-    input_state.mouse_wheel_delta_x = 0.0f;
-    input_state.mouse_wheel_delta_y = 0.0f;
-}
-
-void
-input_process_key(Key_Code key_code, b8 pressed) {
-    if (!input_state.is_initialized || (u32)key_code >= 512) {
-        return;
-    }
-
-    input_state.keys[(u32)key_code] = pressed;
-}
-
-void
-input_process_mouse_button(Mouse_Button button, b8 pressed) {
-    if (!input_state.is_initialized || (u8)button >= 8) {
-        return;
-    }
-
-    input_state.mouse_buttons[(u8)button] = pressed;
-}
-
-void
-input_process_mouse_move(s32 x, s32 y) {
-    if (!input_state.is_initialized) {
-        return;
-    }
-
-    input_state.mouse_x = x;
-    input_state.mouse_y = y;
-}
-
-void
-input_process_mouse_wheel(f32 delta_x, f32 delta_y) {
-    if (!input_state.is_initialized) {
-        return;
-    }
-
-    input_state.mouse_wheel_delta_x = delta_x;
-    input_state.mouse_wheel_delta_y = delta_y;
-}
+internal_var Input_State *state_ptr = nullptr;
 
 Input_State *
-input_get_state() {
-    if (!input_state.is_initialized) {
-        return nullptr;
-    }
+input_init(Arena *allocator)
+{
+    CORE_DEBUG("Initializing input system...");
 
-    return &input_state;
+    RUNTIME_ASSERT(state_ptr == nullptr);
+
+    state_ptr                 = push_struct(allocator, Input_State);
+    state_ptr->is_initialized = true;
+
+    CORE_INFO("Input system initialized successfully");
+
+    return state_ptr;
+}
+
+void
+input_update()
+{
+    ENSURE(state_ptr);
+
+    // Copy current state to previous state for edge detection
+    memory_copy(state_ptr->keys_prev, state_ptr->keys, sizeof(state_ptr->keys));
+    memory_copy(state_ptr->mouse_buttons_prev,
+                state_ptr->mouse_buttons,
+                sizeof(state_ptr->mouse_buttons));
+
+    // Update mouse delta
+    state_ptr->mouse_delta_x = state_ptr->mouse_x - state_ptr->mouse_prev_x;
+    state_ptr->mouse_delta_y = state_ptr->mouse_y - state_ptr->mouse_prev_y;
+
+    // Store previous mouse position
+    state_ptr->mouse_prev_x = state_ptr->mouse_x;
+    state_ptr->mouse_prev_y = state_ptr->mouse_y;
+
+    // Reset wheel delta (it's only valid for one frame)
+    state_ptr->mouse_wheel_delta_x = 0.0f;
+    state_ptr->mouse_wheel_delta_y = 0.0f;
+}
+
+void
+input_process_key(Key_Code key_code, b8 pressed)
+{
+    ENSURE(state_ptr);
+    RUNTIME_ASSERT((u32)key_code <= (u32)Key_Code::MAX_KEYS);
+
+    state_ptr->keys[(u32)key_code] = pressed;
+}
+
+void
+input_process_mouse_button(Mouse_Button button, b8 pressed)
+{
+    ENSURE(state_ptr);
+    RUNTIME_ASSERT((u32)button <= (u32)Mouse_Button::MAX_BUTTONS);
+
+    state_ptr->mouse_buttons[(u8)button] = pressed;
+}
+
+void
+input_process_mouse_move(s32 x, s32 y)
+{
+    ENSURE(state_ptr);
+
+    state_ptr->mouse_x = x;
+    state_ptr->mouse_y = y;
+}
+
+void
+input_process_mouse_wheel(f32 delta_x, f32 delta_y)
+{
+    ENSURE(state_ptr);
+
+    state_ptr->mouse_wheel_delta_x = delta_x;
+    state_ptr->mouse_wheel_delta_y = delta_y;
 }
 
 // Utility functions for common input checks
 b8
-input_is_key_pressed(Key_Code key_code) {
-    if (!input_state.is_initialized || (u32)key_code >= 512) {
-        return false;
-    }
-    return input_state.keys[(u32)key_code];
+input_is_key_pressed(Key_Code key_code)
+{
+    ENSURE(state_ptr);
+    RUNTIME_ASSERT((u32)key_code <= (u32)Key_Code::MAX_KEYS);
+
+    return state_ptr->keys[(u32)key_code];
 }
 
 b8
-input_is_key_released(Key_Code key_code) {
+input_is_key_released(Key_Code key_code)
+{
     return !input_is_key_pressed(key_code);
 }
 
 b8
-input_was_key_pressed(Key_Code key_code) {
-    if (!input_state.is_initialized || (u32)key_code >= 512) {
-        return false;
-    }
-    return input_state.keys[(u32)key_code] &&
-           !input_state.keys_prev[(u32)key_code];
+input_was_key_pressed(Key_Code key_code)
+{
+    ENSURE(state_ptr);
+    RUNTIME_ASSERT((u32)key_code <= (u32)Key_Code::MAX_KEYS);
+
+    return state_ptr->keys[(u32)key_code] &&
+           !state_ptr->keys_prev[(u32)key_code];
 }
 
 b8
-input_was_key_released(Key_Code key_code) {
-    if (!input_state.is_initialized || (u32)key_code >= 512) {
-        return false;
-    }
-    return !input_state.keys[(u32)key_code] &&
-           input_state.keys_prev[(u32)key_code];
+input_was_key_released(Key_Code key_code)
+{
+    ENSURE(state_ptr);
+    RUNTIME_ASSERT((u32)key_code <= (u32)Key_Code::MAX_KEYS);
+
+    return !state_ptr->keys[(u32)key_code] &&
+           state_ptr->keys_prev[(u32)key_code];
 }
 
 b8
-input_is_mouse_button_pressed(Mouse_Button button) {
-    if (!input_state.is_initialized || (u8)button >= 8) {
-        return false;
-    }
-    return input_state.mouse_buttons[(u8)button];
+input_is_mouse_button_pressed(Mouse_Button button)
+{
+    ENSURE(state_ptr);
+    RUNTIME_ASSERT((u32)button <= (u32)Mouse_Button::MAX_BUTTONS);
+
+    return state_ptr->mouse_buttons[(u8)button];
 }
 
 b8
-input_is_mouse_button_released(Mouse_Button button) {
+input_is_mouse_button_released(Mouse_Button button)
+{
     return !input_is_mouse_button_pressed(button);
 }
 
 b8
-input_was_mouse_button_pressed(Mouse_Button button) {
-    if (!input_state.is_initialized || (u8)button >= 8) {
-        return false;
-    }
-    return input_state.mouse_buttons[(u8)button] &&
-           !input_state.mouse_buttons_prev[(u8)button];
+input_was_mouse_button_pressed(Mouse_Button button)
+{
+    ENSURE(state_ptr);
+    RUNTIME_ASSERT((u32)button <= (u32)Mouse_Button::MAX_BUTTONS);
+
+    return state_ptr->mouse_buttons[(u8)button] &&
+           !state_ptr->mouse_buttons_prev[(u8)button];
 }
 
 b8
-input_was_mouse_button_released(Mouse_Button button) {
-    if (!input_state.is_initialized || (u8)button >= 8) {
-        return false;
-    }
-    return !input_state.mouse_buttons[(u8)button] &&
-           input_state.mouse_buttons_prev[(u8)button];
+input_was_mouse_button_released(Mouse_Button button)
+{
+    ENSURE(state_ptr);
+    RUNTIME_ASSERT((u32)button <= (u32)Mouse_Button::MAX_BUTTONS);
+
+    return !state_ptr->mouse_buttons[(u8)button] &&
+           state_ptr->mouse_buttons_prev[(u8)button];
 }

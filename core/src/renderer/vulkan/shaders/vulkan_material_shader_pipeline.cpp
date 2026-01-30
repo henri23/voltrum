@@ -6,6 +6,8 @@
 #include "renderer/vulkan/vulkan_types.hpp"
 
 #include "core/logger.hpp"
+#include "core/thread_context.hpp"
+#include "memory/arena.hpp"
 #include "renderer/vulkan/vulkan_shader_utils.hpp"
 
 #include "math/math_types.hpp"
@@ -223,27 +225,26 @@ b8 vulkan_material_shader_pipeline_create(Vulkan_Context *context,
         return false;
     }
 
-    Auto_Array<VkDescriptorSetLayout> global_layouts;
+    Scratch_Arena scratch = scratch_begin(nullptr, 0);
+
+    VkDescriptorSetLayout *global_layouts = push_array(scratch.arena,
+        VkDescriptorSetLayout,
+        context->swapchain.image_count);
 
     for (u32 i = 0; i < context->swapchain.image_count; ++i)
-        global_layouts.push_back(out_shader->global_descriptor_set_layout);
+        global_layouts[i] = out_shader->global_descriptor_set_layout;
 
     VkDescriptorSetAllocateInfo alloc_info = {
         VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
     alloc_info.descriptorPool = out_shader->global_descriptor_pool;
     alloc_info.descriptorSetCount = context->swapchain.image_count;
-    alloc_info.pSetLayouts = global_layouts.data;
-
-    // Reserve memory in the global_descriptor_sets array equal to the number
-    // of swapchain images
-    // out_shader->global_descriptor_sets =
-    //     static_cast<VkDescriptorSet*>(memory_allocate(
-    //         sizeof(VkDescriptorSet) * context->swapchain.image_count,
-    //         Memory_Tag::RENDERER));
+    alloc_info.pSetLayouts = global_layouts;
 
     VK_CHECK(vkAllocateDescriptorSets(context->device.logical_device,
         &alloc_info,
         out_shader->global_descriptor_sets));
+
+    scratch_end(scratch);
 
     // Fixed the device local and host visible at the same time bug by querying
     // the capabilities of the selected GPU and adjusting accordingly
@@ -277,10 +278,6 @@ void vulkan_material_shader_pipeline_destroy(Vulkan_Context *context,
     vkDestroyDescriptorSetLayout(logical_device,
         shader->object_descriptor_set_layout,
         context->allocator);
-
-    // memory_deallocate(shader->global_descriptor_sets,
-    //     sizeof(VkDescriptorSet) * context->swapchain.image_count,
-    //     Memory_Tag::RENDERER);
 
     // Destroy global uniforms resources
     vulkan_buffer_destroy(context, &shader->global_uniform_buffer);

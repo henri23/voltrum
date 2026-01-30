@@ -98,7 +98,7 @@ _arena_push(Arena *arena, u64 size, u64 align, b8 should_zero) {
     return result;
 }
 
-INTERNAL_FUNC void
+void
 arena_pop_to(Arena *arena, u64 position) {
     u64 new_position = CLAMP_BOT(ARENA_HEADER_SIZE, position);
 
