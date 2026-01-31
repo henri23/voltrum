@@ -165,7 +165,8 @@ void memory_get_current_usage(char *out_buf) {
     // more byte for the null terminator character as the strlen disregards it
     u64 length = strlen(utilization_buffer);
 
-    string_copy(out_buf, utilization_buffer);
+    u64 copy_len = strlen(utilization_buffer);
+    memory_copy(out_buf, utilization_buffer, copy_len + 1);
 }
 
 u64 memory_get_allocations_count() { return state.allocations_count; }

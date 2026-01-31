@@ -355,6 +355,15 @@ ui_titlebar_draw(UI_State *context)
         {
             state->is_titlebar_hovered = new_hover_state;
         }
+
+        // Block OS-level titlebar drag when an ImGui window (e.g. a floating
+        // window) overlaps the titlebar region
+        ImGuiWindow *hovered_window    = GImGui->HoveredWindow;
+        ImGuiWindow *titlebar_window   = ImGui::GetCurrentWindow();
+        b8           imgui_blocks_drag = in_titlebar &&
+                               hovered_window != nullptr &&
+                               hovered_window != titlebar_window;
+        context->platform->block_titlebar_drag = imgui_blocks_drag;
     }
     ImGui::End();
 }

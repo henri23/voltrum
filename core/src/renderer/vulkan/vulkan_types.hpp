@@ -4,6 +4,7 @@
 #include "defines.hpp"
 
 #include "data_structures/dynamic_array.hpp"
+#include "data_structures/memory_pool.hpp"
 #include "renderer/renderer_types.hpp"
 #include <vulkan/vulkan.h>
 
@@ -22,13 +23,16 @@ struct Vulkan_Buffer
     u32                memory_property_flags;
 };
 
+constexpr const u32 VULKAN_MAX_SURFACE_FORMATS = 16;
+constexpr const u32 VULKAN_MAX_PRESENT_MODES   = 8;
+
 struct Vulkan_Swapchain_Support_Info
 {
     VkSurfaceCapabilitiesKHR capabilities;
     u32                      formats_count;
-    VkSurfaceFormatKHR      *formats;
+    VkSurfaceFormatKHR       formats[VULKAN_MAX_SURFACE_FORMATS];
     u32                      present_modes_count;
-    VkPresentModeKHR        *present_modes;
+    VkPresentModeKHR         present_modes[VULKAN_MAX_PRESENT_MODES];
 };
 
 struct Vulkan_Device
@@ -105,9 +109,9 @@ struct Vulkan_Swapchain
     VkSwapchainKHR handle;
     u32            max_in_flight_frames;
 
-    u32          image_count;
-    VkImage     *images; // array of VkImages. Automatically created and cleaned
-    VkImageView *views; // array of Views, struct that lets us access the images
+    u32         image_count;
+    VkImage     images[3];
+    VkImageView views[3];
 
     VkFramebuffer framebuffers[3];
 
@@ -177,7 +181,8 @@ constexpr const u32 VULKAN_MATERIAL_SHADER_SAMPLER_COUNT    = 1;
 constexpr const u32 VULKAN_MAX_MATERIAL_COUNT = 1024;
 
 // NOTE: Max number of simultaneously uploaded geometries
-constexpr const u32 VULKAN_MAX_GEOMETRY_COUNT = 4096;
+constexpr const u32 VULKAN_MAX_GEOMETRY_COUNT     = 4096;
+constexpr const u32 VULKAN_MAX_TEXTURE_DATA_COUNT = 1024;
 
 struct Vulkan_Geometry_Data
 {
@@ -274,11 +279,17 @@ struct Vulkan_ImGui_Shader_Pipeline
     VkDescriptorSet viewport_descriptors[3];
 };
 
+struct Vulkan_Texture_Data
+{
+    Vulkan_Image    image;
+    VkSampler       sampler;
+    VkDescriptorSet ui_descriptor_set;
+};
+
 struct Vulkan_Context
 {
     f32 frame_delta_time;
 
-    Arena          *persistent_arena;
     Platform_State *platform;
 
     VkInstance             instance;
@@ -332,14 +343,10 @@ struct Vulkan_Context
     // TODO: Make dynamic
     Vulkan_Geometry_Data registered_geometries[VULKAN_MAX_GEOMETRY_COUNT];
 
-    s32 (*find_memory_index)(u32 type_filter, u32 property_flags);
-};
+    Arena                           *texture_data_arena;
+    Memory_Pool<Vulkan_Texture_Data> texture_data_pool;
 
-struct Vulkan_Texture_Data
-{
-    Vulkan_Image    image;
-    VkSampler       sampler;
-    VkDescriptorSet ui_descriptor_set;
+    s32 (*find_memory_index)(u32 type_filter, u32 property_flags);
 };
 
 struct Vulkan_Physical_Device_Requirements

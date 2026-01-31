@@ -11,6 +11,10 @@ struct Platform_State
     SDL_Window   *window;
     SDL_Renderer *renderer;
     f32           main_scale;
+
+    // Set by the UI layer each frame to prevent OS titlebar drag
+    // when an ImGui window overlaps the titlebar area
+    b8 block_titlebar_drag;
 };
 
 struct Platform_System_Info

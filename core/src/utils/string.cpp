@@ -1,259 +1,500 @@
 #include "utils/string.hpp"
+
+#include "math/math_types.hpp"
+#include "memory/arena.hpp"
 #include "memory/memory.hpp"
 
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <string.h>
 
-#if !defined(PLATFORM_WINDOWS)
-#    include <strings.h>
-#endif
-
-b8 string_check_equal(const char *str1, const char *str2) {
-    return strcmp(str1, str2) == 0;
-}
-
-b8 string_check_equal_insensitive(const char *str1, const char *str2) {
-#if defined(PLATFORM_WINDOWS)
-    return _stricmp(str1, str2) == 0;
-#else
-    return strcasecmp(str1, str2) == 0;
-#endif
-}
-
-s32 string_format(char *dest, const char *format, ...) {
-    if (dest) {
-
-        va_list arg_ptr; // Pointer to args
-
-        va_start(arg_ptr, format);
-        s32 written = string_format_v(dest, format, arg_ptr);
-        va_end(arg_ptr);
-        return written;
-    }
-
-    return -1;
-}
-
-s32 string_format_v(char *dest, const char *format, va_list va_list) {
-    if (dest) {
-        char buffer[32000];
-        s32 written = vsnprintf(buffer, 32000, format, va_list);
-        buffer[written] = 0;
-        memory_copy(dest, buffer, written + 1);
-
-        return written;
-    }
-
-    return -1;
-}
-
-char *string_empty(char *str) {
-    if (str) {
-        str[0] = '\0';
-    }
-
-    return str;
-}
-
-u64 string_length(const char *string) {
-    u64 length = 0;
-    // Continue to iterate inside the string until we find the
-    // null terminator /0 whose ASCII value is 0
-    while (string[length] != 0) {
-        length++;
-    }
-    return length;
-}
-
-char *string_copy(char *dest, const char *source) {
-    return strcpy(dest, source);
-}
-
-char *string_ncopy(char *dest, const char *source, u64 max_length) {
-    return strncpy(dest, source, max_length);
-}
-
-char *string_duplicate(const char *source) {
-    if (!source) {
-        return nullptr;
-    }
-
-    u64 length = string_length(source);
-    char *duplicate = static_cast<char *>(
-        memory_allocate((length + 1) * sizeof(char), Memory_Tag::STRING));
-
-    if (duplicate) {
-        string_copy(duplicate, source);
-    }
-
-    return duplicate;
-}
-
-// This method does not allocate memory, but instead it modifies the existing
-// string. If the string provided was dynamically allocated, the original
-// pointer must be kept, and used for memory deallocation.
-char *string_trim(char *str) {
-    char *end;
-
-    while (isspace((unsigned char)*str))
-        str++;
-
-    if (*str == 0)
-        return str;
-
-    end = str + string_length(str) - 1;
-
-    while (end > str && isspace((unsigned char)*end))
-        end--;
-
-    end[1] = '\0';
-
-    return str;
-}
-
-// This method dynamically allocates a new substring with trimmed whitespaces
-// Must be deallocated by the called. It returns the length of the new allocated
-// string
-u64 string_trim_copy(const char *src_str, char *out_str) {
-    u64 length = 0;
-
-    while (isspace((unsigned)*src_str))
-        src_str++;
-
-    if (*src_str == 0) {
-        out_str = nullptr;
-    }
-
-    const char *end = src_str + string_length(src_str) - 1;
-    while (end > src_str && isspace((unsigned char)*end))
-        end--;
-
-    length = end - src_str;
-
-    // WARN: Potential memory leak if not properly deallocate
-    out_str = static_cast<char *>(
-        memory_allocate(length * sizeof(char), Memory_Tag::STRING));
-
-    string_ncopy(out_str, src_str, length);
-    out_str[length] = '\0';
-
-    return length;
-}
-
-void string_substr(char *dest, const char *source, s32 start, s32 length) {
-    if (length == 0)
-        return;
-
-    u64 src_length = string_length(source);
-
-    if (start >= src_length) {
-        dest[0] = '\0';
-        return;
-    }
-
-    if (length > 0) {
-        for (u64 i = start, j = 0; j < length && source[i]; ++i, ++j) {
-            dest[j] = source[i];
+// Construction
+String
+str_from_cstr(const char *c)
+{
+    String result = {};
+    if (c)
+    {
+        u64 len = 0;
+        while (c[len])
+        {
+            len++;
         }
-        dest[start + length] = '\0';
-    } else {
-        // If a negative length is provided, we proceede until the end of the
-        // source string
-        u64 j = 0;
-        for (u64 i = start; source[i]; ++i, ++j) {
-            dest[j] = source[i];
-        }
-        dest[start + length] = '\0';
+        result.str  = (const u8 *)c;
+        result.size = len;
     }
+    return result;
 }
 
-s32 string_index_of(char *str, char character) {
-    if (!str) {
-        return -1;
+// Matching
+INTERNAL_FUNC u8
+char_to_lower(u8 c)
+{
+    return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c;
+}
+
+INTERNAL_FUNC u8
+char_to_forward_slash(u8 c)
+{
+    return (c == '\\') ? '/' : c;
+}
+
+b8
+str_match(String a, String b, String_Match_Flags flags)
+{
+    if (a.size != b.size)
+    {
+        return false;
     }
 
-    u32 length = string_length(str);
-    if (length > 0) {
-        for (u32 i = 0; i < length; ++i) {
-            if (str[i] == character) {
-                return i;
+    b8 case_insensitive = (flags & String_Match_Flags::CASE_INSENSITIVE) !=
+                          String_Match_Flags::NONE;
+    b8 slash_insensitive = (flags & String_Match_Flags::SLASH_INSENSITIVE) !=
+                           String_Match_Flags::NONE;
+
+    for (u64 i = 0; i < a.size; i++)
+    {
+        u8 ca = a.str[i];
+        u8 cb = b.str[i];
+
+        if (case_insensitive)
+        {
+            ca = char_to_lower(ca);
+            cb = char_to_lower(cb);
+        }
+        if (slash_insensitive)
+        {
+            ca = char_to_forward_slash(ca);
+            cb = char_to_forward_slash(cb);
+        }
+
+        if (ca != cb)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+u64
+str_find_needle(String             haystack,
+                u64                start,
+                String             needle,
+                String_Match_Flags flags)
+{
+    if (needle.size == 0 || start + needle.size > haystack.size)
+    {
+        return (u64)-1;
+    }
+
+    b8 case_insensitive = (flags & String_Match_Flags::CASE_INSENSITIVE) !=
+                          String_Match_Flags::NONE;
+    b8 slash_insensitive = (flags & String_Match_Flags::SLASH_INSENSITIVE) !=
+                           String_Match_Flags::NONE;
+
+    for (u64 i = start; i + needle.size <= haystack.size; i++)
+    {
+        b8 found = true;
+        for (u64 j = 0; j < needle.size; j++)
+        {
+            u8 ch = haystack.str[i + j];
+            u8 cn = needle.str[j];
+
+            if (case_insensitive)
+            {
+                ch = char_to_lower(ch);
+                cn = char_to_lower(cn);
+            }
+            if (slash_insensitive)
+            {
+                ch = char_to_forward_slash(ch);
+                cn = char_to_forward_slash(cn);
+            }
+
+            if (ch != cn)
+            {
+                found = false;
+                break;
             }
         }
+
+        if (found)
+        {
+            return i;
+        }
     }
 
-    return -1;
+    return (u64)-1;
 }
 
-b8 string_to_vec4(char *str, vec4 *out_vec4) {
-    if (!str || !out_vec4) {
+// Slicing
+String
+str_prefix(String s, u64 size)
+{
+    u64 clamped = (size < s.size) ? size : s.size;
+    return String{s.str, clamped};
+}
+
+String
+str_skip(String s, u64 amt)
+{
+    u64 clamped = (amt < s.size) ? amt : s.size;
+    return String{s.str + clamped, s.size - clamped};
+}
+
+String
+str_substr(String s, u64 start, u64 len)
+{
+    if (start >= s.size)
+    {
+        return str_zero();
+    }
+    u64 max_len = s.size - start;
+    u64 clamped = (len < max_len) ? len : max_len;
+    return String{s.str + start, clamped};
+}
+
+String
+str_trim_whitespace(String s)
+{
+    u64 start = 0;
+    while (start < s.size && isspace(s.str[start]))
+    {
+        start++;
+    }
+
+    u64 end = s.size;
+    while (end > start && isspace(s.str[end - 1]))
+    {
+        end--;
+    }
+
+    return String{s.str + start, end - start};
+}
+
+// Arena-allocated operations
+String
+str_copy(Arena *arena, String s)
+{
+    if (s.size == 0 || !s.str)
+    {
+        return str_zero();
+    }
+
+    u8 *buf = push_array(arena, u8, s.size);
+    memory_copy(buf, s.str, s.size);
+    return String{buf, s.size};
+}
+
+String
+str_cat(Arena *arena, String a, String b)
+{
+    u64 total = a.size + b.size;
+    if (total == 0)
+    {
+        return str_zero();
+    }
+
+    u8 *buf = push_array(arena, u8, total);
+
+    if (a.size > 0)
+    {
+        memory_copy(buf, a.str, a.size);
+    }
+    if (b.size > 0)
+    {
+        memory_copy(buf + a.size, b.str, b.size);
+    }
+
+    return String{buf, total};
+}
+
+String
+str_fmt(Arena *arena, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    String result = str_fmt_v(arena, fmt, args);
+    va_end(args);
+    return result;
+}
+
+String
+str_fmt_v(Arena *arena, const char *fmt, va_list args)
+{
+    va_list args_copy;
+    va_copy(args_copy, args);
+    s32 len = vsnprintf(nullptr, 0, fmt, args_copy);
+    va_end(args_copy);
+
+    if (len <= 0)
+    {
+        return str_zero();
+    }
+
+    u8 *buf = push_array(arena, u8, (u64)len + 1);
+    vsnprintf((char *)buf, (u64)len + 1, fmt, args);
+
+    return String{buf, (u64)len};
+}
+
+// Path helpers
+INTERNAL_FUNC u64
+find_last_slash(String s)
+{
+    u64 pos = (u64)-1;
+    for (u64 i = 0; i < s.size; i++)
+    {
+        if (s.str[i] == '/' || s.str[i] == '\\')
+        {
+            pos = i;
+        }
+    }
+    return pos;
+}
+
+String
+str_chop_last_slash(String s)
+{
+    u64 pos = find_last_slash(s);
+    if (pos == (u64)-1)
+    {
+        return s;
+    }
+    return String{s.str, pos};
+}
+
+String
+str_skip_last_slash(String s)
+{
+    u64 pos = find_last_slash(s);
+    if (pos == (u64)-1)
+    {
+        return s;
+    }
+    return String{s.str + pos + 1, s.size - pos - 1};
+}
+
+String
+str_chop_last_dot(String s)
+{
+    u64 pos = (u64)-1;
+    for (u64 i = 0; i < s.size; i++)
+    {
+        if (s.str[i] == '.')
+        {
+            pos = i;
+        }
+    }
+
+    if (pos == (u64)-1)
+    {
+        return s;
+    }
+    return String{s.str, pos};
+}
+
+String
+str_skip_last_dot(String s)
+{
+    u64 pos = (u64)-1;
+    for (u64 i = 0; i < s.size; i++)
+    {
+        if (s.str[i] == '.')
+        {
+            pos = i;
+        }
+    }
+
+    if (pos == (u64)-1)
+    {
+        return str_zero();
+    }
+    return String{s.str + pos + 1, s.size - pos - 1};
+}
+
+String
+str_path_join(Arena *arena, String dir, String file)
+{
+    if (dir.size == 0)
+    {
+        return str_copy(arena, file);
+    }
+    if (file.size == 0)
+    {
+        return str_copy(arena, dir);
+    }
+
+    u8 last = dir.str[dir.size - 1];
+    if (last == '/' || last == '\\')
+    {
+        return str_cat(arena, dir, file);
+    }
+
+    u64 total = dir.size + 1 + file.size;
+    u8 *buf   = push_array(arena, u8, total);
+    memory_copy(buf, dir.str, dir.size);
+    buf[dir.size] = '/';
+    memory_copy(buf + dir.size + 1, file.str, file.size);
+
+    return String{buf, total};
+}
+
+// Search
+u64
+str_index_of(String s, u8 character)
+{
+    for (u64 i = 0; i < s.size; i++)
+    {
+        if (s.str[i] == character)
+        {
+            return i;
+        }
+    }
+    return (u64)-1;
+}
+
+// Hashing (FNV-1a)
+u64
+str_hash(String s)
+{
+    u64 hash = 14695981039346656037ULL;
+    for (u64 i = 0; i < s.size; i++)
+    {
+        hash ^= (u64)s.str[i];
+        hash *= 1099511628211ULL;
+    }
+    return hash;
+}
+
+// Parsing - uses stack buffer to null-terminate for sscanf
+INTERNAL_FUNC b8
+make_cstr_buffer(String s, char *buf, u64 buf_size)
+{
+    if (s.size == 0 || !s.str)
+    {
+        return false;
+    }
+    if (s.size >= buf_size)
+    {
+        return false;
+    }
+    memory_copy(buf, s.str, s.size);
+    buf[s.size] = '\0';
+    return true;
+}
+
+b8
+str_to_f32(String s, f32 *out)
+{
+    if (!out)
+    {
         return false;
     }
 
-    s32 result = sscanf(str,
-        "%f %f %f %f",
-        &out_vec4->x,
-        &out_vec4->y,
-        &out_vec4->z,
-        &out_vec4->w);
-
-    return result == 4;
-}
-
-b8 string_to_vec3(char *str, vec3 *out_vec3) {
-    if (!str || !out_vec3) {
+    char buf[128];
+    if (!make_cstr_buffer(s, buf, sizeof(buf)))
+    {
         return false;
     }
 
-    s32 result =
-        sscanf(str, "%f %f %f", &out_vec3->x, &out_vec3->y, &out_vec3->z);
-
-    return result == 3;
+    return sscanf(buf, "%f", out) == 1;
 }
 
-b8 string_to_vec2(char *str, vec2 *out_vec2) {
-    if (!str || !out_vec2) {
+b8
+str_to_f64(String s, f64 *out)
+{
+    if (!out)
+    {
         return false;
     }
 
-    s32 result = sscanf(str, "%f %f", &out_vec2->x, &out_vec2->y);
-
-    return result == 2;
-}
-
-b8 string_to_f32(char *str, f32 *out_float) {
-    if (!str || !out_float) {
+    char buf[128];
+    if (!make_cstr_buffer(s, buf, sizeof(buf)))
+    {
         return false;
     }
 
-    s32 result = sscanf(str, "%f", out_float);
-
-    return result == 1;
+    return sscanf(buf, "%lf", out) == 1;
 }
 
-b8 string_to_f64(char *str, f64 *out_double) {
-    if (!str || !out_double) {
+b8
+str_to_vec2(String s, vec2 *out)
+{
+    if (!out)
+    {
         return false;
     }
 
-    s32 result = sscanf(str, "%lf", out_double);
-
-    return result == 1;
-}
-
-b8 string_to_bool(char *str, b8 *out_bool) {
-    if (!str || !out_bool) {
+    char buf[256];
+    if (!make_cstr_buffer(s, buf, sizeof(buf)))
+    {
         return false;
     }
 
-    if (string_check_equal_insensitive(str, "true") ||
-        string_check_equal(str, "1")) {
-        *out_bool = true;
+    return sscanf(buf, "%f %f", &out->x, &out->y) == 2;
+}
+
+b8
+str_to_vec3(String s, vec3 *out)
+{
+    if (!out)
+    {
+        return false;
+    }
+
+    char buf[256];
+    if (!make_cstr_buffer(s, buf, sizeof(buf)))
+    {
+        return false;
+    }
+
+    return sscanf(buf, "%f %f %f", &out->x, &out->y, &out->z) == 3;
+}
+
+b8
+str_to_vec4(String s, vec4 *out)
+{
+    if (!out)
+    {
+        return false;
+    }
+
+    char buf[256];
+    if (!make_cstr_buffer(s, buf, sizeof(buf)))
+    {
+        return false;
+    }
+
+    return sscanf(buf, "%f %f %f %f", &out->x, &out->y, &out->z, &out->w) == 4;
+}
+
+b8
+str_to_bool(String s, b8 *out)
+{
+    if (!out || s.size == 0 || !s.str)
+    {
+        return false;
+    }
+
+    String trimmed = str_trim_whitespace(s);
+
+    if (str_match(trimmed,
+                  STR("true"),
+                  String_Match_Flags::CASE_INSENSITIVE) ||
+        str_match(trimmed, STR("1")))
+    {
+        *out = true;
         return true;
-    } else if (string_check_equal_insensitive(str, "false") ||
-               string_check_equal(str, "0")) {
-        *out_bool = false;
+    }
+
+    if (str_match(trimmed,
+                  STR("false"),
+                  String_Match_Flags::CASE_INSENSITIVE) ||
+        str_match(trimmed, STR("0")))
+    {
+        *out = false;
         return true;
     }
 

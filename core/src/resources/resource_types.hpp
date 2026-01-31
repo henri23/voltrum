@@ -2,6 +2,7 @@
 
 #include "math/math_types.hpp"
 #include "utils/enum.hpp"
+#include "utils/string.hpp"
 
 enum class Resource_Type : u32 {
     TEXT,        // the data will be a char* array
@@ -40,7 +41,7 @@ struct Texture {
     b8 has_transparency;
     b8 is_ui_texture;
     u32 generation;
-    char name[TEXTURE_NAME_MAX_LENGTH];
+    Const_String<TEXTURE_NAME_MAX_LENGTH> name;
     void *internal_data;
 };
 
@@ -62,17 +63,17 @@ using Material_ID = u32;
 constexpr u32 MATERIAL_NAME_MAX_LENGTH = 256;
 
 struct Material_Config {
-    char name[MATERIAL_NAME_MAX_LENGTH];
+    Const_String<MATERIAL_NAME_MAX_LENGTH> name;
     b8 auto_release;
     vec4 diffuse_color;
-    char diffuse_map_name[TEXTURE_NAME_MAX_LENGTH];
+    Const_String<TEXTURE_NAME_MAX_LENGTH> diffuse_map_name;
 };
 
 struct Material {
     Material_ID id;
     u32 generation;
     u32 internal_id; // Renderer specific object identifier
-    char name[MATERIAL_NAME_MAX_LENGTH];
+    Const_String<MATERIAL_NAME_MAX_LENGTH> name;
     vec4 diffuse_color;
     Texture_Map diffuse_map;
 };
@@ -84,6 +85,6 @@ struct Geometry {
     Geometry_ID id;
     u32 internal_id;
     u32 generation;
-    char name[GEOMETRY_NAME_MAX_LENGTH];
+    Const_String<GEOMETRY_NAME_MAX_LENGTH> name;
     Material *material;
 };

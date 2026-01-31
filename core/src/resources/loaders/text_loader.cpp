@@ -16,29 +16,24 @@ text_loader_load(Arena      *arena,
         return false;
     }
 
-    const char *format_str = "%s/%s/%s%s";
-    char full_file_path[512];
+    String full_path = str_fmt(arena,
+                               "%s/%s%s",
+                               resource_system_base_path(),
+                               name,
+                               "");
 
-    string_format(full_file_path,
-                  format_str,
-                  resource_system_base_path(),
-                  "",
-                  name,
-                  "");
-
-    // Arena-allocate full path copy
-    u64 path_len = string_length(full_file_path);
-    char *path_copy = push_array(arena, char, path_len + 1);
-    memory_copy(path_copy, full_file_path, path_len + 1);
-    out_resource->full_path = path_copy;
+    out_resource->full_path = (char *)full_path.str;
 
     File_Handle file;
-    if (!filesystem_open(full_file_path, File_Modes::READ, false, &file))
+    if (!filesystem_open((const char *)full_path.str,
+                         File_Modes::READ,
+                         false,
+                         &file))
     {
         CORE_ERROR(
             "text_loader_load - unable to open text file for "
             "reading: '%s'",
-            full_file_path);
+            (const char *)full_path.str);
         return false;
     }
 
@@ -46,7 +41,7 @@ text_loader_load(Arena      *arena,
     if (!filesystem_size(&file, &file_size))
     {
         CORE_ERROR("text_loader_load - Unable to read file: '%s'",
-                   full_file_path);
+                   (const char *)full_path.str);
         filesystem_close(&file);
         return false;
     }
@@ -57,7 +52,7 @@ text_loader_load(Arena      *arena,
     if (!filesystem_read_all_text(&file, resource_data, &read_size))
     {
         CORE_ERROR("text_loader_load - Unable to read file as text '%s'",
-                   full_file_path);
+                   (const char *)full_path.str);
         filesystem_close(&file);
         return false;
     }

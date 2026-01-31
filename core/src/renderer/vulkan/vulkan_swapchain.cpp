@@ -1,7 +1,6 @@
 #include "vulkan_swapchain.hpp"
 
 #include "core/logger.hpp"
-#include "memory/arena.hpp"
 #include "memory/memory.hpp"
 
 #include "defines.hpp"
@@ -56,8 +55,7 @@ void create_swapchain(Vulkan_Context *context,
     // From the time we get initially the swapchain support during device
     // selection, until the renderer comes here, the present modes may have
     // changed so we query a second time to get the most up-to-date properties
-    vulkan_device_query_swapchain_capabilities(context->persistent_arena,
-        context->device.physical_device,
+    vulkan_device_query_swapchain_capabilities(context->device.physical_device,
         context->surface,
         &context->device.swapchain_info);
 
@@ -190,17 +188,8 @@ void create_swapchain(Vulkan_Context *context,
         &out_swapchain->image_count,
         nullptr);
 
-    if (!out_swapchain->images) {
-        out_swapchain->images = push_array(context->persistent_arena,
-            VkImage,
-            out_swapchain->image_count);
-    }
-
-    if (!out_swapchain->views) {
-        out_swapchain->views = push_array(context->persistent_arena,
-            VkImageView,
-            out_swapchain->image_count);
-    }
+    RUNTIME_ASSERT_MSG(out_swapchain->image_count <= 4,
+        "Swapchain image count exceeds fixed array size of 4");
 
     vkGetSwapchainImagesKHR(context->device.logical_device,
         out_swapchain->handle,
@@ -305,9 +294,6 @@ void vulkan_swapchain_destroy(Vulkan_Context *context,
     CORE_DEBUG("All image views destroyed");
 
     CORE_INFO("Destroying Vulkan swapchain...");
-
-    swapchain->views  = nullptr;
-    swapchain->images = nullptr;
 
     vkDestroySwapchainKHR(context->device.logical_device,
         swapchain->handle,

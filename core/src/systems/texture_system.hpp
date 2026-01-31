@@ -18,6 +18,7 @@ struct Texture_Reference
 
 struct Texture_System_State
 {
+    Arena                *arena;
     Texture_System_Config config;
     Texture               default_texture;
 

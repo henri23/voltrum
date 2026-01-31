@@ -1,56 +1,131 @@
 #pragma once
 
 #include "defines.hpp"
-#include "math/math_types.hpp"
+#include "utils/enum.hpp"
 
 #include <stdarg.h>
 
-VOLTRUM_API b8 string_check_equal(const char *str1, const char *str2);
+struct Arena;
+struct vec2;
+struct vec3;
+struct vec4;
 
-VOLTRUM_API b8 string_check_equal_insensitive(const char *str1,
-    const char *str2);
+// Non-owning view (pointer + length, 16 bytes)
+struct String
+{
+    const u8 *str;
+    u64       size;
+};
 
-VOLTRUM_API s32 string_format(char *dest, const char *format, ...);
+// Fixed-capacity inline storage (no allocation needed)
+template <u64 N>
+struct Const_String
+{
+    u8  data[N];
+    u64 size;
 
-VOLTRUM_API s32 string_format_v(char *dest,
-    const char *format,
-    va_list va_list);
+    operator String() const { return String{data, size}; }
+};
 
-VOLTRUM_API char *string_empty(char *str);
+enum class String_Match_Flags : u32
+{
+    NONE              = 0,
+    CASE_INSENSITIVE  = (1 << 0),
+    SLASH_INSENSITIVE = (1 << 1),
+};
+ENABLE_BITMASK(String_Match_Flags)
 
-VOLTRUM_API u64 string_length(const char *string);
+// Construction
+#define STR(string) (String{(const u8 *)(string), sizeof(string) - 1})
 
-VOLTRUM_API char *string_copy(char *dest, const char *source);
-VOLTRUM_API char *string_ncopy(char *dest, const char *source, u64 max_length);
+VOLTRUM_API String str_from_cstr(const char *c);
 
-// Duplicates input string by allocating memory for the return string. Should be
-// deallocated by the caller
-VOLTRUM_API char *string_duplicate(const char *source);
+FORCE_INLINE String
+str(const u8 *s, u64 size)
+{
+    return String{s, size};
+}
 
-// Trim whitespaces from both ends of the string
-VOLTRUM_API char *string_trim(char *str);
+FORCE_INLINE String
+str_zero()
+{
+    return String{nullptr, 0};
+}
 
-VOLTRUM_API char *string_trim_copy(char *str);
+template <u64 N>
+Const_String<N>
+const_str_from_cstr(const char *s)
+{
+    Const_String<N> result = {};
+    if (s)
+    {
+        u64 i = 0;
+        while (s[i] && i < N)
+        {
+            result.data[i] = (u8)s[i];
+            i++;
+        }
+        result.size = i;
+    }
+    return result;
+}
 
-// Get a substring from a string
-// If the length is -1 go to the end of the source string
-VOLTRUM_API void
-string_substr(char *dest, const char *source, s32 start, s32 length = -1);
+template <u64 N>
+Const_String<N>
+const_str_from_str(String s)
+{
+    Const_String<N> result = {};
+    u64             len    = (s.size < N) ? s.size : N;
+    for (u64 i = 0; i < len; i++)
+    {
+        result.data[i] = s.str[i];
+    }
+    result.size = len;
+    return result;
+}
 
-// Returns the index of the first occurence of the character.
-// Returns -1 if character is not found
-VOLTRUM_API s32 string_index_of(char *str, char character);
+// Matching
+VOLTRUM_API b8 str_match(String             a,
+                         String             b,
+                         String_Match_Flags flags = String_Match_Flags::NONE);
 
-// Parse vec4 from space delimited string (i.e "1.0 1.0 4.0 0.0")
-VOLTRUM_API b8 string_to_vec4(char *str, vec4 *out_vec4);
+VOLTRUM_API u64
+str_find_needle(String             haystack,
+                u64                start,
+                String             needle,
+                String_Match_Flags flags = String_Match_Flags::NONE);
 
-VOLTRUM_API b8 string_to_vec3(char *str, vec3 *out_vec3);
+// Slicing (no allocation, returns views into the original)
+VOLTRUM_API String str_prefix(String s, u64 size);
+VOLTRUM_API String str_skip(String s, u64 amt);
+VOLTRUM_API String str_substr(String s, u64 start, u64 len);
+VOLTRUM_API String str_trim_whitespace(String s);
 
-VOLTRUM_API b8 string_to_vec2(char *str, vec2 *out_vec2);
+// Arena-allocated operations
+// These are arena-agnostic: pass a scratch arena for temporary strings,
+// or a persistent arena for strings that need to outlive the current scope.
+VOLTRUM_API String str_copy(Arena *arena, String s);
+VOLTRUM_API String str_cat(Arena *arena, String a, String b);
+VOLTRUM_API String str_fmt(Arena *arena, const char *fmt, ...);
+VOLTRUM_API String str_fmt_v(Arena *arena, const char *fmt, va_list args);
 
-VOLTRUM_API b8 string_to_f32(char *str, f32 *out_float);
+// Path helpers (views unless noted)
+VOLTRUM_API String str_chop_last_slash(String s);
+VOLTRUM_API String str_skip_last_slash(String s);
+VOLTRUM_API String str_chop_last_dot(String s);
+VOLTRUM_API String str_skip_last_dot(String s);
+VOLTRUM_API String str_path_join(Arena *arena, String dir, String file);
 
-VOLTRUM_API b8 string_to_f64(char *str, f64 *out_double);
+// Search - returns (u64)-1 if not found
+VOLTRUM_API u64 str_index_of(String s, u8 character);
 
-// The input string can either be "true"/"false" or "0"/"1"
-VOLTRUM_API b8 string_to_bool(char *str, b8 *out_bool);
+// Hashing (FNV-1a)
+VOLTRUM_API u64 str_hash(String s);
+
+// Parsing
+VOLTRUM_API b8 str_to_f32(String s, f32 *out);
+VOLTRUM_API b8 str_to_f64(String s, f64 *out);
+VOLTRUM_API b8 str_to_vec2(String s, vec2 *out);
+VOLTRUM_API b8 str_to_vec3(String s, vec3 *out);
+VOLTRUM_API b8 str_to_vec4(String s, vec4 *out);
+VOLTRUM_API b8 str_to_bool(String s, b8 *out);

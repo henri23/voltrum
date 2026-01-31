@@ -237,7 +237,7 @@ application_init(Client *client_state)
                                               client_state->config.name);
     ENSURE(engine_state->renderer);
 
-    Texture_System_Config config = {16384};
+    Texture_System_Config config = {1024};
     engine_state->textures =
         texture_system_init(engine_state->persistent_arena, config);
 
@@ -269,16 +269,16 @@ application_init(Client *client_state)
     // -- CUBE GEOMETRY (delete later) --
     Geometry_Config g_config;
     g_config.vertex_count = 24;
-    g_config.vertices     = static_cast<vertex_3d *>(
-        memory_allocate(sizeof(vertex_3d) * 24, Memory_Tag::ARRAY));
+    g_config.vertices     =
+        push_array(engine_state->persistent_arena, vertex_3d, 24);
     g_config.index_count = 36;
-    g_config.indices     = static_cast<u32 *>(
-        memory_allocate(sizeof(u32) * 36, Memory_Tag::ARRAY));
+    g_config.indices     =
+        push_array(engine_state->persistent_arena, u32, 36);
 
-    string_ncopy(g_config.name, "test_cube", GEOMETRY_NAME_MAX_LENGTH);
-    string_ncopy(g_config.material_name,
-                 "test_material",
-                 MATERIAL_NAME_MAX_LENGTH);
+    g_config.name =
+        const_str_from_cstr<GEOMETRY_NAME_MAX_LENGTH>("test_cube");
+    g_config.material_name =
+        const_str_from_cstr<MATERIAL_NAME_MAX_LENGTH>("test_material");
 
     f32 s = 1.0f; // half-size
 

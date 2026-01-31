@@ -22,8 +22,8 @@ struct Geometry_Config
     vertex_3d *vertices;
     u32        index_count;
     u32       *indices;
-    char       name[GEOMETRY_NAME_MAX_LENGTH];
-    char       material_name[MATERIAL_NAME_MAX_LENGTH];
+    Const_String<GEOMETRY_NAME_MAX_LENGTH>  name;
+    Const_String<MATERIAL_NAME_MAX_LENGTH> material_name;
 };
 
 struct Geometry_Reference
@@ -60,7 +60,8 @@ Geometry *geometry_system_get_default();
 // WARN: The vertex and index arrays are dynamically allocated and should be
 // freed upon object disposal
 Geometry_Config
-geometry_system_generate_plane_config(f32         width,
+geometry_system_generate_plane_config(Arena       *arena,
+                                      f32         width,
                                       f32         height,
                                       u32         x_segment_count,
                                       u32         y_segment_count,

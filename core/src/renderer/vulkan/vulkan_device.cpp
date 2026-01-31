@@ -3,7 +3,6 @@
 #include "core/logger.hpp"
 #include "core/thread_context.hpp"
 #include "data_structures/dynamic_array.hpp"
-#include "memory/arena.hpp"
 #include "memory/memory.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 #include "utils/string.hpp"
@@ -16,8 +15,7 @@ struct Device_Queue_Indices {
     u32 compute_family_index;
 };
 
-INTERNAL_FUNC b8 is_device_suitable(Arena *persistent,
-    Arena *scratch,
+INTERNAL_FUNC b8 is_device_suitable(Arena *scratch,
     VkPhysicalDevice device,
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties *properties,
@@ -123,8 +121,7 @@ b8 select_physical_device(Vulkan_Context *context,
         Device_Queue_Indices queue_indices;
 
         // Score the GPUs based on the properties they provide
-        b8 result = is_device_suitable(context->persistent_arena,
-            scratch.arena,
+        b8 result = is_device_suitable(scratch.arena,
             physical_devices_array[i],
             context->surface,
             &device_properties,
@@ -372,8 +369,7 @@ b8 create_logical_device(Vulkan_Context *context) {
 // 			mulitple GPUs that can fulfill those requirements, the
 // 			first one gets selected, not necessarily the best
 
-b8 is_device_suitable(Arena *persistent,
-    Arena *scratch,
+b8 is_device_suitable(Arena *scratch,
     VkPhysicalDevice device,
     VkSurfaceKHR surface,
     const VkPhysicalDeviceProperties *properties,
@@ -487,8 +483,7 @@ b8 is_device_suitable(Arena *persistent,
             (requirements->present &&
                 out_indices->present_family_index != -1))) {
 
-        vulkan_device_query_swapchain_capabilities(persistent,
-            device,
+        vulkan_device_query_swapchain_capabilities(device,
             surface,
             out_swapchain_info);
 
@@ -536,9 +531,9 @@ b8 is_device_suitable(Arena *persistent,
                 b8 found = false;
 
                 for (u32 j = 0; j < available_extensions_count; ++j) {
-                    if (string_check_equal(
-                            extension_properties[j].extensionName,
-                            (*requirements->device_extension_names)[i])) {
+                    if (str_match(
+                            str_from_cstr(extension_properties[j].extensionName),
+                            str_from_cstr((*requirements->device_extension_names)[i]))) {
                         found = true;
                         break;
                     }
@@ -562,16 +557,13 @@ b8 is_device_suitable(Arena *persistent,
     return false;
 }
 
-// This function could be called multiple times, but with arena allocation
-// only the first call actually pushes — subsequent calls reuse the pointer
 void vulkan_device_query_swapchain_capabilities(
-    Arena                        *allocator,
     VkPhysicalDevice              device,
     VkSurfaceKHR                  surface,
     Vulkan_Swapchain_Support_Info *out_swapchain_info) {
 
-    out_swapchain_info->formats_count = -1;
-    out_swapchain_info->present_modes_count = -1;
+    out_swapchain_info->formats_count = 0;
+    out_swapchain_info->present_modes_count = 0;
 
     VK_CHECK(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device,
         surface,
@@ -583,12 +575,9 @@ void vulkan_device_query_swapchain_capabilities(
         nullptr));
 
     if (out_swapchain_info->formats_count != 0) {
-
-        if (!out_swapchain_info->formats) {
-            out_swapchain_info->formats = push_array(allocator,
-                VkSurfaceFormatKHR,
-                out_swapchain_info->formats_count);
-        }
+        RUNTIME_ASSERT_MSG(
+            out_swapchain_info->formats_count <= VULKAN_MAX_SURFACE_FORMATS,
+            "Surface format count exceeds VULKAN_MAX_SURFACE_FORMATS");
 
         VK_CHECK(vkGetPhysicalDeviceSurfaceFormatsKHR(device,
             surface,
@@ -602,12 +591,9 @@ void vulkan_device_query_swapchain_capabilities(
         nullptr));
 
     if (out_swapchain_info->present_modes_count != 0) {
-
-        if (!out_swapchain_info->present_modes) {
-            out_swapchain_info->present_modes = push_array(allocator,
-                VkPresentModeKHR,
-                out_swapchain_info->present_modes_count);
-        }
+        RUNTIME_ASSERT_MSG(
+            out_swapchain_info->present_modes_count <= VULKAN_MAX_PRESENT_MODES,
+            "Present mode count exceeds VULKAN_MAX_PRESENT_MODES");
 
         VK_CHECK(vkGetPhysicalDeviceSurfacePresentModesKHR(device,
             surface,
@@ -631,9 +617,7 @@ void vulkan_device_shutdown(Vulkan_Context *context) {
         context->device.logical_device = nullptr;
     }
 
-    context->device.swapchain_info.formats = nullptr;
     context->device.swapchain_info.formats_count = 0;
-    context->device.swapchain_info.present_modes = nullptr;
     context->device.swapchain_info.present_modes_count = 0;
 
     context->device.presentation_queue = nullptr;

@@ -118,8 +118,7 @@ vulkan_initialize(Arena          *allocator,
 {
     state_ptr = push_struct(allocator, Vulkan_Context);
 
-    state_ptr->persistent_arena = allocator;
-    state_ptr->platform         = platform;
+    state_ptr->platform = platform;
 
     // Function pointer assignment
     state_ptr->find_memory_index = find_memory_index;
@@ -130,6 +129,11 @@ vulkan_initialize(Arena          *allocator,
     state_ptr->command_buffers.init(allocator);
     state_ptr->image_available_semaphores.init(allocator);
     state_ptr->render_finished_semaphores.init(allocator);
+
+    // Initialize texture data pool with its own dedicated arena
+    state_ptr->texture_data_arena = arena_create();
+    state_ptr->texture_data_pool.init(state_ptr->texture_data_arena,
+        VULKAN_MAX_TEXTURE_DATA_COUNT);
 
     // TODO: I do not like that the renderer calls the application layer,
     // since the dependency should be inverse.
@@ -437,11 +441,20 @@ vulkan_shutdown()
     // Shutdown ImGui UI backend
     vulkan_ui_backend_shutdown(state_ptr);
 
-    // Destroy all offscreen render target resources
+    // Destroy any remaining active texture GPU resources
+    state_ptr->texture_data_pool.for_each_active(
+        [](Vulkan_Texture_Data *data) {
+            if (data->ui_descriptor_set != VK_NULL_HANDLE) {
+                vulkan_imgui_shader_pipeline_remove_texture_descriptor(
+                    data->ui_descriptor_set);
+            }
+            vulkan_image_destroy(state_ptr, &data->image);
+            vkDestroySampler(state_ptr->device.logical_device,
+                data->sampler,
+                state_ptr->allocator);
+        });
 
-    // Free dynamically allocated arrays
-
-    CORE_DEBUG("Offscreen render targets destroyed");
+    CORE_DEBUG("Active texture data destroyed");
 
     vulkan_buffer_destroy(state_ptr, &state_ptr->object_vertex_buffer);
     vulkan_buffer_destroy(state_ptr, &state_ptr->object_index_buffer);
@@ -508,6 +521,8 @@ vulkan_shutdown()
 #endif
 
     vkDestroyInstance(state_ptr->instance, state_ptr->allocator);
+
+    arena_release(state_ptr->texture_data_arena);
 
     CORE_DEBUG("Vulkan renderer shut down");
 }
@@ -882,8 +897,8 @@ vulkan_enable_validation_layers(
 
         b8 found = false;
         for (u32 j = 0; j < available_layer_count; ++j) {
-            if (string_check_equal(out_layer_names[i],
-                    available_layers[j].layerName)) {
+            if (str_match(str_from_cstr(out_layer_names[i]),
+                    str_from_cstr(available_layers[j].layerName))) {
                 found = true;
                 CORE_INFO("Found.");
                 break;
@@ -1132,8 +1147,7 @@ recreate_swapchain(b8 is_resized_event)
     }
 
     // Requery support
-    vulkan_device_query_swapchain_capabilities(state_ptr->persistent_arena,
-        state_ptr->device.physical_device,
+    vulkan_device_query_swapchain_capabilities(state_ptr->device.physical_device,
         state_ptr->surface,
         &state_ptr->device.swapchain_info);
     vulkan_device_detect_depth_format(&state_ptr->device);
@@ -1318,11 +1332,9 @@ create_buffers(Vulkan_Context *context) {
 
 void
 vulkan_create_texture(const u8 *pixels, Texture *texture, b8 is_ui_texture) {
-    texture->internal_data =
-        push_struct(state_ptr->persistent_arena, Vulkan_Texture_Data);
+    Vulkan_Texture_Data *data = state_ptr->texture_data_pool.acquire();
 
-    Vulkan_Texture_Data *data =
-        static_cast<Vulkan_Texture_Data *>(texture->internal_data);
+    texture->internal_data = data;
 
     data->ui_descriptor_set = VK_NULL_HANDLE;
     texture->is_ui_texture = is_ui_texture;
@@ -1454,6 +1466,7 @@ vulkan_destroy_texture(Texture *texture) {
             state_ptr->allocator);
         data->sampler = nullptr;
 
+        state_ptr->texture_data_pool.release(data);
     }
 
     memory_zero(texture, sizeof(struct Texture));

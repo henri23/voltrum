@@ -151,7 +151,8 @@ geometry_system_get_default()
 // WARN: The vertex and index arrays are dynamically allocated and should be
 // freed upon object disposal
 Geometry_Config
-geometry_system_generate_plane_config(f32         width,
+geometry_system_generate_plane_config(Arena       *arena,
+                                      f32         width,
                                       f32         height,
                                       u32         x_segment_count,
                                       u32         y_segment_count,
@@ -201,13 +202,10 @@ geometry_system_generate_plane_config(f32         width,
     Geometry_Config config;
     // 4 verts per quad segment
     config.vertex_count = x_segment_count * y_segment_count * 4;
-    config.vertices     = static_cast<vertex_3d *>(
-        memory_allocate(sizeof(vertex_3d) * config.vertex_count,
-                        Memory_Tag::ARRAY));
+    config.vertices     = push_array(arena, vertex_3d, config.vertex_count);
     // 6 indices per segment
     config.index_count = x_segment_count * y_segment_count * 6;
-    config.indices     = static_cast<u32 *>(
-        memory_allocate(sizeof(u32) * config.index_count, Memory_Tag::ARRAY));
+    config.indices     = push_array(arena, u32, config.index_count);
 
     f32 seg_width   = width / x_segment_count;
     f32 seg_height  = height / y_segment_count;
@@ -266,28 +264,26 @@ geometry_system_generate_plane_config(f32         width,
         }
     }
 
-    if (name && string_length(name) > 0)
+    if (name && str_from_cstr(name).size > 0)
     {
-        string_ncopy(config.name, name, GEOMETRY_NAME_MAX_LENGTH);
+        config.name =
+            const_str_from_cstr<GEOMETRY_NAME_MAX_LENGTH>(name);
     }
     else
     {
-        string_ncopy(config.name,
-                     DEFAULT_GEOMETRY_NAME,
-                     GEOMETRY_NAME_MAX_LENGTH);
+        config.name =
+            const_str_from_cstr<GEOMETRY_NAME_MAX_LENGTH>(DEFAULT_GEOMETRY_NAME);
     }
 
-    if (material_name && string_length(material_name) > 0)
+    if (material_name && str_from_cstr(material_name).size > 0)
     {
-        string_ncopy(config.material_name,
-                     material_name,
-                     MATERIAL_NAME_MAX_LENGTH);
+        config.material_name =
+            const_str_from_cstr<MATERIAL_NAME_MAX_LENGTH>(material_name);
     }
     else
     {
-        string_ncopy(config.material_name,
-                     DEFAULT_MATERIAL_NAME,
-                     MATERIAL_NAME_MAX_LENGTH);
+        config.material_name =
+            const_str_from_cstr<MATERIAL_NAME_MAX_LENGTH>(DEFAULT_MATERIAL_NAME);
     }
 
     return config;
@@ -316,9 +312,10 @@ create_geometry(Geometry_System_State *state,
         return false;
     }
 
-    if (string_length(config.material_name) > 0)
+    if (config.material_name.size > 0)
     {
-        geometry->material = material_system_acquire(config.material_name);
+        geometry->material =
+            material_system_acquire((const char *)config.material_name.data);
         if (!geometry->material)
         {
             // If the requested material fails to be acquired, fallback to
@@ -338,12 +335,13 @@ destroy_geometry(Geometry_System_State *state, Geometry *geometry)
     geometry->internal_id = INVALID_ID;
     geometry->generation  = INVALID_ID;
 
-    string_empty(geometry->name);
+    geometry->name = {};
 
     // Release the material
-    if (geometry->material && string_length(geometry->material->name) > 0)
+    if (geometry->material && geometry->material->name.size > 0)
     {
-        material_system_release(geometry->material->name);
+        material_system_release(
+            (const char *)geometry->material->name.data);
         geometry->material = nullptr;
     }
 }

@@ -27,9 +27,9 @@ platform_hit_test_callback(SDL_Window *win, const SDL_Point *area, void *data);
 
 Platform_State *
 platform_init(Arena      *allocator,
-                 const char *application_name,
-                 s32         width,
-                 s32         height)
+              const char *application_name,
+              s32         width,
+              s32         height)
 {
 
     Platform_State *state =
@@ -40,19 +40,31 @@ platform_init(Arena      *allocator,
     CORE_DEBUG("Starting platform subsystem...");
 
 #ifdef PLATFORM_LINUX
-    // On Linux, prefer Wayland over X11 if Wayland is available
-    // SDL will automatically fall back to X11 if Wayland is not available
-    const char *wayland_display = getenv("WAYLAND_DISPLAY");
-    if (wayland_display && wayland_display[0] != '\0')
+    // Set to true to force X11 for testing
+    constexpr b8 force_x11 = false;
+
+    if (force_x11)
     {
-        SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland,x11");
-        CORE_DEBUG(
-            "Wayland detected, preferring Wayland video driver with X11 "
-            "fallback");
+        SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
+        CORE_DEBUG("Forcing X11 video driver for testing");
     }
     else
     {
-        CORE_DEBUG("Wayland not detected, using default X11 video driver");
+        // Prefer Wayland over X11 if Wayland is available
+        // SDL will automatically fall back to X11 if Wayland is not available
+        const char *wayland_display = getenv("WAYLAND_DISPLAY");
+        if (wayland_display && wayland_display[0] != '\0')
+        {
+            SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "wayland,x11");
+            CORE_DEBUG(
+                "Wayland detected, preferring Wayland video driver with X11 "
+                "fallback");
+        }
+        else
+        {
+            CORE_DEBUG(
+                "Wayland not detected, using default X11 video driver");
+        }
     }
 #endif
 
@@ -518,6 +530,12 @@ platform_hit_test_callback(SDL_Window *win, const SDL_Point *area, void *data)
 
     if (area->y <= TITLEBAR_HEIGHT_PIXELS)
     {
+        // Let ImGui handle the input if an ImGui window overlaps the
+        // titlebar area (e.g. a floating window dragged over it)
+        if (state_ptr->block_titlebar_drag)
+        {
+            return SDL_HITTEST_NORMAL;
+        }
         return SDL_HITTEST_DRAGGABLE;
     }
 

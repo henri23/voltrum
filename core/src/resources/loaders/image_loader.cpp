@@ -20,27 +20,25 @@ image_loader_load(Arena      *arena,
         return false;
     }
 
-    const char *format_str = "%s/%s/%s%s";
     const s32 required_channel_count = 4; // RGBA
 
     // NOTE: Most images are stored in a format where the data is actually
     // stored upside-down, so if we load the data from the bottom -> up we
     // should technically retrieve the original orientation
     stbi_set_flip_vertically_on_load(true);
-    char full_file_path[512];
 
-    string_format(full_file_path,
-                  format_str,
-                  resource_system_base_path(),
-                  "textures",
-                  name,
-                  ".png");
+    String full_path = str_fmt(arena,
+                               "%s/%s/%s%s",
+                               resource_system_base_path(),
+                               "textures",
+                               name,
+                               ".png");
 
     s32 width;
     s32 height;
     s32 channel_count;
 
-    u8 *data = stbi_load(full_file_path,
+    u8 *data = stbi_load((const char *)full_path.str,
                          &width,
                          &height,
                          &channel_count,
@@ -50,7 +48,7 @@ image_loader_load(Arena      *arena,
     if (fail_reason)
     {
         CORE_ERROR("Image resource loader failed to load file '%s': '%s'",
-                   full_file_path,
+                   (const char *)full_path.str,
                    fail_reason);
 
         stbi__err(0, 0);
@@ -66,7 +64,7 @@ image_loader_load(Arena      *arena,
     if (!data)
     {
         CORE_ERROR("Image resource loader failed to load file '%s'",
-                   full_file_path);
+                   (const char *)full_path.str);
         return false;
     }
 
@@ -79,11 +77,7 @@ image_loader_load(Arena      *arena,
     // Free stbi allocated memory immediately
     stbi_image_free(data);
 
-    // Arena-allocate full path copy
-    u64 path_len = string_length(full_file_path);
-    char *path_copy = push_array(arena, char, path_len + 1);
-    memory_copy(path_copy, full_file_path, path_len + 1);
-    out_resource->full_path = path_copy;
+    out_resource->full_path = (char *)full_path.str;
 
     Image_Resource_Data *resource_data =
         push_struct(arena, Image_Resource_Data);

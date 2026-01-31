@@ -33,10 +33,10 @@
 template <typename T>
 struct Hashmap_Item
 {
-    T    value;
-    b8   is_occupied;
-    char key[50];  // Cached key for linear probing in the collision tail
-    u32  distance; // Will store the probe sequence length for each item
+    T      value;
+    b8     is_occupied;
+    String key;      // Arena-owned copy of the key
+    u32    distance; // Will store the probe sequence length for each item
 };
 
 constexpr u64 HASHMAP_DEFAULT_CAPACITY = 16;
@@ -55,9 +55,6 @@ struct Hashmap
 
     Arena *_allocator; // Add arena pointer to make the hashmap be backed by an
                        // arena
-
-    // TODO: Add custom allocator memory management
-    // Allocator* allocator;
 
     FORCE_INLINE
     Hashmap()
@@ -89,18 +86,12 @@ struct Hashmap
     }
 
     FORCE_INLINE b8
-    add(const char *key, const T *value, b8 overwrite = false)
+    add(String key, const T *value, b8 overwrite = false)
     {
         if (items == nullptr)
         {
             CORE_ERROR(
                 "Hashmap not initialized. Call init() before using add()");
-            return false;
-        }
-
-        if (string_length(key) >= 50)
-        {
-            CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
             return false;
         }
 
@@ -113,14 +104,14 @@ struct Hashmap
         // By exploiting the capacity as a power of two instead of using the %
         // operator to map all possible hash addresses inside the bounds of the
         // array, we instead just create a bitmask and apply a bitwise and op.
-        u64 address = hash_function(key) & (capacity - 1);
+        u64 address = str_hash(key) & (capacity - 1);
 
         RUNTIME_ASSERT(address < capacity);
 
         Hashmap_Item<T> current_item = {};
         current_item.value           = *value;
-        string_copy(current_item.key, key);
-        current_item.distance = 0;
+        current_item.key             = str_copy(_allocator, key);
+        current_item.distance        = 0;
         // Mark already as occupied because if we will use this element, we are
         // adding willingly the element inside the hash map
         current_item.is_occupied = true;
@@ -139,7 +130,7 @@ struct Hashmap
             }
 
             if (items[address].is_occupied &&
-                string_check_equal(items[address].key, current_item.key))
+                str_match(items[address].key, current_item.key))
             {
                 if (overwrite)
                 {
@@ -147,8 +138,9 @@ struct Hashmap
                     return true;
                 }
 
-                CORE_WARN("Key '%s' is already present in the hashmap",
-                    current_item.key);
+                CORE_WARN("Key '%.*s' is already present in the hashmap",
+                    (int)current_item.key.size,
+                    current_item.key.str);
                 return false;
             }
 
@@ -159,7 +151,9 @@ struct Hashmap
             // elements and instead start propagating the "rich" element
             if (items[address].distance < current_item.distance)
             {
-                swap(&items[address], &current_item);
+                Hashmap_Item<T> temp = items[address];
+                items[address]       = current_item;
+                current_item         = temp;
             }
 
             probe++;
@@ -171,7 +165,7 @@ struct Hashmap
     }
 
     FORCE_INLINE b8
-    find_ptr(const char *key, T **out_ptr)
+    find_ptr(String key, T **out_ptr)
     {
         if (items == nullptr)
         {
@@ -180,13 +174,7 @@ struct Hashmap
             return false;
         }
 
-        if (string_length(key) >= 50)
-        {
-            CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
-            return false;
-        }
-
-        u64 address = hash_function(key) & (capacity - 1);
+        u64 address = str_hash(key) & (capacity - 1);
 
         RUNTIME_ASSERT(address < capacity);
 
@@ -197,11 +185,13 @@ struct Hashmap
         {
             if (!items[address].is_occupied)
             {
-                CORE_WARN("Key '%s' is not present inside the hashmap", key);
+                CORE_WARN("Key '%.*s' is not present inside the hashmap",
+                    (int)key.size,
+                    key.str);
                 return false;
             }
 
-            if (string_check_equal(items[address].key, key))
+            if (str_match(items[address].key, key))
             {
                 *out_ptr = &items[address].value;
                 return true;
@@ -215,7 +205,7 @@ struct Hashmap
     }
 
     FORCE_INLINE b8
-    find(const char *key, T *out_copy)
+    find(String key, T *out_copy)
     {
         if (items == nullptr)
         {
@@ -224,13 +214,7 @@ struct Hashmap
             return false;
         }
 
-        if (string_length(key) >= 50)
-        {
-            CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
-            return false;
-        }
-
-        u64 address = hash_function(key) & (capacity - 1);
+        u64 address = str_hash(key) & (capacity - 1);
 
         RUNTIME_ASSERT(address < capacity);
 
@@ -241,11 +225,13 @@ struct Hashmap
         {
             if (!items[address].is_occupied)
             {
-                CORE_WARN("Key '%s' is not present inside the hashmap", key);
+                CORE_WARN("Key '%.*s' is not present inside the hashmap",
+                    (int)key.size,
+                    key.str);
                 return false;
             }
 
-            if (string_check_equal(items[address].key, key))
+            if (str_match(items[address].key, key))
             {
                 memory_copy(out_copy, &items[address].value, sizeof(T));
                 return true;
@@ -259,7 +245,7 @@ struct Hashmap
     }
 
     FORCE_INLINE b8
-    remove(const char *key)
+    remove(String key)
     {
         if (items == nullptr)
         {
@@ -268,13 +254,7 @@ struct Hashmap
             return false;
         }
 
-        if (string_length(key) >= 50)
-        {
-            CORE_ERROR("Hashmap key '%s' exceeds 50 characters", key);
-            return false;
-        }
-
-        u64 address = hash_function(key) & (capacity - 1);
+        u64 address = str_hash(key) & (capacity - 1);
 
         RUNTIME_ASSERT(address < capacity);
 
@@ -287,11 +267,13 @@ struct Hashmap
         {
             if (!items[address].is_occupied)
             {
-                CORE_WARN("Key '%s' is not present inside the hashmap", key);
+                CORE_WARN("Key '%.*s' is not present inside the hashmap",
+                    (int)key.size,
+                    key.str);
                 return false;
             }
 
-            if (string_check_equal(items[address].key, key))
+            if (str_match(items[address].key, key))
             {
                 found         = true;
                 found_address = address;
@@ -369,30 +351,14 @@ struct Hashmap
         {
 
             const auto *slot = &items[idx];
-            CORE_INFO("%5llu | %4u | %-44s", idx, slot->distance, slot->key);
+            CORE_INFO("%5llu | %4u | %.*s",
+                idx,
+                slot->distance,
+                (int)slot->key.size,
+                slot->key.str);
 
             ++printed;
         }
-    }
-
-    FORCE_INLINE void
-    swap(Hashmap_Item<T> *item1, Hashmap_Item<T> *item2)
-    {
-        T    temp_value = item1->value;
-        char temp_key[50];
-        string_copy(temp_key, item1->key);
-        u32 temp_distance    = item1->distance;
-        b8  temp_is_occupied = item1->is_occupied;
-
-        item1->value = item2->value;
-        string_copy(item1->key, item2->key);
-        item1->distance    = item2->distance;
-        item1->is_occupied = item2->is_occupied;
-
-        item2->value = temp_value;
-        string_copy(item2->key, temp_key);
-        item2->distance    = temp_distance;
-        item2->is_occupied = temp_is_occupied;
     }
 
     FORCE_INLINE u64
@@ -405,22 +371,5 @@ struct Hashmap
     full()
     {
         return count == capacity;
-    }
-
-    FORCE_INLINE u64
-    hash_function(const char *key)
-    {
-        // For the hash function I am using the Fowler-Noll-Vo hash function
-        // Reference:
-        // https://en.wikipedia.org/wiki/Fowler%E2%80%93Noll%E2%80%93Vo_hash_function
-        // This combination of FNV offset basis and FNV prime gives the best
-        // collision performance for 64 bit addressing
-        u64 hash = 0xcbf29ce484222325; // FNV offset basis
-        while (*key)
-        { // until we run into the null propagator character
-            hash ^= static_cast<u8>(*key++);
-            hash *= 0x00000100000001b3; // FNV prime
-        }
-        return hash;
     }
 };

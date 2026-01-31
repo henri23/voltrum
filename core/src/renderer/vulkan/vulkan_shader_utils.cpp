@@ -17,16 +17,19 @@ create_shader_module(Vulkan_Context        *context,
 {
     Scratch_Arena scratch = scratch_begin(nullptr, 0);
 
-    char file_name[512];
-    string_format(file_name, "shaders/%s.%s.spv", name, type_str);
+    String file_name = str_fmt(scratch.arena,
+                               "shaders/%s.%s.spv",
+                               name,
+                               type_str);
 
     Resource binary_resource;
     if (!resource_system_load(scratch.arena,
-                              file_name,
+                              (const char *)file_name.str,
                               Resource_Type::BINARY,
                               &binary_resource))
     {
-        CORE_ERROR("Unable to read shader module: %s", file_name);
+        CORE_ERROR("Unable to read shader module: %s",
+                   (const char *)file_name.str);
         scratch_end(scratch);
         return false;
     }
@@ -47,7 +50,7 @@ create_shader_module(Vulkan_Context        *context,
                                   &shader_stages[stage_index].handle));
 
     CORE_DEBUG("Shader module created for %s - size: %zu bytes",
-               file_name,
+               (const char *)file_name.str,
                binary_resource.data_size);
 
     scratch_end(scratch);
