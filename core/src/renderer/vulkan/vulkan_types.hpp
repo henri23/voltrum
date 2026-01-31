@@ -23,7 +23,7 @@ struct Vulkan_Buffer
     u32                memory_property_flags;
 };
 
-constexpr const u32 VULKAN_MAX_SURFACE_FORMATS = 16;
+constexpr const u32 VULKAN_MAX_SURFACE_FORMATS = 64;
 constexpr const u32 VULKAN_MAX_PRESENT_MODES   = 8;
 
 struct Vulkan_Swapchain_Support_Info

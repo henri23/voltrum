@@ -133,7 +133,18 @@ case "$BUILD_SYSTEM" in
         ;;
 esac
 
-start_time=$(date +%s%3N)
+# Portable millisecond timing (works on macOS and Linux)
+get_time_ms() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: use perl for millisecond precision
+        perl -MTime::HiRes=time -e 'printf "%.0f\n", time * 1000'
+    else
+        # Linux: use date with %3N
+        date +%s%3N
+    fi
+}
+
+start_time=$(get_time_ms)
 
 # Function to print status messages without ANSI colors
 print_status() {
@@ -234,10 +245,10 @@ if [ "$RUN_TESTS" = true ]; then
 
     print_status "step" "Running voltrum tests..."
 
-    test_start_time=$(date +%s%3N)
+    test_start_time=$(get_time_ms)
 
     if ./tests/voltrum_tests; then
-        test_end_time=$(date +%s%3N)
+        test_end_time=$(get_time_ms)
         test_time=$(expr $test_end_time - $test_start_time)
 
         # Convert test time to readable format
@@ -311,7 +322,7 @@ fi
 echo
 
 # Record end time and calculate duration
-end_time=$(date +%s%3N)
+end_time=$(get_time_ms)
 tottime=$(expr $end_time - $start_time)
 
 # Convert milliseconds to a more readable format
