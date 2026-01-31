@@ -66,9 +66,9 @@ renderer_on_resize(u16 width, u16 height)
 }
 
 b8
-renderer_draw_frame(Frame_Context *frame_ctx, Render_Packet *packet)
+renderer_draw_frame(Frame_Context *frame_ctx, Render_Context *render_ctx)
 {
-    if (state_ptr->backend.begin_frame(frame_ctx, packet->delta_time))
+    if (state_ptr->backend.begin_frame(frame_ctx, frame_ctx->delta_t))
     {
 
         if (!state_ptr->backend.start_renderpass(frame_ctx,
@@ -87,10 +87,10 @@ renderer_draw_frame(Frame_Context *frame_ctx, Render_Packet *packet)
                                                         0);
 
         // Draw geometries
-        u32 count = packet->geometry_count;
+        u32 count = render_ctx->geometry_count;
         for (u32 i = 0; i < count; ++i)
         {
-            state_ptr->backend.draw_geometry(packet->geometries[i]);
+            state_ptr->backend.draw_geometry(render_ctx->geometries[i]);
         }
 
         if (!state_ptr->backend.finish_renderpass(frame_ctx,
@@ -111,9 +111,9 @@ renderer_draw_frame(Frame_Context *frame_ctx, Render_Packet *packet)
         }
 
         // Draw UI geometry
-        if (packet->ui_data.draw_list)
+        if (render_ctx->ui_data.draw_list)
         {
-            state_ptr->backend.draw_ui(packet->ui_data);
+            state_ptr->backend.draw_ui(render_ctx->ui_data);
         }
 
         if (!state_ptr->backend.finish_renderpass(frame_ctx,
@@ -125,7 +125,7 @@ renderer_draw_frame(Frame_Context *frame_ctx, Render_Packet *packet)
             return false;
         }
 
-        b8 result = state_ptr->backend.end_frame(frame_ctx, packet->delta_time);
+        b8 result = state_ptr->backend.end_frame(frame_ctx, frame_ctx->delta_t);
         state_ptr->backend.frame_number++;
 
         if (!result)

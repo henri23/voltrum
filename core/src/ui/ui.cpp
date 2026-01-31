@@ -242,17 +242,17 @@ ui_shutdown_layers(UI_State *state)
 }
 
 void
-ui_update_layers(UI_State *state, f32 delta_t)
+ui_update_layers(UI_State *state, Frame_Context *ctx)
 {
     for (auto &layer : *state->layers)
     {
         if (layer.on_update)
-            layer.on_update(&layer, delta_t);
+            layer.on_update(&layer, ctx->delta_t);
     }
 }
 
 ImDrawData *
-ui_draw_layers(UI_State *state, f32 delta_t)
+ui_draw_layers(UI_State *state, Frame_Context *ctx)
 {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
@@ -264,7 +264,7 @@ ui_draw_layers(UI_State *state, f32 delta_t)
     for (auto &layer : *state->layers)
     {
         if (layer.on_render)
-            layer.on_render(&layer, delta_t);
+            layer.on_render(&layer, ctx->delta_t);
     }
 
     ImGui::Render();

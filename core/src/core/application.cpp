@@ -39,16 +39,18 @@ struct Engine_State
 
     Absolute_Clock clock;
 
+    Ring_Queue<Event> *event_queue;
+
     // Subsystem state
-    Platform_State         *platform;
-    Input_State            *inputs;
-    Event_State            *events;
-    Resource_System_State  *resources;
-    Renderer_System_State  *renderer;
-    Texture_System_State   *textures;
-    Material_System_State  *materials;
-    Geometry_System_State  *geometries;
-    UI_State               *ui;
+    Platform_State        *platform;
+    Input_State           *inputs;
+    Event_State           *events;
+    Resource_System_State *resources;
+    Renderer_System_State *renderer;
+    Texture_System_State  *textures;
+    Material_System_State *materials;
+    Geometry_System_State *geometries;
+    UI_State              *ui;
 
     Geometry *test_geometry;
     f32       cube_rotation;
@@ -114,7 +116,7 @@ app_on_debug_event(const Event *event)
                 texture_system_get_default_texture();
         }
 
-        texture_system_release(old_name);
+        // texture_system_release(old_name);
     }
 
     return true;
@@ -180,7 +182,7 @@ application_init(Client *client_state)
     //     memory_allocate(sizeof(Internal_App_State), Memory_Tag::APPLICATION);
     Arena *persistent_arena = arena_create();
 
-    engine_state                     = push_struct(persistent_arena, Engine_State);
+    engine_state = push_struct(persistent_arena, Engine_State);
     client_state->internal_app_state = engine_state;
 
     engine_state->client           = client_state;
@@ -202,6 +204,10 @@ application_init(Client *client_state)
     engine_state->events = events_init(engine_state->persistent_arena);
     ENSURE(engine_state->events);
 
+    engine_state->event_queue =
+        push_struct(engine_state->persistent_arena, Ring_Queue<Event>);
+    engine_state->event_queue->init(engine_state->persistent_arena);
+
     engine_state->inputs = input_init(engine_state->persistent_arena);
     ENSURE(engine_state->inputs);
 
@@ -220,10 +226,9 @@ application_init(Client *client_state)
     // Set window icon using cross-platform SDL method
     application_set_window_icon();
 
-    engine_state->renderer =
-        renderer_startup(engine_state->persistent_arena,
-                         engine_state->platform,
-                         client_state->config.name);
+    engine_state->renderer = renderer_startup(engine_state->persistent_arena,
+                                              engine_state->platform,
+                                              client_state->config.name);
     ENSURE(engine_state->renderer);
 
     Texture_System_Config config = {16384};
@@ -397,8 +402,7 @@ application_run()
         Scratch_Arena frame_scratch = scratch_begin(nullptr, 0);
 
         frame_ctx.arena       = frame_scratch.arena;
-        frame_ctx.event_queue = push_struct(frame_ctx.arena, Ring_Queue<Event>);
-        frame_ctx.event_queue->init(frame_ctx.arena);
+        frame_ctx.event_queue = engine_state->event_queue;
 
         if (!platform_message_pump(&frame_ctx))
         {
@@ -417,13 +421,15 @@ application_run()
             f64 delta_time       = frame_start_time - last_time;
             last_time            = frame_start_time;
 
+            frame_ctx.delta_t = delta_time;
+
             // DEBUG: Check frame timing consistency
             // CORE_DEBUG("delta: %.4f ms", delta_time * 1000.0);
 
             if (engine_state->client->update)
             {
                 if (!engine_state->client->update(engine_state->client,
-                                                  delta_time))
+                                                  &frame_ctx))
                 {
                     CORE_FATAL("Client update failed. Aborting...");
                     engine_state->is_running = false;
@@ -433,15 +439,15 @@ application_run()
             if (engine_state->client->render)
             {
                 if (!engine_state->client->render(engine_state->client,
-                                                  delta_time))
+                                                  &frame_ctx))
                 {
                     CORE_FATAL("Client render failed. Aborting...");
                     engine_state->is_running = false;
                 }
             }
 
-            Render_Packet packet;
-            packet.delta_time = delta_time;
+            Render_Context *packet =
+                push_struct(frame_ctx.arena, Render_Context);
 
             // TODO: temp - viewport geometry
             Geometry_Render_Data test_render;
@@ -453,15 +459,15 @@ application_run()
                                engine_state->cube_rotation * 0.7f,
                                0.0f);
 
-            packet.geometry_count = 1;
-            packet.geometries     = &test_render;
+            packet->geometry_count = 1;
+            packet->geometries     = &test_render;
 
-            ui_update_layers(engine_state->ui, packet.delta_time);
+            ui_update_layers(engine_state->ui, &frame_ctx);
 
-            packet.ui_data.draw_list =
-                ui_draw_layers(engine_state->ui, packet.delta_time);
+            packet->ui_data.draw_list =
+                ui_draw_layers(engine_state->ui, &frame_ctx);
 
-            if (!renderer_draw_frame(&frame_ctx, &packet))
+            if (!renderer_draw_frame(&frame_ctx, packet))
             {
                 engine_state->is_running = false;
             }

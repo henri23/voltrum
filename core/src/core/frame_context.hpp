@@ -8,4 +8,5 @@ struct Frame_Context
 {
     Arena             *arena;
     Ring_Queue<Event> *event_queue;
+    f32                delta_t;
 };

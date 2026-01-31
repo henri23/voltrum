@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/frame_context.hpp"
 #include "data_structures/dynamic_array.hpp"
 #include "defines.hpp"
 #include "memory/arena.hpp"
@@ -28,8 +29,8 @@ struct Client
 
     // Lifecycle callbacks - client implements these
     b8 (*initialize)(Client *);
-    b8 (*update)(Client *, f32 delta_time);
-    b8 (*render)(Client *, f32 delta_time);
+    b8 (*update)(Client *, Frame_Context *);
+    b8 (*render)(Client *, Frame_Context *);
     void (*on_resize)(Client *, u32 width, u32 height);
     void (*shutdown)(Client *);
 

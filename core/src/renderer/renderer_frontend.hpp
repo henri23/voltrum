@@ -4,14 +4,13 @@
 
 struct Renderer_System_State;
 
-Renderer_System_State *renderer_startup(Arena                *allocator,
-                                         struct Platform_State *platform,
-                                         const char            *application_name);
+Renderer_System_State *renderer_startup(Arena                 *allocator,
+                                        struct Platform_State *platform,
+                                        const char *application_name);
 
 void renderer_on_resize(u16 width, u16 height);
 
-b8 renderer_draw_frame(Frame_Context *frame_ctx,
-                       Render_Packet *packet);
+b8 renderer_draw_frame(Frame_Context *frame_ctx, Render_Context *packet);
 
 void renderer_create_texture(const u8       *pixels,
                              struct Texture *texture,
@@ -23,11 +22,11 @@ void *renderer_get_texture_draw_data(struct Texture *texture);
 b8   renderer_create_material(struct Material *material);
 void renderer_destroy_material(struct Material *material);
 
-b8 renderer_create_geometry(Geometry        *geometry,
-                            u32              vertex_count,
-                            const vertex_3d *vertices,
-                            u32              index_count,
-                            u32             *indices);
+b8   renderer_create_geometry(Geometry        *geometry,
+                              u32              vertex_count,
+                              const vertex_3d *vertices,
+                              u32              index_count,
+                              u32             *indices);
 void renderer_destroy_geometry(Geometry *geometry);
 
 // WARN: The exposing of this method from the core library is temporary until

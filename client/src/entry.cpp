@@ -21,13 +21,17 @@
 #endif
 
 // Client-specific state structure
-struct Frontend_State {
+struct Frontend_State
+{
     b8 initialized;
 };
 
 // Memory debug callback function
-b8 client_memory_debug_callback(const Event *event) {
-    if (event->key.key_code == Key_Code::M && !event->key.repeat) {
+b8
+client_memory_debug_callback(const Event *event)
+{
+    if (event->key.key_code == Key_Code::M && !event->key.repeat)
+    {
         u64 allocation_count = memory_get_allocations_count();
         CLIENT_INFO("Current memory allocations: %llu", allocation_count);
     }
@@ -35,7 +39,9 @@ b8 client_memory_debug_callback(const Event *event) {
 }
 
 // Client lifecycle callback implementations
-b8 client_initialize(Client *client_state) {
+b8
+client_initialize(Client *client_state)
+{
 
 #if defined(PLATFORM_WINDOWS) && !defined(VOLTRUM_STATIC_LINKING)
     // Get ImGui context from core DLL for Windows compatibility
@@ -51,97 +57,121 @@ b8 client_initialize(Client *client_state) {
 #endif
 
     events_register_callback(Event_Type::KEY_PRESSED,
-        client_memory_debug_callback,
-        Event_Priority::LOW);
+                             client_memory_debug_callback,
+                             Event_Priority::LOW);
 
     CLIENT_INFO("Client initialized.");
 
     return true;
 }
 
-b8 client_update(Client *client_state, f32 delta_time) {
-    static u64 alloc_count = 0;
-    u64 prev_alloc_count = alloc_count;
+b8
+client_update(Client *client_state, Frame_Context *ctx)
+{
+    static u64 alloc_count      = 0;
+    u64        prev_alloc_count = alloc_count;
 
     alloc_count = memory_get_allocations_count();
-    if (input_is_key_pressed(Key_Code::M) &&
-        input_was_key_pressed(Key_Code::M)) {
+    if (input_is_key_pressed(Key_Code::M) && input_was_key_pressed(Key_Code::M))
+    {
         CORE_DEBUG("Allocations: %llu (%llu this frame)",
-            alloc_count,
-            alloc_count - prev_alloc_count);
+                   alloc_count,
+                   alloc_count - prev_alloc_count);
     }
 
     // TODO: Re-enable when client_update receives Frame_Context*
-    // if (input_is_key_pressed(Key_Code::T) &&
-    //     input_was_key_pressed(Key_Code::T)) {
-    //     Event context = {};
-    //     context.type = Event_Type::DEBUG0;
-    //     frame_ctx->event_queue->enqueue(context);
-    // }
+    if (input_is_key_pressed(Key_Code::T) && input_was_key_pressed(Key_Code::T))
+    {
+        Event event = {};
+        event.type  = Event_Type::DEBUG0;
+        ctx->event_queue->enqueue(event);
+    }
 
     return true;
 }
 
-b8 client_render(Client *client_state, f32 delta_time) {
+b8
+client_render(Client *client_state, Frame_Context *ctx)
+{
     // Client render logic can go here
     return true;
 }
 
-void client_on_resize(Client *client_state, u32 width, u32 height) {
+void
+client_on_resize(Client *client_state, u32 width, u32 height)
+{
     // Handle resize events
 }
 
-void client_shutdown(Client *client_state) {
+void
+client_shutdown(Client *client_state)
+{
     CLIENT_INFO("Client shutdown complete.")
 }
 
 // Menu callback - called by core UI to draw menu items
-void client_menu_callback() {
-    if (ui::BeginMenu("File")) {
-        if (ui::MenuItem(ICON_FA_RIGHT_FROM_BRACKET " Exit")) {
+void
+client_menu_callback()
+{
+    if (ui::BeginMenu("File"))
+    {
+        if (ui::MenuItem(ICON_FA_RIGHT_FROM_BRACKET " Exit"))
+        {
             platform_close_window();
         }
         ui::EndMenu();
     }
 
-    if (ui::BeginMenu("View")) {
+    if (ui::BeginMenu("View"))
+    {
         ui::MenuItem(ICON_FA_WINDOW_MAXIMIZE " Viewport");
         ui::MenuItem(ICON_FA_SLIDERS " Properties");
 
         ImGui::Separator();
 
         b8 signal_visible = editor_is_signal_analyzer_visible();
-        if (ui::MenuItem(ICON_FA_BOLT " Signal Analyzer", nullptr, !signal_visible)) {
+        if (ui::MenuItem(ICON_FA_BOLT " Signal Analyzer",
+                         nullptr,
+                         !signal_visible))
+        {
             editor_toggle_signal_analyzer();
         }
 
         ImGui::Separator();
 
         b8 demo_visible = editor_is_demo_window_visible();
-        if (ui::MenuItem(ICON_FA_CODE " ImGui Demo", nullptr, !demo_visible)) {
+        if (ui::MenuItem(ICON_FA_CODE " ImGui Demo", nullptr, !demo_visible))
+        {
             editor_toggle_demo_window();
         }
 
         b8 implot_demo_visible = editor_is_implot_demo_window_visible();
-        if (ui::MenuItem(ICON_FA_CHART_LINE " ImPlot Demo", nullptr, !implot_demo_visible)) {
+        if (ui::MenuItem(ICON_FA_CHART_LINE " ImPlot Demo",
+                         nullptr,
+                         !implot_demo_visible))
+        {
             editor_toggle_implot_demo_window();
         }
         ui::EndMenu();
     }
 
-    if (ui::BeginMenu("Help")) {
+    if (ui::BeginMenu("Help"))
+    {
         ui::MenuItem(ICON_FA_CIRCLE_INFO " About");
         ui::EndMenu();
     }
 
-    if (ui::BeginMenu("Tools")) {
+    if (ui::BeginMenu("Tools"))
+    {
         ui::MenuItem(ICON_FA_GEARS " Explore");
         ui::EndMenu();
     }
 }
 
 // Main client initialization function called by core
-b8 create_client(Client *client_state) {
+b8
+create_client(Client *client_state)
+{
 
     client_state->arena = arena_create();
 
@@ -159,8 +189,7 @@ b8 create_client(Client *client_state) {
     client_state->shutdown   = client_shutdown;
 
     // Initialize state pointers
-    client_state->state =
-        push_struct(client_state->arena, Frontend_State);
+    client_state->state = push_struct(client_state->arena, Frontend_State);
 
     // Create and register editor layer
     client_state->layers.init(client_state->arena);
