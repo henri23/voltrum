@@ -336,13 +336,7 @@ application_init(Client *client_state)
     engine_state->test_geometry =
         geometry_system_acquire_by_config(g_config, true);
 
-    memory_deallocate(g_config.vertices,
-                      sizeof(vertex_3d) * g_config.vertex_count,
-                      Memory_Tag::ARRAY);
-
-    memory_deallocate(g_config.indices,
-                      sizeof(u32) * g_config.index_count,
-                      Memory_Tag::ARRAY);
+    // Vertices and indices are arena-allocated and will be freed with the arena
     // TODO: Temp
 
     engine_state->ui = ui_init(engine_state->persistent_arena,

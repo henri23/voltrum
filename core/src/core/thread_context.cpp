@@ -19,8 +19,11 @@ thread_context_allocate()
 void
 thread_context_release(Thread_Context *context)
 {
+    // Save arenas[1] before releasing arenas[0], because
+    // context itself lives inside arenas[0]
+    Arena *arena1 = context->arenas[1];
     arena_release(context->arenas[0]);
-    arena_release(context->arenas[1]);
+    arena_release(arena1);
 }
 
 void

@@ -158,3 +158,26 @@ constexpr u64 KiB(1 << 10);
 // For operator overloading in headers - must use 'inline' (not __forceinline)
 // to satisfy One Definition Rule (ODR) across all compilers
 #define INLINE_OPERATOR inline
+
+// ---- AddressSanitizer Integration ----
+// Detect whether ASAN is enabled at compile time
+#if defined(__SANITIZE_ADDRESS__)
+#    define ASAN_ENABLED 1
+#elif defined(__has_feature)
+#    if __has_feature(address_sanitizer)
+#        define ASAN_ENABLED 1
+#    endif
+#endif
+
+#if ASAN_ENABLED
+#    include <sanitizer/asan_interface.h>
+#    define ASAN_POISON_MEMORY_REGION(addr, size)                               \
+        __asan_poison_memory_region((addr), (size))
+#    define ASAN_UNPOISON_MEMORY_REGION(addr, size)                             \
+        __asan_unpoison_memory_region((addr), (size))
+#    define NO_ASAN __attribute__((no_sanitize("address")))
+#else
+#    define ASAN_POISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
+#    define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
+#    define NO_ASAN
+#endif

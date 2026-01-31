@@ -4,6 +4,17 @@
 #include "core/logger.hpp"
 #include "platform/platform.hpp"
 
+#if ASAN_ENABLED
+C_LINKAGE const char *
+__lsan_default_suppressions()
+{
+    return "leak:libnvidia-glcore.so\n"
+           "leak:libdbus-1.so\n"
+           "leak:Vulkan-ValidationLayers\n"
+           "leak:Vulkan-Loader\n";
+}
+#endif
+
 Arena *
 _arena_create(const char *file, s32 line, u64 reserve_size, u64 commit_size) {
 
@@ -27,13 +38,22 @@ _arena_create(const char *file, s32 line, u64 reserve_size, u64 commit_size) {
     arena->allocation_file = file;
     arena->allocation_line = line;
 
-    // TODO: Tell ASAN that this committed region is now being used
+    // Poison all committed memory past the header. This marks the region as
+    // "off-limits" so ASAN can detect out-of-bounds accesses within the arena.
+    // The header itself (0..ARENA_HEADER_SIZE) stays unpoisoned since it's
+    // actively used by the Arena struct.
+    ASAN_POISON_MEMORY_REGION(
+        static_cast<u8 *>(block) + ARENA_HEADER_SIZE,
+        aligned_commit_size - ARENA_HEADER_SIZE);
 
     return arena;
 }
 
 void
 arena_release(Arena *arena) {
+    // Unpoison everything before releasing so ASAN doesn't complain about
+    // the platform layer touching poisoned memory during decommit/release
+    ASAN_UNPOISON_MEMORY_REGION(arena->memory, arena->committed_memory);
     platform_virtual_memory_release(arena->memory, arena->reserved_memory);
 }
 
@@ -81,6 +101,11 @@ _arena_push(Arena *arena, u64 size, u64 align, b8 should_zero) {
 
         platform_virtual_memory_commit(commit_pointer, commit_size);
 
+        // Poison the newly committed pages — they are not yet in use.
+        // The portion that covers the current allocation will be unpoisoned
+        // below when we unpoison the result pointer.
+        ASAN_POISON_MEMORY_REGION(commit_pointer, commit_size);
+
         arena->committed_memory = aligned_requested_commit_offset;
     }
 
@@ -89,6 +114,9 @@ _arena_push(Arena *arena, u64 size, u64 align, b8 should_zero) {
         "allocation");
 
     void *result = static_cast<u8 *>(arena->memory) + current_offset;
+
+    // Unpoison the region being handed out so ASAN allows access to it
+    ASAN_UNPOISON_MEMORY_REGION(result, size);
 
     arena->offset = requested_offset; // Update offset
 
@@ -105,6 +133,14 @@ arena_pop_to(Arena *arena, u64 position) {
     RUNTIME_ASSERT_MSG(new_position <= arena->offset,
         "arena_pop_to - Cannot pop to a positon that is ahead of the current "
         "position");
+
+    // Re-poison the region being freed so ASAN catches use-after-pop accesses
+    if (new_position < arena->offset)
+    {
+        ASAN_POISON_MEMORY_REGION(
+            static_cast<u8 *>(arena->memory) + new_position,
+            arena->offset - new_position);
+    }
 
     arena->offset = new_position;
 }
