@@ -2,6 +2,7 @@
 
 #include "core/asserts.hpp"
 #include "core/logger.hpp"
+#include "core/thread_context.hpp"
 #include "data_structures/hashmap.hpp"
 #include "memory/memory.hpp"
 #include "utils/string.hpp"
@@ -26,14 +27,17 @@ INTERNAL_FUNC void destroy_texture(Texture *texture);
 INTERNAL_FUNC b8
 load_texture(const char *texture_name, Texture *texture, b8 is_ui_texture)
 {
+    Scratch_Arena scratch = scratch_begin(nullptr, 0);
+
     Resource img_resource;
-    if (!resource_system_load(texture_name,
+    if (!resource_system_load(scratch.arena,
+                              texture_name,
                               Resource_Type::IMAGE,
                               &img_resource))
     {
-
         CORE_ERROR("Failed to load image resource for texture '%s'",
                    texture_name);
+        scratch_end(scratch);
         return false;
     }
 
@@ -86,7 +90,7 @@ load_texture(const char *texture_name, Texture *texture, b8 is_ui_texture)
         texture->generation = current_generation + 1;
     }
 
-    resource_system_unload(&img_resource);
+    scratch_end(scratch);
 
     return true;
 }

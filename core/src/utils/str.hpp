@@ -5,76 +5,53 @@
 
 #include <stdarg.h>
 
-// Forward declarations
 struct Arena;
 struct vec2;
 struct vec3;
 struct vec4;
 
-// Non-owning view (16 bytes)
+// Non-owning view (pointer + length, 16 bytes)
 struct String
 {
     const u8 *str;
     u64       size;
 };
 
-// Fixed-capacity inline storage
+// Fixed-capacity inline storage (no allocation needed)
 template <u64 N>
 struct Const_String
 {
     u8  data[N];
     u64 size;
 
-    operator String() const { return {data, size}; }
+    operator String() const { return String{data, size}; }
 };
 
-// String list - for building strings incrementally
-struct String_Node
-{
-    String_Node *next;
-    String       string;
-};
-
-struct String_List
-{
-    String_Node *first;
-    String_Node *last;
-    u64          node_count;
-    u64          total_size;
-};
-
-// Match flags
 enum class String_Match_Flags : u32
 {
-    NONE             = 0,
+    NONE              = 0,
     CASE_INSENSITIVE  = (1 << 0),
-    SLASH_INSENSITIVE = (1 << 1), // treat '/' and '\\' as equal
+    SLASH_INSENSITIVE = (1 << 1),
 };
 ENABLE_BITMASK(String_Match_Flags)
 
-// Constructors / Conversions
+// Construction
+#define STR(string) (String{(const u8 *)(string), sizeof(string) - 1})
 
-// Compile-time string literal
-#define str_lit(s) (String{(const u8 *)(s), sizeof(s) - 1})
-
-// Wrap a C string (computes length)
 VOLTRUM_API String str_from_cstr(const char *c);
 
-// Wrap raw buffer
 FORCE_INLINE String
 str(const u8 *s, u64 size)
 {
-    return {s, size};
+    return String{s, size};
 }
 
-// Zero / empty string
 FORCE_INLINE String
 str_zero()
 {
-    return {nullptr, 0};
+    return String{nullptr, 0};
 }
 
-// Copy a C string into a Const_String
 template <u64 N>
 Const_String<N>
 const_str_from_cstr(const char *s)
@@ -93,7 +70,6 @@ const_str_from_cstr(const char *s)
     return result;
 }
 
-// Copy a String into a Const_String (truncates if > N)
 template <u64 N>
 Const_String<N>
 const_str_from_str(String s)
@@ -113,44 +89,37 @@ VOLTRUM_API b8 str_match(String             a,
                          String             b,
                          String_Match_Flags flags = String_Match_Flags::NONE);
 
-VOLTRUM_API u64 str_find_needle(String             haystack,
-                                u64                start,
-                                String             needle,
-                                String_Match_Flags flags = String_Match_Flags::NONE);
+VOLTRUM_API u64
+str_find_needle(String             haystack,
+                u64                start,
+                String             needle,
+                String_Match_Flags flags = String_Match_Flags::NONE);
 
-// Slicing (no allocation)
+// Slicing (no allocation, returns views into the original)
 VOLTRUM_API String str_prefix(String s, u64 size);
 VOLTRUM_API String str_skip(String s, u64 amt);
-VOLTRUM_API String str_postfix(String s, u64 size);
-VOLTRUM_API String str_chop(String s, u64 amt);
 VOLTRUM_API String str_substr(String s, u64 start, u64 len);
 VOLTRUM_API String str_trim_whitespace(String s);
 
 // Arena-allocated operations
+// These are arena-agnostic: pass a scratch arena for temporary strings,
+// or a persistent arena for strings that need to outlive the current scope.
 VOLTRUM_API String str_copy(Arena *arena, String s);
 VOLTRUM_API String str_cat(Arena *arena, String a, String b);
 VOLTRUM_API String str_fmt(Arena *arena, const char *fmt, ...);
 VOLTRUM_API String str_fmt_v(Arena *arena, const char *fmt, va_list args);
 
-// String list
-VOLTRUM_API void   str_list_push(Arena *arena, String_List *list, String s);
-VOLTRUM_API String str_list_join(Arena       *arena,
-                                 String_List *list,
-                                 String       separator);
-
-// Path helpers (no allocation unless noted)
+// Path helpers (views unless noted)
 VOLTRUM_API String str_chop_last_slash(String s);
 VOLTRUM_API String str_skip_last_slash(String s);
 VOLTRUM_API String str_chop_last_dot(String s);
 VOLTRUM_API String str_skip_last_dot(String s);
-
-// Joins dir and file with a '/' separator (arena-allocated)
 VOLTRUM_API String str_path_join(Arena *arena, String dir, String file);
 
-// Search / Indexing - returns (u64)-1 if not found
+// Search - returns (u64)-1 if not found
 VOLTRUM_API u64 str_index_of(String s, u8 character);
 
-// Hashing
+// Hashing (FNV-1a)
 VOLTRUM_API u64 str_hash(String s);
 
 // Parsing

@@ -8,7 +8,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-// Constructors / Conversions
+// Construction
 String
 str_from_cstr(const char *c)
 {
@@ -128,33 +128,19 @@ str_find_needle(String             haystack,
     return (u64)-1;
 }
 
-// Slicing (no allocation)
+// Slicing
 String
 str_prefix(String s, u64 size)
 {
     u64 clamped = (size < s.size) ? size : s.size;
-    return {s.str, clamped};
+    return String{s.str, clamped};
 }
 
 String
 str_skip(String s, u64 amt)
 {
     u64 clamped = (amt < s.size) ? amt : s.size;
-    return {s.str + clamped, s.size - clamped};
-}
-
-String
-str_postfix(String s, u64 size)
-{
-    u64 clamped = (size < s.size) ? size : s.size;
-    return {s.str + s.size - clamped, clamped};
-}
-
-String
-str_chop(String s, u64 amt)
-{
-    u64 clamped = (amt < s.size) ? amt : s.size;
-    return {s.str, s.size - clamped};
+    return String{s.str + clamped, s.size - clamped};
 }
 
 String
@@ -166,7 +152,7 @@ str_substr(String s, u64 start, u64 len)
     }
     u64 max_len = s.size - start;
     u64 clamped = (len < max_len) ? len : max_len;
-    return {s.str + start, clamped};
+    return String{s.str + start, clamped};
 }
 
 String
@@ -184,7 +170,7 @@ str_trim_whitespace(String s)
         end--;
     }
 
-    return {s.str + start, end - start};
+    return String{s.str + start, end - start};
 }
 
 // Arena-allocated operations
@@ -198,7 +184,7 @@ str_copy(Arena *arena, String s)
 
     u8 *buf = push_array(arena, u8, s.size);
     memory_copy(buf, s.str, s.size);
-    return {buf, s.size};
+    return String{buf, s.size};
 }
 
 String
@@ -221,7 +207,7 @@ str_cat(Arena *arena, String a, String b)
         memory_copy(buf + a.size, b.str, b.size);
     }
 
-    return {buf, total};
+    return String{buf, total};
 }
 
 String
@@ -237,7 +223,6 @@ str_fmt(Arena *arena, const char *fmt, ...)
 String
 str_fmt_v(Arena *arena, const char *fmt, va_list args)
 {
-    // First pass: determine length
     va_list args_copy;
     va_copy(args_copy, args);
     s32 len = vsnprintf(nullptr, 0, fmt, args_copy);
@@ -248,69 +233,10 @@ str_fmt_v(Arena *arena, const char *fmt, va_list args)
         return str_zero();
     }
 
-    // Second pass: write into arena buffer
-    // Allocate len+1 for vsnprintf null terminator, but String size is len
     u8 *buf = push_array(arena, u8, (u64)len + 1);
     vsnprintf((char *)buf, (u64)len + 1, fmt, args);
 
-    return {buf, (u64)len};
-}
-
-// String list
-void
-str_list_push(Arena *arena, String_List *list, String s)
-{
-    String_Node *node = push_struct(arena, String_Node);
-    node->string      = s;
-    node->next        = nullptr;
-
-    if (list->last)
-    {
-        list->last->next = node;
-    }
-    else
-    {
-        list->first = node;
-    }
-
-    list->last = node;
-    list->node_count++;
-    list->total_size += s.size;
-}
-
-String
-str_list_join(Arena *arena, String_List *list, String separator)
-{
-    if (list->node_count == 0)
-    {
-        return str_zero();
-    }
-
-    u64 total = list->total_size;
-    if (list->node_count > 1)
-    {
-        total += separator.size * (list->node_count - 1);
-    }
-
-    u8 *buf = push_array(arena, u8, total);
-    u64 pos = 0;
-
-    for (String_Node *node = list->first; node; node = node->next)
-    {
-        if (node->string.size > 0)
-        {
-            memory_copy(buf + pos, node->string.str, node->string.size);
-            pos += node->string.size;
-        }
-
-        if (node->next && separator.size > 0)
-        {
-            memory_copy(buf + pos, separator.str, separator.size);
-            pos += separator.size;
-        }
-    }
-
-    return {buf, total};
+    return String{buf, (u64)len};
 }
 
 // Path helpers
@@ -336,7 +262,7 @@ str_chop_last_slash(String s)
     {
         return s;
     }
-    return {s.str, pos};
+    return String{s.str, pos};
 }
 
 String
@@ -347,7 +273,7 @@ str_skip_last_slash(String s)
     {
         return s;
     }
-    return {s.str + pos + 1, s.size - pos - 1};
+    return String{s.str + pos + 1, s.size - pos - 1};
 }
 
 String
@@ -366,7 +292,7 @@ str_chop_last_dot(String s)
     {
         return s;
     }
-    return {s.str, pos};
+    return String{s.str, pos};
 }
 
 String
@@ -385,7 +311,7 @@ str_skip_last_dot(String s)
     {
         return str_zero();
     }
-    return {s.str + pos + 1, s.size - pos - 1};
+    return String{s.str + pos + 1, s.size - pos - 1};
 }
 
 String
@@ -400,7 +326,6 @@ str_path_join(Arena *arena, String dir, String file)
         return str_copy(arena, dir);
     }
 
-    // Check if dir already ends with a slash
     u8 last = dir.str[dir.size - 1];
     if (last == '/' || last == '\\')
     {
@@ -413,10 +338,10 @@ str_path_join(Arena *arena, String dir, String file)
     buf[dir.size] = '/';
     memory_copy(buf + dir.size + 1, file.str, file.size);
 
-    return {buf, total};
+    return String{buf, total};
 }
 
-// Search / Indexing
+// Search
 u64
 str_index_of(String s, u8 character)
 {
@@ -443,9 +368,7 @@ str_hash(String s)
     return hash;
 }
 
-// Parsing
-// sscanf requires null-terminated strings, so we copy into a small stack
-// buffer.
+// Parsing - uses stack buffer to null-terminate for sscanf
 INTERNAL_FUNC b8
 make_cstr_buffer(String s, char *buf, u64 buf_size)
 {
@@ -558,18 +481,18 @@ str_to_bool(String s, b8 *out)
     String trimmed = str_trim_whitespace(s);
 
     if (str_match(trimmed,
-                  str_lit("true"),
+                  STR("true"),
                   String_Match_Flags::CASE_INSENSITIVE) ||
-        str_match(trimmed, str_lit("1")))
+        str_match(trimmed, STR("1")))
     {
         *out = true;
         return true;
     }
 
     if (str_match(trimmed,
-                  str_lit("false"),
+                  STR("false"),
                   String_Match_Flags::CASE_INSENSITIVE) ||
-        str_match(trimmed, str_lit("0")))
+        str_match(trimmed, STR("0")))
     {
         *out = false;
         return true;

@@ -62,8 +62,13 @@ internal_var Engine_State *engine_state = nullptr;
 INTERNAL_FUNC void
 application_set_window_icon()
 {
+    Scratch_Arena scratch = scratch_begin(nullptr, 0);
+
     Resource icon_resource = {};
-    if (resource_system_load("voltrum", Resource_Type::ICON, &icon_resource))
+    if (resource_system_load(scratch.arena,
+                             "voltrum",
+                             Resource_Type::ICON,
+                             &icon_resource))
     {
         Image_Resource_Data *icon_data =
             static_cast<Image_Resource_Data *>(icon_resource.data);
@@ -73,13 +78,14 @@ application_set_window_icon()
                                  icon_data->width,
                                  icon_data->height);
 
-        resource_system_unload(&icon_resource);
         CORE_DEBUG("Window icon set successfully");
     }
     else
     {
         CORE_WARN("Failed to load window icon");
     }
+
+    scratch_end(scratch);
 }
 
 INTERNAL_FUNC b8
@@ -211,7 +217,7 @@ application_init(Client *client_state)
     engine_state->inputs = input_init(engine_state->persistent_arena);
     ENSURE(engine_state->inputs);
 
-    Resource_System_Config resource_config = {32};
+    Resource_System_Config resource_config = {};
 
 #ifdef DEBUG_BUILD
     resource_config.asset_base_path = "../assets";

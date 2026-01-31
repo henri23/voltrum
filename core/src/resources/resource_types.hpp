@@ -14,16 +14,12 @@ enum class Resource_Type : u32 {
     CUSTOM
 };
 
-using Loader_ID = u32;
-
-// The resource loader will be responsible for temporaril allocating the data
-// of the resource and deleting it
-struct Resource {
-    Loader_ID loader_id;
+struct Resource
+{
     const char *name;
-    char *full_path;
-    u64 data_size; // Size of the data stored in the opaque member void* data
-    void *data;
+    char       *full_path;
+    u64         data_size;
+    void       *data;
 };
 
 struct Image_Resource_Data {

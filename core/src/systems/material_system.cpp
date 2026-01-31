@@ -1,5 +1,6 @@
 #include "systems/material_system.hpp"
 #include "core/logger.hpp"
+#include "core/thread_context.hpp"
 #include "data_structures/hashmap.hpp"
 #include "defines.hpp"
 #include "math/math.hpp"
@@ -78,14 +79,20 @@ material_system_shutdown()
 Material *
 material_system_acquire(const char *name)
 {
+    Scratch_Arena scratch = scratch_begin(nullptr, 0);
+
     Resource resource = {};
 
-    if (!resource_system_load(name, Resource_Type::MATERIAL, &resource))
+    if (!resource_system_load(scratch.arena,
+                              name,
+                              Resource_Type::MATERIAL,
+                              &resource))
     {
         CORE_ERROR(
             "Failed to load material file: '%s'. Null pointer will be "
             "returned.",
             name);
+        scratch_end(scratch);
         return nullptr;
     }
 
@@ -96,7 +103,7 @@ material_system_acquire(const char *name)
             *static_cast<Material_Config *>(resource.data));
     }
 
-    resource_system_unload(&resource);
+    scratch_end(scratch);
 
     if (!material)
     {

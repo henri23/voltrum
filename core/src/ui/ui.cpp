@@ -3,6 +3,7 @@
 #include "ui_titlebar.hpp"
 
 #include "core/logger.hpp"
+#include "core/thread_context.hpp"
 #include "systems/resource_system.hpp"
 
 #include <SDL3/SDL.h>
@@ -80,18 +81,21 @@ load_default_fonts(UI_State *state)
 {
     ImGuiIO &io = ImGui::GetIO();
 
+    // Scratch arena keeps font data alive until Build() copies it
+    Scratch_Arena scratch = scratch_begin(nullptr, 0);
+
     constexpr const char *style_names[] = {"normal",
                                            "italic",
                                            "bold_normal",
                                            "bold_italic"};
 
-    // Store resources to keep data alive until Build() is called
     Resource font_resources[(u8)Font_Style::MAX_COUNT] = {};
     Resource icon_resource                             = {};
     b8       icon_loaded                               = false;
 
     // Load icon font once (will be merged with each text font)
-    if (resource_system_load("fontawesome/fontawesome_normal",
+    if (resource_system_load(scratch.arena,
+                             "fontawesome/fontawesome_normal",
                              Resource_Type::FONT,
                              &icon_resource))
     {
@@ -117,7 +121,8 @@ load_default_fonts(UI_State *state)
 
         path[i] = '\0';
 
-        if (!resource_system_load(path,
+        if (!resource_system_load(scratch.arena,
+                                  path,
                                   Resource_Type::FONT,
                                   &font_resources[s]))
         {
@@ -163,33 +168,12 @@ load_default_fonts(UI_State *state)
     if (!io.Fonts->Build())
     {
         CORE_ERROR("Failed to build font atlas");
-        // Clean up resources before returning
-        for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s)
-        {
-            if (font_resources[s].data)
-            {
-                resource_system_unload(&font_resources[s]);
-            }
-        }
-        if (icon_loaded)
-        {
-            resource_system_unload(&icon_resource);
-        }
+        scratch_end(scratch);
         return false;
     }
 
-    // Now safe to unload font data - ImGui has copied what it needs
-    for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s)
-    {
-        if (font_resources[s].data)
-        {
-            resource_system_unload(&font_resources[s]);
-        }
-    }
-    if (icon_loaded)
-    {
-        resource_system_unload(&icon_resource);
-    }
+    // All font data freed implicitly when scratch ends
+    scratch_end(scratch);
 
     io.FontDefault = state->fonts[(u8)Font_Style::NORMAL];
     CORE_DEBUG("Font atlas built successfully with icon support");

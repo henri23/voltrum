@@ -1,5 +1,8 @@
 #pragma once
 
-#include "systems/resource_system.hpp"
+#include "memory/arena.hpp"
+#include "resources/resource_types.hpp"
 
-Resource_Loader binary_resource_loader_create();
+b8 binary_loader_load(Arena      *arena,
+                      const char *name,
+                      Resource   *out_resource);
