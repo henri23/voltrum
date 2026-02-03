@@ -18,7 +18,7 @@ struct Memory_Pool
         T     item;
     };
 
-    using Pool_Callback = void (*)(T *item);
+    using PFN_Pool_Iteration_Callback = void (*)(T *item);
 
     Arena *_allocator;
     Slot  *slots;
@@ -29,10 +29,11 @@ struct Memory_Pool
     FORCE_INLINE void
     init(Arena *allocator, u32 max_capacity)
     {
-        RUNTIME_ASSERT_MSG(allocator != nullptr,
-                           "Memory_Pool::init - allocator cannot be null");
-        RUNTIME_ASSERT_MSG(max_capacity > 0,
-                           "Memory_Pool::init - capacity must be > 0");
+        ENSURE(allocator);
+
+        RUNTIME_ASSERT_MSG(
+            max_capacity > 0,
+            "memory_pool_init - Capacity must be greater than 0");
 
         _allocator   = allocator;
         capacity     = max_capacity;
@@ -52,8 +53,7 @@ struct Memory_Pool
     FORCE_INLINE T *
     acquire()
     {
-        RUNTIME_ASSERT_MSG(first_free,
-                           "Memory_Pool::acquire - pool exhausted");
+        RUNTIME_ASSERT_MSG(first_free, "memory_pool_acquire - Pool exhausted");
 
         Slot *slot      = first_free;
         first_free      = slot->next_free;
@@ -72,13 +72,13 @@ struct Memory_Pool
         // Recover the containing Slot from the item pointer by computing
         // the byte offset of the 'item' field within a Slot
         using Slot_Type = Slot;
+
         constexpr u64 item_offset = offsetof(Slot_Type, item);
 
-        Slot *slot = reinterpret_cast<Slot *>(
-            reinterpret_cast<u8 *>(item) - item_offset);
+        Slot *slot = (Slot *)((u8 *)item - item_offset);
 
         RUNTIME_ASSERT_MSG(slot->active,
-                           "Memory_Pool::release - item is not active");
+                           "memory_pool_release - Item is not active");
 
         slot->active    = false;
         slot->next_free = first_free;
@@ -87,7 +87,7 @@ struct Memory_Pool
     }
 
     FORCE_INLINE void
-    for_each_active(Pool_Callback callback)
+    for_each_active(PFN_Pool_Iteration_Callback callback)
     {
         for (u32 i = 0; i < capacity; ++i)
         {

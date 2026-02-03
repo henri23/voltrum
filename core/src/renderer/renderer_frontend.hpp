@@ -4,9 +4,10 @@
 
 struct Renderer_System_State;
 
-Renderer_System_State *renderer_startup(Arena                 *allocator,
-                                        struct Platform_State *platform,
-                                        const char *application_name);
+Renderer_System_State *renderer_init(
+    Arena                 *allocator,
+    struct Platform_State *platform,
+    String                 application_name);
 
 void renderer_on_resize(u16 width, u16 height);
 

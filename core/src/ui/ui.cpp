@@ -89,9 +89,9 @@ load_default_fonts(UI_State *state)
                                            "bold_normal",
                                            "bold_italic"};
 
-    Resource font_resources[(u8)Font_Style::MAX_COUNT] = {};
-    Resource icon_resource                             = {};
-    b8       icon_loaded                               = false;
+    Resource font_resources[FONT_MAX_COUNT] = {};
+    Resource icon_resource                  = {};
+    b8       icon_loaded                    = false;
 
     // Load icon font once (will be merged with each text font)
     if (resource_system_load(scratch.arena,
@@ -107,7 +107,7 @@ load_default_fonts(UI_State *state)
         CORE_WARN("Failed to load FontAwesome icon font");
     }
 
-    for (u8 s = 0; s < (u8)Font_Style::MAX_COUNT; ++s)
+    for (u8 s = 0; s < FONT_MAX_COUNT; ++s)
     {
         char path[128];
         u32  i = 0;
@@ -186,14 +186,14 @@ ui_init(Arena                   *allocator,
         Dynamic_Array<UI_Layer> *layers,
         UI_Theme                 theme,
         PFN_menu_callback        menu_callback,
-        const char              *app_name,
+        String                   app_name,
         Platform_State          *plat_state)
 {
     UI_State *state = push_struct(allocator, UI_State);
 
     state->current_theme  = theme;
     state->menu_callback  = menu_callback;
-    state->app_name       = app_name;
+    state->app_name       = C_STR(app_name);
     state->is_initialized = true;
     state->platform       = plat_state;
     state->layers         = layers;
@@ -204,7 +204,7 @@ ui_init(Arena                   *allocator,
 
     ui_themes_apply(state->current_theme, style);
 
-    ui_titlebar_setup(state, app_name);
+    ui_titlebar_setup(state, C_STR(app_name));
 
     for (UI_Layer &layer : *layers)
     {

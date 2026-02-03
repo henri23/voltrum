@@ -4,9 +4,10 @@
 #include "resources/resource_types.hpp"
 #include "vulkan_types.hpp"
 
-b8   vulkan_initialize(Arena          *allocator,
-                       Platform_State *platform,
-                       const char     *app_name);
+b8 vulkan_initialize(
+    Arena          *allocator,
+    Platform_State *platform,
+    String          app_name);
 void vulkan_shutdown();
 
 void vulkan_on_resized(u16 width, u16 height);

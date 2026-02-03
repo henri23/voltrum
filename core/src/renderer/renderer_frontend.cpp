@@ -23,9 +23,10 @@ struct Renderer_System_State
 internal_var Renderer_System_State *state_ptr;
 
 Renderer_System_State *
-renderer_startup(Arena          *allocator,
-                 Platform_State *platform,
-                 const char     *application_name)
+renderer_init(
+    Arena          *allocator,
+    Platform_State *platform,
+    String          application_name)
 {
     auto *state = push_struct(allocator, Renderer_System_State);
 

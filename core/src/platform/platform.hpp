@@ -3,6 +3,7 @@
 #include "core/frame_context.hpp"
 #include "defines.hpp"
 #include "memory/arena.hpp"
+#include "utils/string.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -35,10 +36,8 @@ struct Platform_Process_Info
     const char *user_program_data_path;
 };
 
-Platform_State *platform_init(Arena      *allocator,
-                              const char *application_name,
-                              s32         width,
-                              s32         height);
+Platform_State *
+platform_init(Arena *allocator, String application_name, s32 width, s32 height);
 
 void platform_shutdown(Platform_State *state);
 

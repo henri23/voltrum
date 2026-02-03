@@ -7,32 +7,27 @@
 #include "defines.hpp"
 
 // Client must implement this function to initialize their state
-extern b8 create_client(Client *client_state);
+extern b8         create_client(Client *client_state);
+extern App_Config request_client_config();
 
 int
-main() {
-    // Stack-allocate client state (following koala_engine pattern)
-    Client client_state = {};
-
+main()
+{
     Thread_Context *thread_context = thread_context_allocate();
-    thread_context->thread_name = "Application thread";
+    thread_context->thread_name    = "Application thread";
     thread_context_select(thread_context);
 
-    // Let client initialize its state and configuration
-    if (!create_client(&client_state)) {
-        CORE_FATAL("Failed to initialize client");
-        return -1;
-    }
-
-    // Validate required client configuration
-    if (!client_state.config.name) {
-        CORE_FATAL("Client must provide application name");
-        return -1;
-    }
+    auto config = request_client_config();
 
     // Initialize application with client state
-    if (!application_init(&client_state)) {
-        CORE_FATAL("Failed to initialize application");
+    Client *client = application_init(&config);
+
+    ENSURE(client);
+
+    // Let client initialize its state and configuration
+    if (!create_client(client))
+    {
+        CORE_FATAL("Failed to initialize client");
         return -1;
     }
 

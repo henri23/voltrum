@@ -8,26 +8,25 @@
 
 constexpr u64 DEFAULT_DYNAMIC_ARRAY_CAPACITY = 16;
 
-template <typename T>
-struct Dynamic_Chunk
-{
-    // Dynamic_Chunk<T> *prev;
-    Dynamic_Chunk<T> *next;
-    u64               offset;
-    T                *elements;
-};
-
 // The autoarray is a dynamic array implementation that manages memory elements
 // in a contigous memory layout
 template <typename T>
 struct Dynamic_Array
 {
+    struct Dynamic_Chunk
+    {
+        Dynamic_Chunk *next;
+
+        u64 offset;
+        T  *elements;
+    };
+
     u64 granularity; // Size of each chunk equal to the initial capacity value
     u64 capacity;
     u64 size;
 
-    Dynamic_Chunk<T> *current;
-    Dynamic_Chunk<T> *first;
+    Dynamic_Chunk *current;
+    Dynamic_Chunk *first;
 
     Arena *_allocator; // Should not be accessed externally
 
@@ -42,7 +41,7 @@ struct Dynamic_Array
         granularity = capacity;
         size        = 0;
 
-        first = push_struct(_allocator, Dynamic_Chunk<T>);
+        first = push_struct(_allocator, Dynamic_Chunk);
 
         current           = first;
         current->elements = push_array(_allocator, T, capacity);
@@ -61,7 +60,7 @@ struct Dynamic_Array
         u64 index_in_chunk = index % granularity;
         u64 chunk_number   = index / granularity;
 
-        Dynamic_Chunk<T> *chunk = first;
+        Dynamic_Chunk *chunk = first;
 
         for (u64 i = 0; i < capacity / granularity; ++i)
         {
@@ -80,7 +79,7 @@ struct Dynamic_Array
     FORCE_INLINE void
     _resize()
     {
-        current->next = push_struct(_allocator, Dynamic_Chunk<T>);
+        current->next = push_struct(_allocator, Dynamic_Chunk);
         current       = current->next;
 
         current->elements = push_array(_allocator, T, granularity);
@@ -131,9 +130,10 @@ struct Dynamic_Array
 
     struct Iterator
     {
-        Dynamic_Chunk<T> *chunk;
-        u64               index; // index within current chunk
-        u64               granularity;
+        Dynamic_Chunk *chunk;
+
+        u64 index; // index within current chunk
+        u64 granularity;
 
         FORCE_INLINE T &
         operator*()

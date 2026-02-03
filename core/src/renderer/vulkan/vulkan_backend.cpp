@@ -112,9 +112,10 @@ free_data_range(Vulkan_Buffer *buffer, u64 offset, u64 size) {
 }
 
 b8
-vulkan_initialize(Arena          *allocator,
-                  Platform_State *platform,
-                  const char     *app_name)
+vulkan_initialize(
+    Arena          *allocator,
+    Platform_State *platform,
+    String          app_name)
 {
     state_ptr = push_struct(allocator, Vulkan_Context);
 
@@ -163,8 +164,8 @@ vulkan_initialize(Arena          *allocator,
 
     VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
 
-    app_info.pNext = nullptr;
-    app_info.pApplicationName = app_name;
+    app_info.pNext            = nullptr;
+    app_info.pApplicationName = C_STR(app_name);
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.pEngineName = "Koala engine";
     app_info.engineVersion = VK_MAKE_VERSION(1, 0, 0);

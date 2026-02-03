@@ -38,6 +38,9 @@ ENABLE_BITMASK(String_Match_Flags)
 // Construction
 #define STR(string) (String{(const u8 *)(string), sizeof(string) - 1})
 
+// Cast String to C string (assumes underlying buffer is null-terminated)
+#define C_STR(string) ((const char *)(string).str)
+
 VOLTRUM_API String str_from_cstr(const char *c);
 
 FORCE_INLINE String

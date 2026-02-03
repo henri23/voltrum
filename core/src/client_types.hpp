@@ -1,36 +1,29 @@
 #pragma once
 
-#include "core/frame_context.hpp"
 #include "data_structures/dynamic_array.hpp"
 #include "defines.hpp"
-#include "memory/arena.hpp"
 #include "ui/ui_themes.hpp"
 #include "ui/ui_types.hpp"
+#include "utils/string.hpp"
 
 // Client configuration structure - client controls engine behavior
 struct App_Config
 {
-    UI_Theme    theme;
-    const char *name;
-    u32         width;
-    u32         height;
+    UI_Theme theme;
+    String   name;
+    u32      width;
+    u32      height;
 };
 
 // Application structure - similar to Game struct in koala_engine
 struct Client
 {
-    App_Config config;
-
-    Arena *arena;
-
-    // Internal engine state (opaque pointer managed by core)
-    // Client cannot access this directly - only core can use this
-    void *internal_app_state;
+    Arena *mode_arena;
 
     // Lifecycle callbacks - client implements these
     b8 (*initialize)(Client *);
-    b8 (*update)(Client *, Frame_Context *);
-    b8 (*render)(Client *, Frame_Context *);
+    b8 (*update)(Client *, struct Frame_Context *);
+    b8 (*render)(Client *, struct Frame_Context *);
     void (*on_resize)(Client *, u32 width, u32 height);
     void (*shutdown)(Client *);
 

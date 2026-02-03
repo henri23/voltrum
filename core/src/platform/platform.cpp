@@ -26,10 +26,7 @@ INTERNAL_FUNC SDL_HitTestResult
 platform_hit_test_callback(SDL_Window *win, const SDL_Point *area, void *data);
 
 Platform_State *
-platform_init(Arena      *allocator,
-              const char *application_name,
-              s32         width,
-              s32         height)
+platform_init(Arena *allocator, String application_name, s32 width, s32 height)
 {
 
     Platform_State *state =
@@ -62,8 +59,7 @@ platform_init(Arena      *allocator,
         }
         else
         {
-            CORE_DEBUG(
-                "Wayland not detected, using default X11 video driver");
+            CORE_DEBUG("Wayland not detected, using default X11 video driver");
         }
     }
 #endif
@@ -85,8 +81,10 @@ platform_init(Arena      *allocator,
                                    SDL_WINDOW_HIGH_PIXEL_DENSITY |
                                    SDL_WINDOW_BORDERLESS;
 
-    state->window =
-        SDL_CreateWindow(application_name, width, height, window_flags);
+    state->window = SDL_CreateWindow((const char *)application_name.str,
+                                     width,
+                                     height,
+                                     window_flags);
 
     if (state->window == nullptr)
     {

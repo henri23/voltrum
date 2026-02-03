@@ -11,7 +11,6 @@
 #include <ui/icons.hpp>
 #include <ui/ui_widgets.hpp>
 
-
 // WARN: This is temporary, the renderer subsystem should not be
 // exposed outside the engine
 #include <platform/platform.hpp>
@@ -107,7 +106,7 @@ client_on_resize(Client *client_state, u32 width, u32 height)
 void
 client_shutdown(Client *client_state)
 {
-    CLIENT_INFO("Client shutdown complete.")
+    CLIENT_INFO("Client shutdown complete.");
 }
 
 // Menu callback - called by core UI to draw menu items
@@ -169,36 +168,44 @@ client_menu_callback()
     }
 }
 
-// Main client initialization function called by core
-b8
-create_client(Client *client_state)
+App_Config
+request_client_config()
 {
-
-    client_state->arena = arena_create();
+    App_Config client_config;
 
     // Set up client configuration
-    client_state->config.name   = "Voltrum EDA";
-    client_state->config.width  = 1600;
-    client_state->config.height = 900;
-    client_state->config.theme  = UI_Theme::CATPPUCCIN;
+    client_config.name   = STR("Voltrum EDA");
+    client_config.width  = 1600;
+    client_config.height = 900;
+    client_config.theme  = UI_Theme::CATPPUCCIN;
 
+    return client_config;
+}
+
+// Main client initialization function called by core
+b8
+create_client(Client *client)
+{
     // Set up lifecycle callbacks
-    client_state->initialize = client_initialize;
-    client_state->update     = client_update;
-    client_state->render     = client_render;
-    client_state->on_resize  = client_on_resize;
-    client_state->shutdown   = client_shutdown;
+    client->initialize = client_initialize;
+    client->update     = client_update;
+    client->render     = client_render;
+    client->on_resize  = client_on_resize;
+    client->shutdown   = client_shutdown;
 
     // Initialize state pointers
-    client_state->state = push_struct(client_state->arena, Frontend_State);
+    client->state = push_struct(client->mode_arena, Frontend_State);
+    auto editor_layer_state =
+        push_struct(client->mode_arena, Editor_Layer_State);
 
     // Create and register editor layer
-    client_state->layers.init(client_state->arena);
-    UI_Layer editor_layer = create_editor_layer();
-    client_state->layers.add(editor_layer);
+    client->layers.init(client->mode_arena);
+
+    // Add layers
+    client->layers.add(create_editor_layer(editor_layer_state));
 
     // Set menu callback
-    client_state->menu_callback = client_menu_callback;
+    client->menu_callback = client_menu_callback;
 
     return true;
 }

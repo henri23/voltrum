@@ -20,6 +20,8 @@ enum class Font_Style : u8
     MAX_COUNT
 };
 
+internal_var constexpr u8 FONT_MAX_COUNT = (u8)Font_Style::MAX_COUNT;
+
 struct UI_Titlebar_State
 {
     const char *title_text;
@@ -61,11 +63,10 @@ struct UI_Layer
 struct UI_State
 {
     PFN_menu_callback menu_callback;
-
-    UI_Theme    current_theme;
-    const char *app_name;
-    b8          is_initialized;
-    ImFont     *fonts[(u8)Font_Style::MAX_COUNT];
+    UI_Theme          current_theme;
+    const char       *app_name;
+    b8                is_initialized;
+    ImFont           *fonts[FONT_MAX_COUNT];
 
     Dynamic_Array<UI_Layer> *layers;
     UI_Titlebar_State        titlebar;

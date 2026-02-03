@@ -1,11 +1,11 @@
 #pragma once
 
-using u8 = unsigned char;
+using u8  = unsigned char;
 using u16 = unsigned short;
 using u32 = unsigned int;
 using u64 = unsigned long long;
 
-using s8 = signed char;
+using s8  = signed char;
 using s16 = signed short;
 using s32 = signed int;
 using s64 = signed long long;
@@ -14,10 +14,10 @@ using f32 = float;
 using f64 = double;
 
 using b32 = int;
-using b8 = bool;
+using b8  = bool;
 
 constexpr u32 INVALID_ID = -1;
-using Object_ID = u32;
+using Object_ID          = u32;
 
 // Properly define static assertions
 #if defined(__clang__) || defined(__gcc__)
@@ -73,7 +73,9 @@ constexpr u64 KiB(1 << 10);
 #    define THREAD_STATIC __thread
 #endif
 
-#define C_LINKAGE_BEGIN extern "C" {
+#define C_LINKAGE_BEGIN                                                        \
+    extern "C"                                                                 \
+    {
 #define C_LINKAGE_END }
 #define C_LINKAGE extern "C"
 
@@ -164,18 +166,28 @@ constexpr u64 KiB(1 << 10);
 #if defined(__SANITIZE_ADDRESS__)
 #    define ASAN_ENABLED 1
 #elif defined(__has_feature)
-#    if __has_feature(address_sanitizer)
+#    if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
 #        define ASAN_ENABLED 1
 #    endif
 #endif
 
 #if ASAN_ENABLED
-#    include <sanitizer/asan_interface.h>
-#    define ASAN_POISON_MEMORY_REGION(addr, size)                               \
+// Declare functions directly for cross-platform compatibility (MSVC doesn't
+// have sanitizer/asan_interface.h in standard include path)
+C_LINKAGE void __asan_poison_memory_region(void const volatile *addr, u64 size);
+
+C_LINKAGE void __asan_unpoison_memory_region(void const volatile *addr,
+                                             u64                  size);
+
+#    define ASAN_POISON_MEMORY_REGION(addr, size)                              \
         __asan_poison_memory_region((addr), (size))
-#    define ASAN_UNPOISON_MEMORY_REGION(addr, size)                             \
+#    define ASAN_UNPOISON_MEMORY_REGION(addr, size)                            \
         __asan_unpoison_memory_region((addr), (size))
-#    define NO_ASAN __attribute__((no_sanitize("address")))
+#    ifdef _MSC_VER
+#        define NO_ASAN __declspec(no_sanitize_address)
+#    else
+#        define NO_ASAN __attribute__((no_sanitize("address")))
+#    endif
 #else
 #    define ASAN_POISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))
 #    define ASAN_UNPOISON_MEMORY_REGION(addr, size) ((void)(addr), (void)(size))

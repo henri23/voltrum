@@ -5,6 +5,7 @@
 #include "math/math_types.hpp"
 #include "memory/arena.hpp"
 #include "resources/resource_types.hpp"
+#include "utils/string.hpp"
 
 struct Geometry_Render_Data
 {
@@ -32,7 +33,7 @@ struct Renderer_Backend
     // Lifecycle
     b8 (*initialize)(Arena                 *allocator,
                      struct Platform_State *platform,
-                     const char            *app_name);
+                     String                 app_name);
     void (*shutdown)();
     void (*resized)(u16 width, u16 height);
 

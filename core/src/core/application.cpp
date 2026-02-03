@@ -10,7 +10,6 @@
 #include "input/input.hpp"
 #include "math/math.hpp"
 #include "memory/arena.hpp"
-#include "memory/memory.hpp"
 #include "platform/platform.hpp"
 #include "renderer/renderer_frontend.hpp"
 
@@ -28,14 +27,22 @@ constexpr f64 TARGET_FRAME_TIME = 1 / (f64)TARGET_FPS;
 
 struct Engine_State
 {
+    // Configuration requested by client
+    App_Config config;
+
     // Arenas
     Arena *persistent_arena;
+    Arena *frame_arenas[2];
 
-    Client *client;
-    b8      is_running;
-    b8      is_suspended;
-    u16     width;
-    u16     height;
+    // Client state management
+    Arena  *client_arena;
+    Client *client_state;
+
+    // Statuses
+    b8  is_running;
+    b8  is_suspended;
+    u16 width;
+    u16 height;
 
     Absolute_Clock clock;
 
@@ -122,7 +129,7 @@ app_on_debug_event(const Event *event)
                 texture_system_get_default_texture();
         }
 
-        // texture_system_release(old_name);
+        texture_system_release(old_name);
     }
 
     return true;
@@ -161,9 +168,9 @@ app_on_resized_callback(const Event *event)
                 engine_state->is_suspended = false;
             }
 
-            engine_state->client->on_resize(engine_state->client,
-                                            engine_state->width,
-                                            engine_state->height);
+            engine_state->client_state->on_resize(engine_state->client_state,
+                                                  engine_state->width,
+                                                  engine_state->height);
 
             renderer_on_resize(engine_state->width, engine_state->height);
         }
@@ -171,39 +178,39 @@ app_on_resized_callback(const Event *event)
     return false;
 }
 
-b8
-application_init(Client *client_state)
+Client *
+application_init(App_Config *config)
 {
-    RUNTIME_ASSERT_MSG(client_state, "Client state cannot be null");
-
-    // Protect against multiple initialization
-    if (client_state->internal_app_state != nullptr)
-    {
-        CORE_ERROR("Application already initialized");
-        return false;
-    }
+    RUNTIME_ASSERT_MSG(
+        config,
+        "application_init - Client configuration cannot be null");
 
     // Allocate application state
-    // client_state->internal_app_state =
-    //     memory_allocate(sizeof(Internal_App_State), Memory_Tag::APPLICATION);
     Arena *persistent_arena = arena_create();
+    engine_state            = push_struct(persistent_arena, Engine_State);
 
-    engine_state = push_struct(persistent_arena, Engine_State);
-    client_state->internal_app_state = engine_state;
+    engine_state->config = *config;
 
-    engine_state->client           = client_state;
+    engine_state->client_arena = arena_create();
+
+    engine_state->client_state =
+        push_struct(engine_state->client_arena, Client);
+
+    engine_state->client_state->mode_arena = engine_state->client_arena;
+
+    // engine_state->client           = client_state;
     engine_state->persistent_arena = persistent_arena;
 
     if (!log_init())
     {
         CORE_FATAL("Failed to initialize log subsystem");
-        return false;
+        return nullptr;
     }
 
     engine_state->platform = platform_init(engine_state->persistent_arena,
-                                           client_state->config.name,
-                                           client_state->config.width,
-                                           client_state->config.height);
+                                           config->name,
+                                           config->width,
+                                           config->height);
     ENSURE(engine_state->platform);
 
     // Initialize event and input systems
@@ -232,14 +239,14 @@ application_init(Client *client_state)
     // Set window icon using cross-platform SDL method
     application_set_window_icon();
 
-    engine_state->renderer = renderer_startup(engine_state->persistent_arena,
-                                              engine_state->platform,
-                                              client_state->config.name);
+    engine_state->renderer = renderer_init(engine_state->persistent_arena,
+                                           engine_state->platform,
+                                           config->name);
     ENSURE(engine_state->renderer);
 
-    Texture_System_Config config = {1024};
+    Texture_System_Config texture_config = {1024};
     engine_state->textures =
-        texture_system_init(engine_state->persistent_arena, config);
+        texture_system_init(engine_state->persistent_arena, texture_config);
 
     ENSURE(engine_state->textures);
 
@@ -269,14 +276,12 @@ application_init(Client *client_state)
     // -- CUBE GEOMETRY (delete later) --
     Geometry_Config g_config;
     g_config.vertex_count = 24;
-    g_config.vertices     =
+    g_config.vertices =
         push_array(engine_state->persistent_arena, vertex_3d, 24);
     g_config.index_count = 36;
-    g_config.indices     =
-        push_array(engine_state->persistent_arena, u32, 36);
+    g_config.indices     = push_array(engine_state->persistent_arena, u32, 36);
 
-    g_config.name =
-        const_str_from_cstr<GEOMETRY_NAME_MAX_LENGTH>("test_cube");
+    g_config.name = const_str_from_cstr<GEOMETRY_NAME_MAX_LENGTH>("test_cube");
     g_config.material_name =
         const_str_from_cstr<MATERIAL_NAME_MAX_LENGTH>("test_material");
 
@@ -339,15 +344,6 @@ application_init(Client *client_state)
     // Vertices and indices are arena-allocated and will be freed with the arena
     // TODO: Temp
 
-    engine_state->ui = ui_init(engine_state->persistent_arena,
-                               &client_state->layers,
-                               UI_Theme::CATPPUCCIN,
-                               client_state->menu_callback,
-                               client_state->config.name,
-                               engine_state->platform);
-
-    ENSURE(engine_state->ui);
-
     // Register application ESC key handler with HIGH priority to always work
     events_register_callback(Event_Type::KEY_PRESSED,
                              app_escape_key_callback,
@@ -364,7 +360,7 @@ application_init(Client *client_state)
 
     CORE_INFO("All subsystems initialized correctly.");
 
-    return true;
+    return engine_state->client_state;
 }
 
 void
@@ -376,15 +372,24 @@ application_run()
         return;
     }
 
+    engine_state->ui = ui_init(engine_state->persistent_arena,
+                               &engine_state->client_state->layers,
+                               UI_Theme::CATPPUCCIN,
+                               engine_state->client_state->menu_callback,
+                               engine_state->config.name,
+                               engine_state->platform);
+
+    ENSURE(engine_state->ui);
+
     engine_state->is_running = true;
 
     absolute_clock_start(&engine_state->clock);
     absolute_clock_update(&engine_state->clock);
 
     // Call client initialize if provided
-    if (engine_state->client->initialize)
+    if (engine_state->client_state->initialize)
     {
-        if (!engine_state->client->initialize(engine_state->client))
+        if (!engine_state->client_state->initialize(engine_state->client_state))
         {
             CORE_ERROR("Client initialization failed");
             return;
@@ -426,20 +431,22 @@ application_run()
             // DEBUG: Check frame timing consistency
             // CORE_DEBUG("delta: %.4f ms", delta_time * 1000.0);
 
-            if (engine_state->client->update)
+            if (engine_state->client_state->update)
             {
-                if (!engine_state->client->update(engine_state->client,
-                                                  &frame_ctx))
+                if (!engine_state->client_state->update(
+                        engine_state->client_state,
+                        &frame_ctx))
                 {
                     CORE_FATAL("Client update failed. Aborting...");
                     engine_state->is_running = false;
                 }
             }
 
-            if (engine_state->client->render)
+            if (engine_state->client_state->render)
             {
-                if (!engine_state->client->render(engine_state->client,
-                                                  &frame_ctx))
+                if (!engine_state->client_state->render(
+                        engine_state->client_state,
+                        &frame_ctx))
                 {
                     CORE_FATAL("Client render failed. Aborting...");
                     engine_state->is_running = false;
@@ -500,27 +507,19 @@ application_run()
 void
 application_shutdown()
 {
-    if (!engine_state)
-    {
-        return;
-    }
-
-    CORE_INFO("Starting application shutdown...");
-
-    // Call client shutdown if provided
-    if (engine_state->client->shutdown)
-    {
-        CORE_DEBUG("Shutting down client...");
-
-        engine_state->client->shutdown(engine_state->client);
-
-        CORE_DEBUG("Client shutdown complete.");
-    }
+    ENSURE(engine_state);
 
     CORE_DEBUG("Shutting down UI subsystem...");
     ui_shutdown_layers(engine_state->ui);
 
-    CORE_DEBUG("Shutting down geometry subsystem...");
+    // Call client shutdown if provided
+    if (engine_state->client_state->shutdown)
+    {
+        CORE_DEBUG("Shutting down client...");
+        engine_state->client_state->shutdown(engine_state->client_state);
+    }
+
+    arena_release(engine_state->client_arena);
 
     CORE_DEBUG("Shutting down material subsystem...");
     material_system_shutdown();
@@ -537,10 +536,5 @@ application_shutdown()
     log_shutdown();
 
     // Free application state
-    // memory_deallocate(internal_state,
-    //     sizeof(Internal_App_State),
-    //     Memory_Tag::APPLICATION);
-    //
-    // internal_state = nullptr;
     arena_release(engine_state->persistent_arena);
 }
