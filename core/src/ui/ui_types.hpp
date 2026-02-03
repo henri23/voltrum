@@ -50,14 +50,14 @@ struct UI_Layer
 {
     void *state; // Layer state used in client, but managed in core
 
-    void (*on_attach)(UI_Layer *self);
-    void (*on_detach)(UI_Layer *self);
+    void (*on_attach)(void *state);
+    void (*on_detach)(void *state);
 
-    b8 (*on_update)(UI_Layer *self, f32 delta_time);
-    b8 (*on_render)(UI_Layer *self, f32 delta_time);
+    b8 (*on_update)(void *state, f32 delta_time);
+    b8 (*on_render)(void *state, f32 delta_time);
 
     // TODO: Enable later
-    // b8 (*on_event)(UI_Layer* self, Event event);
+    // b8 (*on_event)(void *state, Event event);
 };
 
 struct UI_State

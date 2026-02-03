@@ -21,7 +21,7 @@
 #endif
 
 // Client-specific state structure
-struct Frontend_State
+struct Global_Client_State
 {
     b8 initialized;
 };
@@ -194,7 +194,7 @@ create_client(Client *client)
     client->shutdown   = client_shutdown;
 
     // Initialize state pointers
-    client->state = push_struct(client->mode_arena, Frontend_State);
+    client->state = push_struct(client->mode_arena, Global_Client_State);
     auto editor_layer_state =
         push_struct(client->mode_arena, Editor_Layer_State);
 

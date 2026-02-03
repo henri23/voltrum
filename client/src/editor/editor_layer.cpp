@@ -31,9 +31,9 @@ INTERNAL_FUNC void render_signal_analyzer(Editor_Layer_State *state,
                                           f32                 delta_time);
 
 void
-editor_layer_on_attach(UI_Layer *self)
+editor_layer_on_attach(void *state_ptr)
 {
-    Editor_Layer_State *state = (Editor_Layer_State *)self->state;
+    Editor_Layer_State *state = (Editor_Layer_State *)state_ptr;
     editor_state              = state;
 
     viewport_camera_initialize(&state->camera, {0, 0, 10.0f});
@@ -67,17 +67,18 @@ editor_layer_on_attach(UI_Layer *self)
 }
 
 void
-editor_layer_on_detach(UI_Layer *self)
+editor_layer_on_detach(void *state_ptr)
 {
+    (void)state_ptr;
     editor_state = nullptr;
 
     CLIENT_INFO("Editor layer detached");
 }
 
 b8
-editor_layer_on_update(UI_Layer *self, f32 delta_time)
+editor_layer_on_update(void *state_ptr, f32 delta_time)
 {
-    Editor_Layer_State *state = (Editor_Layer_State *)self->state;
+    Editor_Layer_State *state = (Editor_Layer_State *)state_ptr;
 
     b8 viewport_active = state->viewport_hovered;
     // b8 viewport_active = state->viewport_focused || state->viewport_hovered;
@@ -94,9 +95,9 @@ editor_layer_on_update(UI_Layer *self, f32 delta_time)
 }
 
 b8
-editor_layer_on_render(UI_Layer *self, f32 delta_time)
+editor_layer_on_render(void *state_ptr, f32 delta_time)
 {
-    Editor_Layer_State *state = (Editor_Layer_State *)self->state;
+    Editor_Layer_State *state = (Editor_Layer_State *)state_ptr;
 
     render_viewport_window(state, delta_time);
     render_statistics_window(state, delta_time);

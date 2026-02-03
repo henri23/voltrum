@@ -209,7 +209,7 @@ ui_init(Arena                   *allocator,
     for (UI_Layer &layer : *layers)
     {
         if (layer.on_attach)
-            layer.on_attach(&layer);
+            layer.on_attach(layer.state);
     }
 
     return state;
@@ -221,7 +221,7 @@ ui_shutdown_layers(UI_State *state)
     for (auto &layer : *state->layers)
     {
         if (layer.on_detach)
-            layer.on_detach(&layer);
+            layer.on_detach(layer.state);
     }
 }
 
@@ -231,7 +231,7 @@ ui_update_layers(UI_State *state, Frame_Context *ctx)
     for (auto &layer : *state->layers)
     {
         if (layer.on_update)
-            layer.on_update(&layer, ctx->delta_t);
+            layer.on_update(layer.state, ctx->delta_t);
     }
 }
 
@@ -248,7 +248,7 @@ ui_draw_layers(UI_State *state, Frame_Context *ctx)
     for (auto &layer : *state->layers)
     {
         if (layer.on_render)
-            layer.on_render(&layer, ctx->delta_t);
+            layer.on_render(layer.state, ctx->delta_t);
     }
 
     ImGui::Render();

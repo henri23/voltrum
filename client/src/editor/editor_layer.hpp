@@ -36,10 +36,10 @@ struct Editor_Layer_State
     f32 signal_time;
 };
 
-void editor_layer_on_attach(UI_Layer *self);
-void editor_layer_on_detach(UI_Layer *self);
-b8   editor_layer_on_update(UI_Layer *self, f32 delta_time);
-b8   editor_layer_on_render(UI_Layer *self, f32 delta_time);
+void editor_layer_on_attach(void *state);
+void editor_layer_on_detach(void *state);
+b8   editor_layer_on_update(void *state, f32 delta_time);
+b8   editor_layer_on_render(void *state, f32 delta_time);
 
 UI_Layer create_editor_layer(Editor_Layer_State *state);
 
