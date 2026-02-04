@@ -4,7 +4,8 @@
 #include "utils/enum.hpp"
 #include "utils/string.hpp"
 
-enum class Resource_Type : u32 {
+enum class Resource_Type : u32
+{
     TEXT,        // the data will be a char* array
     BINARY,      // the data will be u8* array
     IMAGE,       // the data will be Image_Resource_Data
@@ -23,68 +24,82 @@ struct Resource
     void       *data;
 };
 
-struct Image_Resource_Data {
-    u8 channel_count;
+struct Image_Resource_Data
+{
+    u8  channel_count;
     u32 width;
     u32 height;
     u8 *pixels;
 };
 
 using Texture_ID = u32;
+
 constexpr u32 TEXTURE_NAME_MAX_LENGTH = 256;
 
-struct Texture {
-    Texture_ID id;
-    u32 width;
-    u32 height;
-    u8 channel_count;
-    b8 has_transparency;
-    b8 is_ui_texture;
-    u32 generation;
+struct Texture
+{
     Const_String<TEXTURE_NAME_MAX_LENGTH> name;
-    void *internal_data;
+
+    Texture_ID id;
+    u32        width;
+    u32        height;
+    u8         channel_count;
+    b8         has_transparency;
+    b8         is_ui_texture;
+    u32        generation;
+    void      *internal_data; // Backend specific texture data
 };
 
 // Bitmask
-enum class Texture_Type {
-    UNKNOWN = 0x00,
+enum class Texture_Type
+{
+    UNKNOWN     = 0x00,
     MAP_DIFFUSE = 1 << 0,
     // MAP_DIFFUSE = 1 << 1,
 };
 
 ENABLE_BITMASK(Texture_Type); // Enable c++ enum to be used as bitmask
 
-struct Texture_Map {
-    Texture *texture;
+struct Texture_Map
+{
+    Texture     *texture;
     Texture_Type type;
 };
 
 using Material_ID = u32;
+
 constexpr u32 MATERIAL_NAME_MAX_LENGTH = 256;
 
-struct Material_Config {
+struct Material_Config
+{
     Const_String<MATERIAL_NAME_MAX_LENGTH> name;
-    b8 auto_release;
+    Const_String<TEXTURE_NAME_MAX_LENGTH>  diffuse_map_name;
+
+    b8   auto_release;
     vec4 diffuse_color;
-    Const_String<TEXTURE_NAME_MAX_LENGTH> diffuse_map_name;
 };
 
-struct Material {
-    Material_ID id;
-    u32 generation;
-    u32 internal_id; // Renderer specific object identifier
+struct Material
+{
     Const_String<MATERIAL_NAME_MAX_LENGTH> name;
-    vec4 diffuse_color;
+
+    Material_ID id;
+    u32         generation;
+    u32         internal_id; // Renderer specific object identifier
+    vec4        diffuse_color;
     Texture_Map diffuse_map;
 };
 
 using Geometry_ID = u32;
+
 constexpr u32 GEOMETRY_NAME_MAX_LENGTH = 256;
 
-struct Geometry {
-    Geometry_ID id;
-    u32 internal_id;
-    u32 generation;
+struct Geometry
+{
     Const_String<GEOMETRY_NAME_MAX_LENGTH> name;
-    Material *material;
+
+    Geometry_ID id;
+    u32         internal_id;
+    u32         generation;
+    Material   *material;
 };

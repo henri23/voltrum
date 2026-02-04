@@ -26,7 +26,7 @@ constexpr u64 ARENA_DEFAULT_RESERVE_SIZE = 64 * MiB;
 constexpr u64 ARENA_DEFAULT_COMMIT_SIZE  = 64 * KiB;
 
 #define arena_create(...)                                                      \
-    _arena_create(__FILE__, __LINE__ __VA_OPT__(, ) __VA_ARGS__)
+    _arena_create(__FILE__, __LINE__ , ##__VA_ARGS__)
 Arena *_arena_create(const char *file,
                      s32         line,
                      u64         reserve_size = ARENA_DEFAULT_RESERVE_SIZE,
