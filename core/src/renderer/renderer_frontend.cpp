@@ -1,5 +1,6 @@
 #include "renderer/renderer_frontend.hpp"
 
+#include "core/frame_context.hpp"
 #include "core/logger.hpp"
 #include "defines.hpp"
 #include "math/math.hpp"

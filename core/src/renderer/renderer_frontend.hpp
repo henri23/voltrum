@@ -11,7 +11,7 @@ Renderer_System_State *renderer_init(
 
 void renderer_on_resize(u16 width, u16 height);
 
-b8 renderer_draw_frame(Frame_Context *frame_ctx, Render_Context *packet);
+b8 renderer_draw_frame(struct Frame_Context *frame_ctx, Render_Context *packet);
 
 void renderer_create_texture(const u8       *pixels,
                              struct Texture *texture,

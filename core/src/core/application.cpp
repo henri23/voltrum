@@ -46,7 +46,7 @@ struct Engine_State
 
     Absolute_Clock clock;
 
-    Ring_Queue<Event> *event_queue;
+    Event_Queue *event_queue;
 
     // Subsystem state
     Platform_State        *platform;
@@ -185,21 +185,23 @@ application_init(App_Config *config)
         config,
         "application_init - Client configuration cannot be null");
 
-    // Allocate application state
+    // Setup core application arena
     Arena *persistent_arena = arena_create();
     engine_state            = push_struct(persistent_arena, Engine_State);
 
-    engine_state->config = *config;
+    // Setup client app arena
+    Arena *client_arena        = arena_create();
+    engine_state->client_arena = client_arena;
 
-    engine_state->client_arena = arena_create();
-
-    engine_state->client_state =
-        push_struct(engine_state->client_arena, Client);
-
-    engine_state->client_state->mode_arena = engine_state->client_arena;
-
-    // engine_state->client           = client_state;
+    // Core state
     engine_state->persistent_arena = persistent_arena;
+    engine_state->config           = *config;
+
+    // Client state
+    Client *client_state = push_struct(engine_state->client_arena, Client);
+
+    engine_state->client_state             = client_state;
+    engine_state->client_state->mode_arena = engine_state->client_arena;
 
     if (!log_init())
     {
@@ -207,23 +209,24 @@ application_init(App_Config *config)
         return nullptr;
     }
 
+    // Platform layer
     engine_state->platform = platform_init(engine_state->persistent_arena,
                                            config->name,
                                            config->width,
                                            config->height);
     ENSURE(engine_state->platform);
 
-    // Initialize event and input systems
+    // Event system, queue and input
     engine_state->events = events_init(engine_state->persistent_arena);
     ENSURE(engine_state->events);
 
     engine_state->event_queue =
-        push_struct(engine_state->persistent_arena, Ring_Queue<Event>);
-    engine_state->event_queue->init(engine_state->persistent_arena);
+        event_queue_create(engine_state->persistent_arena);
 
     engine_state->inputs = input_init(engine_state->persistent_arena);
     ENSURE(engine_state->inputs);
 
+    // Resource & texture systems
     Resource_System_Config resource_config = {};
 
 #ifdef DEBUG_BUILD
@@ -406,7 +409,7 @@ application_run()
     {
         Scratch_Arena frame_scratch = scratch_begin(nullptr, 0);
 
-        frame_ctx.arena       = frame_scratch.arena;
+        frame_ctx.frame_arena = frame_scratch.arena;
         frame_ctx.event_queue = engine_state->event_queue;
 
         if (!platform_message_pump(&frame_ctx))
@@ -416,7 +419,7 @@ application_run()
 
         // TODO: Think whether message queue events need to persist between
         // frames
-        events_queue_flush(frame_ctx.event_queue);
+        event_queue_flush(frame_ctx.event_queue);
 
         // Frame
         if (!engine_state->is_suspended)
@@ -454,7 +457,7 @@ application_run()
             }
 
             Render_Context *packet =
-                push_struct(frame_ctx.arena, Render_Context);
+                push_struct(frame_ctx.frame_arena, Render_Context);
 
             // TODO: temp - viewport geometry
             Geometry_Render_Data test_render;

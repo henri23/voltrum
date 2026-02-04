@@ -1,7 +1,12 @@
 #include "defines.hpp"
 #include "editor/editor_layer.hpp"
 
+#ifdef DEBUG_BUILD
+#    include "debug/debug_layer.hpp"
+#endif
+
 // Interfaces from core library
+#include <core/frame_context.hpp>
 #include <core/logger.hpp>
 #include <entry.hpp>
 #include <events/events.hpp>
@@ -79,12 +84,24 @@ client_update(Client *client_state, Frame_Context *ctx)
                    alloc_count - prev_alloc_count);
     }
 
+#ifdef DEBUG_BUILD
+    {
+        local_persist b8 f12_was_down = false;
+        b8               f12_is_down = input_is_key_pressed(Key_Code::F12);
+        if (f12_is_down && !f12_was_down)
+        {
+            debug_toggle_layer();
+        }
+        f12_was_down = f12_is_down;
+    }
+#endif
+
     // TODO: Re-enable when client_update receives Frame_Context*
     if (input_is_key_pressed(Key_Code::T) && input_was_key_pressed(Key_Code::T))
     {
         Event event = {};
         event.type  = Event_Type::DEBUG0;
-        ctx->event_queue->enqueue(event);
+        event_queue_produce(ctx->event_queue, event);
     }
 
     return true;
@@ -166,6 +183,21 @@ client_menu_callback()
         ui::MenuItem(ICON_FA_GEARS " Explore");
         ui::EndMenu();
     }
+
+#ifdef DEBUG_BUILD
+    if (ui::BeginMenu("Debug"))
+    {
+        b8 debug_visible = debug_is_layer_visible();
+        if (ui::MenuItem(
+                ICON_FA_BUG " Memory Inspector",
+                "F12",
+                debug_visible))
+        {
+            debug_toggle_layer();
+        }
+        ui::EndMenu();
+    }
+#endif
 }
 
 App_Config
@@ -203,6 +235,12 @@ create_client(Client *client)
 
     // Add layers
     client->layers.add(create_editor_layer(editor_layer_state));
+
+#ifdef DEBUG_BUILD
+    auto debug_layer_state =
+        push_struct(client->mode_arena, Debug_Layer_State);
+    client->layers.add(create_debug_layer(debug_layer_state));
+#endif
 
     // Set menu callback
     client->menu_callback = client_menu_callback;

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "core/frame_context.hpp"
 #include "core/logger.hpp"
 #include "data_structures/dynamic_array.hpp"
 #include "events/events.hpp"
@@ -187,7 +188,7 @@ platform_message_pump(Frame_Context *frame_ctx)
         case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
             quit_flagged      = true;
             engine_event.type = Event_Type::WINDOW_CLOSED;
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             break;
 
         case SDL_EVENT_KEY_DOWN:
@@ -196,7 +197,7 @@ platform_message_pump(Frame_Context *frame_ctx)
                 platform_to_key_code(sdl_event.key.scancode);
             engine_event.key.repeat    = sdl_event.key.repeat;
             engine_event.key.modifiers = modifiers;
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             input_process_key(platform_to_key_code(sdl_event.key.scancode),
                               true);
             break;
@@ -207,7 +208,7 @@ platform_message_pump(Frame_Context *frame_ctx)
                 platform_to_key_code(sdl_event.key.scancode);
             engine_event.key.repeat    = false;
             engine_event.key.modifiers = modifiers;
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             input_process_key(platform_to_key_code(sdl_event.key.scancode),
                               false);
             break;
@@ -219,7 +220,7 @@ platform_message_pump(Frame_Context *frame_ctx)
             engine_event.mouse_button.x         = (s32)sdl_event.button.x;
             engine_event.mouse_button.y         = (s32)sdl_event.button.y;
             engine_event.mouse_button.modifiers = modifiers;
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             input_process_mouse_button(
                 platform_to_mouse_button(sdl_event.button.button),
                 true);
@@ -232,7 +233,7 @@ platform_message_pump(Frame_Context *frame_ctx)
             engine_event.mouse_button.x         = (s32)sdl_event.button.x;
             engine_event.mouse_button.y         = (s32)sdl_event.button.y;
             engine_event.mouse_button.modifiers = modifiers;
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             input_process_mouse_button(
                 platform_to_mouse_button(sdl_event.button.button),
                 false);
@@ -244,7 +245,7 @@ platform_message_pump(Frame_Context *frame_ctx)
             engine_event.mouse_move.y       = (s32)sdl_event.motion.y;
             engine_event.mouse_move.delta_x = (s32)sdl_event.motion.xrel;
             engine_event.mouse_move.delta_y = (s32)sdl_event.motion.yrel;
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             input_process_mouse_move((s32)sdl_event.motion.x,
                                      (s32)sdl_event.motion.y);
             break;
@@ -255,7 +256,7 @@ platform_message_pump(Frame_Context *frame_ctx)
             engine_event.mouse_wheel.y       = (s32)sdl_event.wheel.mouse_y;
             engine_event.mouse_wheel.delta_x = sdl_event.wheel.x;
             engine_event.mouse_wheel.delta_y = sdl_event.wheel.y;
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             input_process_mouse_wheel(sdl_event.wheel.x, sdl_event.wheel.y);
             break;
 
@@ -263,22 +264,22 @@ platform_message_pump(Frame_Context *frame_ctx)
             engine_event.type = Event_Type::WINDOW_RESIZED;
             platform_get_drawable_size(&engine_event.window_resize.width,
                                        &engine_event.window_resize.height);
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             break;
 
         case SDL_EVENT_WINDOW_MINIMIZED:
             engine_event.type = Event_Type::WINDOW_MINIMIZED;
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             break;
 
         case SDL_EVENT_WINDOW_MAXIMIZED:
             engine_event.type = Event_Type::WINDOW_MAXIMIZED;
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             break;
 
         case SDL_EVENT_WINDOW_RESTORED:
             engine_event.type = Event_Type::WINDOW_RESTORED;
-            frame_ctx->event_queue->enqueue(engine_event);
+            event_queue_produce(frame_ctx->event_queue, engine_event);
             break;
 
         default:

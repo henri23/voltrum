@@ -2,6 +2,7 @@
 
 #include "input/input.hpp"
 #include "input/input_codes.hpp"
+#include <core/frame_context.hpp>
 #include <core/logger.hpp>
 #include <imgui.h>
 #include <math/math.hpp>
@@ -76,7 +77,7 @@ editor_layer_on_detach(void *state_ptr)
 }
 
 b8
-editor_layer_on_update(void *state_ptr, f32 delta_time)
+editor_layer_on_update(void *state_ptr, Frame_Context *ctx)
 {
     Editor_Layer_State *state = (Editor_Layer_State *)state_ptr;
 
@@ -84,7 +85,7 @@ editor_layer_on_update(void *state_ptr, f32 delta_time)
     // b8 viewport_active = state->viewport_focused || state->viewport_hovered;
 
     b8 camera_moved =
-        viewport_camera_update(&state->camera, delta_time, viewport_active);
+        viewport_camera_update(&state->camera, ctx->delta_t, viewport_active);
 
     if (camera_moved)
     {
@@ -95,16 +96,16 @@ editor_layer_on_update(void *state_ptr, f32 delta_time)
 }
 
 b8
-editor_layer_on_render(void *state_ptr, f32 delta_time)
+editor_layer_on_render(void *state_ptr, Frame_Context *ctx)
 {
     Editor_Layer_State *state = (Editor_Layer_State *)state_ptr;
 
-    render_viewport_window(state, delta_time);
-    render_statistics_window(state, delta_time);
+    render_viewport_window(state, ctx->delta_t);
+    render_statistics_window(state, ctx->delta_t);
 
     if (state->show_signal_analyzer)
     {
-        render_signal_analyzer(state, delta_time);
+        render_signal_analyzer(state, ctx->delta_t);
     }
 
     if (state->show_demo_window)

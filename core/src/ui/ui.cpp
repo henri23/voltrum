@@ -231,7 +231,7 @@ ui_update_layers(UI_State *state, Frame_Context *ctx)
     for (auto &layer : *state->layers)
     {
         if (layer.on_update)
-            layer.on_update(layer.state, ctx->delta_t);
+            layer.on_update(layer.state, ctx);
     }
 }
 
@@ -248,7 +248,7 @@ ui_draw_layers(UI_State *state, Frame_Context *ctx)
     for (auto &layer : *state->layers)
     {
         if (layer.on_render)
-            layer.on_render(layer.state, ctx->delta_t);
+            layer.on_render(layer.state, ctx);
     }
 
     ImGui::Render();

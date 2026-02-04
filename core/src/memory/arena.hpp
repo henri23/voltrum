@@ -35,15 +35,27 @@ Arena *_arena_create(const char *file,
 void arena_release(Arena *arena);
 
 #define push_struct(arena, type)                                               \
-    (type *)_arena_push((arena), sizeof(type), MAX(8, alignof(type)))
+    (type *)_arena_push(                                                       \
+        (arena), sizeof(type), MAX(8, alignof(type)), true,                    \
+        __FILE__, __LINE__)
 
 #define push_array(arena, type, count)                                         \
-    (type *)_arena_push((arena), sizeof(type) * count, MAX(8, alignof(type)))
+    (type *)_arena_push(                                                       \
+        (arena), sizeof(type) * (count), MAX(8, alignof(type)), true,          \
+        __FILE__, __LINE__)
 
 #define push_array_aligned(arena, type, count, align)                          \
-    (type *)_arena_push((arena), sizeof(type) * count, align)
+    (type *)_arena_push(                                                       \
+        (arena), sizeof(type) * (count), (align), true,                        \
+        __FILE__, __LINE__)
 
-void *_arena_push(Arena *arena, u64 size, u64 align, b8 should_zero = true);
+void *_arena_push(
+    Arena      *arena,
+    u64         size,
+    u64         align,
+    b8          should_zero,
+    const char *file,
+    s32         line);
 
 // Popping functions
 void arena_pop(Arena *arena, u64 size);

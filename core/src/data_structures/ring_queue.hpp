@@ -3,7 +3,6 @@
 #include "defines.hpp"
 
 #include "core/asserts.hpp"
-#include "core/logger.hpp"
 #include "memory/arena.hpp"
 
 constexpr u64 DEFAULT_RING_QUEUE_CAPACITY = 256;
@@ -47,21 +46,15 @@ struct Ring_Queue
         return count == 0;
     }
 
-    FORCE_INLINE b8
+    FORCE_INLINE void
     enqueue(const T &value)
     {
-        if (is_full())
-        {
-            CORE_WARN("Ring queue full - element dropped (capacity: %llu)",
-                      capacity);
-            return false;
-        }
+        RUNTIME_ASSERT_MSG(!is_full(),
+                           "Ring queue full - cannot enqueue");
 
         elements[tail] = value;
         tail           = (tail + 1) % capacity;
         count += 1;
-
-        return true;
     }
 
     FORCE_INLINE b8

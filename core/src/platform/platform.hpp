@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/frame_context.hpp"
 #include "defines.hpp"
 #include "memory/arena.hpp"
 #include "utils/string.hpp"
@@ -41,7 +40,7 @@ platform_init(Arena *allocator, String application_name, s32 width, s32 height);
 
 void platform_shutdown(Platform_State *state);
 
-b8 platform_message_pump(Frame_Context *frame_ctx);
+b8 platform_message_pump(struct Frame_Context *frame_ctx);
 
 // Platform specific memory management
 // Virtual memory - OS lazily backs with physical pages on first access.

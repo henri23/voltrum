@@ -53,8 +53,8 @@ struct UI_Layer
     void (*on_attach)(void *state);
     void (*on_detach)(void *state);
 
-    b8 (*on_update)(void *state, f32 delta_time);
-    b8 (*on_render)(void *state, f32 delta_time);
+    b8 (*on_update)(void *state, struct Frame_Context *context);
+    b8 (*on_render)(void *state, struct Frame_Context *context);
 
     // TODO: Enable later
     // b8 (*on_event)(void *state, Event event);

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/frame_context.hpp"
 #include "defines.hpp"
 #include "math/math_types.hpp"
 #include "memory/arena.hpp"
@@ -38,16 +37,16 @@ struct Renderer_Backend
     void (*resized)(u16 width, u16 height);
 
     // Frame loop
-    b8 (*begin_frame)(Frame_Context *frame_ctx, f32 delta_t);
+    b8 (*begin_frame)(struct Frame_Context *frame_ctx, f32 delta_t);
     void (*update_global_viewport_state)(mat4 projection,
                                          mat4 view,
                                          vec3 view_position,
                                          vec4 ambient_colour,
                                          s32  mode);
-    b8 (*end_frame)(Frame_Context *frame_ctx, f32 delta_t);
+    b8 (*end_frame)(struct Frame_Context *frame_ctx, f32 delta_t);
 
-    b8 (*start_renderpass)(Frame_Context *frame_ctx, Renderpass_Type type);
-    b8 (*finish_renderpass)(Frame_Context *frame_ctx, Renderpass_Type type);
+    b8 (*start_renderpass)(struct Frame_Context *frame_ctx, Renderpass_Type type);
+    b8 (*finish_renderpass)(struct Frame_Context *frame_ctx, Renderpass_Type type);
 
     void (*draw_geometry)(Geometry_Render_Data data);
     void (*draw_ui)(UI_Render_Data data);

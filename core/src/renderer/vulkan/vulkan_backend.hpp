@@ -12,18 +12,18 @@ void vulkan_shutdown();
 
 void vulkan_on_resized(u16 width, u16 height);
 
-b8 vulkan_begin_frame(Frame_Context *frame_ctx, f32 delta_t);
+b8 vulkan_begin_frame(struct Frame_Context *frame_ctx, f32 delta_t);
 void vulkan_update_global_viewport_state(mat4 projection,
                                           mat4 view,
                                           vec3 view_position,
                                           vec4 ambient_colour,
                                           s32  mode);
-b8 vulkan_end_frame(Frame_Context *frame_ctx, f32 delta_t);
+b8 vulkan_end_frame(struct Frame_Context *frame_ctx, f32 delta_t);
 
-b8 vulkan_renderpass_start(Frame_Context  *frame_ctx,
-                           Renderpass_Type renderpass_type);
-b8 vulkan_renderpass_finish(Frame_Context  *frame_ctx,
-                            Renderpass_Type renderpass_type);
+b8 vulkan_renderpass_start(struct Frame_Context *frame_ctx,
+                           Renderpass_Type       renderpass_type);
+b8 vulkan_renderpass_finish(struct Frame_Context *frame_ctx,
+                            Renderpass_Type       renderpass_type);
 
 void vulkan_draw_geometry(Geometry_Render_Data data);
 void vulkan_draw_ui(UI_Render_Data data);

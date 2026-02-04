@@ -6,6 +6,10 @@
 #include "core/thread_context.hpp"
 #include "defines.hpp"
 
+#ifdef DEBUG_BUILD
+#    include "memory/arena_debug.hpp"
+#endif
+
 // Client must implement this function to initialize their state
 extern b8         create_client(Client *client_state);
 extern App_Config request_client_config();
@@ -13,6 +17,10 @@ extern App_Config request_client_config();
 int
 main()
 {
+#ifdef DEBUG_BUILD
+    arena_debug_init();
+#endif
+
     Thread_Context *thread_context = thread_context_allocate();
     thread_context->thread_name    = "Application thread";
     thread_context_select(thread_context);
@@ -37,6 +45,10 @@ main()
     application_run();
 
     thread_context_release(thread_context);
+
+#ifdef DEBUG_BUILD
+    arena_debug_shutdown();
+#endif
 
     return 0;
 }

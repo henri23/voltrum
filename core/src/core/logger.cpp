@@ -15,12 +15,13 @@ internal_var const char *LOG_PATTERN =
     "%^[%Y-%m-%d %H:%M:%S.%e] [%-12n] [%-7l] %v%$";
 
 // Smart pointer loggers
-internal_var std::shared_ptr<spdlog::logger> core_logger = nullptr;
-internal_var std::shared_ptr<spdlog::logger> client_logger = nullptr;
+internal_var std::shared_ptr<spdlog::logger> core_logger;
+internal_var std::shared_ptr<spdlog::logger> client_logger;
 
 // Helper function to create logger with consistent format and file output
 INTERNAL_FUNC std::shared_ptr<spdlog::logger>
-create_logger(const char *logger_name, const char *file_name) {
+              create_logger(const char *logger_name, const char *file_name)
+{
 
     // TODO: Change later and move away from <filesystem> library
     // Ensure logs directory exists
@@ -32,12 +33,12 @@ create_logger(const char *logger_name, const char *file_name) {
 
     // Create sinks: console + daily rotating file
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    auto file_sink =
-        std::make_shared<spdlog::sinks::daily_file_sink_mt>(file_path,
-            0,
-            0,
-            true,
-            7); // Daily rotation at midnight
+    auto file_sink    = std::make_shared<spdlog::sinks::daily_file_sink_mt>(
+        file_path,
+        0,
+        0,
+        true,
+        7); // Daily rotation at midnight
 
     // Set consistent formatting for all sinks
     console_sink->set_pattern(LOG_PATTERN);
@@ -45,9 +46,9 @@ create_logger(const char *logger_name, const char *file_name) {
 
     // Create logger with both sinks
     spdlog::sink_ptr sinks[] = {console_sink, file_sink};
-    auto logger = std::make_shared<spdlog::logger>(logger_name,
-        std::begin(sinks),
-        std::end(sinks));
+    auto             logger  = std::make_shared<spdlog::logger>(logger_name,
+                                                   std::begin(sinks),
+                                                   std::end(sinks));
 
     // Set level and register
     logger->set_level(spdlog::level::trace);
@@ -57,7 +58,9 @@ create_logger(const char *logger_name, const char *file_name) {
 }
 
 // Create default console logger with consistent formatting
-INTERNAL_FUNC std::shared_ptr<spdlog::logger> _create_default_logger() {
+INTERNAL_FUNC std::shared_ptr<spdlog::logger>
+              _create_default_logger()
+{
 
     auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
     console_sink->set_pattern(LOG_PATTERN);
@@ -77,8 +80,11 @@ INTERNAL_FUNC std::shared_ptr<spdlog::logger> _create_default_logger() {
 global_variable std::shared_ptr<spdlog::logger> default_console_logger =
     _create_default_logger();
 
-b8 log_init() {
-    try {
+b8
+log_init()
+{
+    try
+    {
         // Create core logger with file output
         core_logger = create_logger("voltrum_core", "core.log");
 
@@ -92,16 +98,20 @@ b8 log_init() {
         CORE_DEBUG("Log subsystem initialized.");
 
         return true;
-    } catch (const std::exception &ex) {
+    }
+    catch (const std::exception &ex)
+    {
         // Log initialization failure to default logger
         default_console_logger->error("Logger initialization failed: {}",
-            ex.what());
+                                      ex.what());
 
         return false;
     }
 }
 
-void log_shutdown() {
+void
+log_shutdown()
+{
     CORE_DEBUG("Logger shutting down...");
 
     // Flush all loggers before shutdown
@@ -124,13 +134,17 @@ void log_shutdown() {
     CORE_DEBUG("Logger shut down.");
 }
 
-void log_output(Log_Scope scope, Log_Level level, const char *message, ...) {
+void
+log_output(Log_Scope scope, Log_Level level, const char *message, ...)
+{
 
     // Select the appropriate logger based on scope
     std::shared_ptr<spdlog::logger> logger = nullptr;
 
-    if (core_logger && client_logger) {
-        switch (scope) {
+    if (core_logger && client_logger)
+    {
+        switch (scope)
+        {
         case Log_Scope::CORE:
             logger = core_logger;
             break;
@@ -144,7 +158,8 @@ void log_output(Log_Scope scope, Log_Level level, const char *message, ...) {
     }
 
     // Fall back to default console logger if main loggers aren't available
-    if (!logger) {
+    if (!logger)
+    {
         logger = default_console_logger;
     }
 
@@ -156,7 +171,8 @@ void log_output(Log_Scope scope, Log_Level level, const char *message, ...) {
     va_end(args);
 
     // Log using spdlog
-    switch (level) {
+    switch (level)
+    {
     case Log_Level::FATAL:
         logger->critical(formatted_message);
         break;
@@ -181,10 +197,12 @@ void log_output(Log_Scope scope, Log_Level level, const char *message, ...) {
     }
 }
 
-VOLTRUM_API void report_assertion_failure(const char *expression,
-    const char *message,
-    const char *file,
-    s32 line) {
+VOLTRUM_API void
+report_assertion_failure(const char *expression,
+                         const char *message,
+                         const char *file,
+                         s32         line)
+{
 
     default_console_logger->critical(
         "Assertion failure: {} failed with message '{}', file {}, line {}",

@@ -116,6 +116,21 @@ struct Event_State
     Event_Callback_Bucket callback_buckets[(u32)Event_Type::MAX_EVENTS];
 };
 
+// Opaque event queue wrapper - hides Ring_Queue<Event> from consumers
+// of Frame_Context. Include this header to produce or flush events.
+struct Event_Queue
+{
+    Ring_Queue<Event> queue;
+};
+
+// Event queue lifecycle
+Event_Queue *event_queue_create(Arena *allocator,
+                                u64    capacity = DEFAULT_RING_QUEUE_CAPACITY);
+void         event_queue_produce(Event_Queue  *eq,
+                                const Event  &event);
+void         event_queue_flush(Event_Queue *eq);
+void         event_queue_reset(Event_Queue *eq);
+
 // Event system functions - following your top-down pattern
 Event_State *events_init(Arena *allocator);
 
@@ -129,6 +144,3 @@ events_register_callback(Event_Type         event_type,
 // Unregister event callback for specific event type
 VOLTRUM_API void events_unregister_callback(Event_Type         event_type,
                                             PFN_event_callback callback);
-
-// Flushes all events from the queue, dispatching callbacks in priority order
-void events_queue_flush(Ring_Queue<Event> *event_queue);

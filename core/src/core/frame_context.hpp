@@ -1,12 +1,13 @@
 #pragma once
 
-#include "data_structures/ring_queue.hpp"
-#include "events/events.hpp"
+#include "defines.hpp"
 #include "memory/arena.hpp"
+
+struct Event_Queue;
 
 struct Frame_Context
 {
-    Arena             *arena;
-    Ring_Queue<Event> *event_queue;
-    f32                delta_t;
+    Arena       *frame_arena;
+    Event_Queue *event_queue;
+    f32          delta_t;
 };

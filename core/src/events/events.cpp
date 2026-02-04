@@ -6,6 +6,36 @@ constexpr u32 DEFAULT_EVENT_CALLBACK_COUNT = 4;
 
 internal_var Event_State *state_ptr = nullptr;
 
+Event_Queue *
+event_queue_create(Arena *allocator, u64 capacity)
+{
+    Event_Queue *eq = push_struct(allocator, Event_Queue);
+    eq->queue.init(allocator, capacity);
+    return eq;
+}
+
+void
+event_queue_produce(Event_Queue  *eq,
+                    const Event  &event)
+{
+    RUNTIME_ASSERT(eq != nullptr);
+    eq->queue.enqueue(event);
+}
+
+INTERNAL_FUNC b8
+event_queue_consume(Event_Queue *eq, Event *out)
+{
+    RUNTIME_ASSERT(eq != nullptr);
+    return eq->queue.dequeue(out);
+}
+
+void
+event_queue_reset(Event_Queue *eq)
+{
+    RUNTIME_ASSERT(eq != nullptr);
+    eq->queue.reset();
+}
+
 Event_State *
 events_init(Arena *allocator)
 {
@@ -108,12 +138,13 @@ events_unregister_callback(Event_Type event_type, PFN_event_callback callback)
 }
 
 void
-events_queue_flush(Ring_Queue<Event> *event_queue)
+event_queue_flush(Event_Queue *eq)
 {
     ENSURE(state_ptr);
+    RUNTIME_ASSERT(eq != nullptr);
 
     Event event;
-    while (event_queue->dequeue(&event))
+    while (event_queue_consume(eq, &event))
     {
         if ((u32)event.type >= (u32)Event_Type::MAX_EVENTS)
         {
