@@ -4,6 +4,7 @@
 
 #include "core/logger.hpp"
 #include "core/thread_context.hpp"
+#include "platform/platform.hpp"
 #include "systems/resource_system.hpp"
 
 #include <SDL3/SDL.h>
@@ -207,6 +208,35 @@ ui_init(Arena                   *allocator,
     ui_themes_apply(state->current_theme, style);
 
     ui_titlebar_setup(state, C_STR(app_name));
+
+    // Register settings handler to persist OS window size in imgui.ini
+    ImGuiSettingsHandler wh;
+    wh.TypeName  = "AppWindow";
+    wh.TypeHash  = ImHashStr("AppWindow");
+    wh.UserData  = (void *)plat_state->window;
+    wh.ReadOpenFn = [](ImGuiContext *, ImGuiSettingsHandler *, const char *)
+        -> void * { return (void *)1; };
+    wh.ReadLineFn = [](ImGuiContext *,
+                       ImGuiSettingsHandler *handler,
+                       void *,
+                       const char          *line) {
+        SDL_Window *win = (SDL_Window *)handler->UserData;
+        int         a, b;
+        if (sscanf(line, "Size=%d,%d", &a, &b) == 2)
+            SDL_SetWindowSize(win, a, b);
+        else if (sscanf(line, "Pos=%d,%d", &a, &b) == 2)
+            SDL_SetWindowPosition(win, a, b);
+    };
+    wh.WriteAllFn = [](ImGuiContext *,
+                        ImGuiSettingsHandler *handler,
+                        ImGuiTextBuffer      *buf) {
+        SDL_Window *win = (SDL_Window *)handler->UserData;
+        int         w, h, x, y;
+        SDL_GetWindowSize(win, &w, &h);
+        SDL_GetWindowPosition(win, &x, &y);
+        buf->appendf("[AppWindow][Main]\nSize=%d,%d\nPos=%d,%d\n\n", w, h, x, y);
+    };
+    ImGui::GetCurrentContext()->SettingsHandlers.push_back(wh);
 
     for (UI_Layer &layer : *layers)
     {

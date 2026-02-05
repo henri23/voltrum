@@ -7,7 +7,6 @@
 #include "core/logger.hpp"
 #include "data_structures/dynamic_array.hpp"
 #include "events/events.hpp"
-#include "math/math.hpp"
 #include "renderer/vulkan/vulkan_types.hpp"
 
 #include "input/input.hpp"
@@ -75,8 +74,22 @@ platform_init(Arena *allocator, String application_name, s32 width, s32 height)
     CORE_DEBUG("SDL initialized successfully");
 
     // Create window with Vulkan graphics context
-    f32 main_scale    = SDL_GetDisplayContentScale(SDL_GetPrimaryDisplay());
-    state->main_scale = main_scale;
+    SDL_DisplayID primary_display = SDL_GetPrimaryDisplay();
+    f32           main_scale      = SDL_GetDisplayContentScale(primary_display);
+    state->main_scale             = main_scale;
+
+    // Clamp window size to fit within the usable display area. On macOS,
+    // logical display resolutions are often smaller than on Windows/Linux
+    // (e.g. 1440x900 on a MacBook Air), so the requested size may exceed
+    // the available space.
+    SDL_Rect usable_bounds;
+    if (SDL_GetDisplayUsableBounds(primary_display, &usable_bounds))
+    {
+        s32 max_w = (s32)(usable_bounds.w * 0.85f);
+        s32 max_h = (s32)(usable_bounds.h * 0.85f);
+        width     = CLAMP_TOP(width, max_w);
+        height    = CLAMP_TOP(height, max_h);
+    }
 
     SDL_WindowFlags window_flags = SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE |
                                    SDL_WINDOW_HIGH_PIXEL_DENSITY |
@@ -517,17 +530,23 @@ platform_hit_test_callback(SDL_Window *win, const SDL_Point *area, void *data)
     int window_width, window_height;
     SDL_GetWindowSize(win, &window_width, &window_height);
 
+    // Check if we're in titlebar drag area first (should work even when
+    // maximized). On macOS, SDL's Cocoa backend passes logical (point)
+    // coordinates to the hit test callback, so no DPI scaling is needed.
+    // On Linux/Windows, hit test coordinates are in physical pixels, so we
+    // scale by the DPI factor.
+    const int TITLEBAR_HEIGHT_LOGICAL = 58;
+#ifdef PLATFORM_APPLE
+    const int TITLEBAR_HEIGHT_THRESHOLD = TITLEBAR_HEIGHT_LOGICAL;
+#else
     int window_width_pixels, window_height_pixels;
     SDL_GetWindowSizeInPixels(win, &window_width_pixels, &window_height_pixels);
-
-    // Check if we're in titlebar drag area first (should work even when
-    // maximized) Scale titlebar height for DPI - SDL hit test uses pixel
-    // coordinates
     f32       scale_y = (f32)window_height_pixels / window_height;
-    const int TITLEBAR_HEIGHT_LOGICAL = 58;
-    const int TITLEBAR_HEIGHT_PIXELS = (int)(TITLEBAR_HEIGHT_LOGICAL * scale_y);
+    const int TITLEBAR_HEIGHT_THRESHOLD =
+        (int)(TITLEBAR_HEIGHT_LOGICAL * scale_y);
+#endif
 
-    if (area->y <= TITLEBAR_HEIGHT_PIXELS)
+    if (area->y <= TITLEBAR_HEIGHT_THRESHOLD)
     {
         // Let ImGui handle the input if an ImGui window overlaps the
         // titlebar area (e.g. a floating window dragged over it)

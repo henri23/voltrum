@@ -36,6 +36,7 @@ internal_var u32 cached_swapchain_fb_height = 0;
 internal_var u32 cached_viewport_fb_width   = 0;
 internal_var u32 cached_viewport_fb_height  = 0;
 
+#ifdef DEBUG_BUILD
 // Forward declare messenger callback
 VKAPI_ATTR VkBool32 VKAPI_CALL
 vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT      message_severity,
@@ -48,6 +49,7 @@ INTERNAL_FUNC b8 vulkan_create_debug_logger(VkInstance *instance);
 INTERNAL_FUNC b8 vulkan_enable_validation_layers(Arena       *scratch,
                                                  const char **out_layer_names,
                                                  u32         *out_layer_count);
+#endif
 
 // Needed for z-buffer image format sel/ection in vulkan_device
 INTERNAL_FUNC s32 find_memory_index(u32 type_filter, u32 property_flags);
@@ -908,6 +910,8 @@ vulkan_renderpass_finish(Frame_Context  *frame_ctx,
     return true;
 }
 
+#ifdef DEBUG_BUILD
+
 // (TODO) move the check of availability of the required layers outside
 // this function
 b8
@@ -963,7 +967,6 @@ vulkan_enable_validation_layers(Arena       *scratch,
     CORE_INFO("All required validaton layers are valid");
     return true;
 }
-
 b8
 vulkan_create_debug_logger(VkInstance *instance)
 {
@@ -1032,6 +1035,7 @@ vk_debug_callback(VkDebugUtilsMessageSeverityFlagBitsEXT      message_severity,
     }
     return VK_FALSE;
 }
+#endif // DEBUG_BUILD
 
 s32
 find_memory_index(u32 type_filter, u32 requested_property_flags)

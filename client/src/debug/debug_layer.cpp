@@ -791,7 +791,7 @@ debug_layer_on_render(void *layer_state, void *global_state, Frame_Context *ctx)
                         arena->committed_memory / measurement_unit,
                         entry->record_count);
 
-            ImGui::TextDisabled(C_STR(arena_summary));
+            ImGui::TextDisabled("%s", C_STR(arena_summary));
 
             scratch_end(scratch);
 
