@@ -81,6 +81,7 @@ INTERNAL_FUNC b8
 load_default_fonts(UI_State *state)
 {
     ImGuiIO &io = ImGui::GetIO();
+    f32 scale = state->platform->main_scale;
 
     // Scratch arena keeps font data alive until Build() copies it
     Scratch_Arena scratch = scratch_begin(nullptr, 0);
@@ -135,15 +136,16 @@ load_default_fonts(UI_State *state)
         ImFontConfig config         = {};
         config.FontDataOwnedByAtlas = false;
 
+        f32 font_size = 20.0f * scale;
         state->fonts[s] =
             io.Fonts->AddFontFromMemoryTTF(font_resources[s].data,
                                            font_resources[s].data_size,
-                                           20.0f,
+                                           font_size,
                                            &config);
 
         if (state->fonts[s])
         {
-            CORE_DEBUG("Loaded font: %s at %.0fpt", path, 20.0f);
+            CORE_DEBUG("Loaded font: %s at %.0fpt (scale=%.2f)", path, font_size, scale);
         }
 
         // Merge icon font with this text font style
@@ -153,13 +155,13 @@ load_default_fonts(UI_State *state)
             icon_config.MergeMode            = true;
             icon_config.PixelSnapH           = true;
             icon_config.FontDataOwnedByAtlas = false;
-            icon_config.GlyphMinAdvanceX     = 20.0f;
+            icon_config.GlyphMinAdvanceX     = 20.0f * scale;
 
             static const ImWchar icon_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
 
             io.Fonts->AddFontFromMemoryTTF(icon_resource.data,
                                            icon_resource.data_size,
-                                           18.0f,
+                                           18.0f * scale,
                                            &icon_config,
                                            icon_ranges);
         }
@@ -176,8 +178,11 @@ load_default_fonts(UI_State *state)
     // All font data freed implicitly when scratch ends
     scratch_end(scratch);
 
+    // Compensate for scaled font size so layout uses logical coordinates
+    io.FontGlobalScale = 1.0f / scale;
+
     io.FontDefault = state->fonts[(u8)Font_Style::NORMAL];
-    CORE_DEBUG("Font atlas built successfully with icon support");
+    CORE_DEBUG("Font atlas built successfully with icon support (scale=%.2f)", scale);
 
     return true;
 }
