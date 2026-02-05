@@ -11,7 +11,8 @@ VOLTRUM_API UI_State *ui_init(Arena                   *arena,
                               UI_Theme                 theme,
                               PFN_menu_callback        menu_callback,
                               String                   app_name,
-                              struct Platform_State   *plat_state);
+                              struct Platform_State   *plat_state,
+                              void                    *global_client_state);
 
 VOLTRUM_API void ui_shutdown_layers(UI_State *state);
 

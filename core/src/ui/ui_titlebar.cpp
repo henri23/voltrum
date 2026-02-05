@@ -151,7 +151,7 @@ ui_titlebar_draw(UI_State *context)
                 // Push smaller horizontal padding for menu items
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
                                     ImVec2(5.0f, 5.0f));
-                context->menu_callback();
+                context->menu_callback(context->global_client_state);
                 ImGui::PopStyleVar();
             }
 
@@ -358,10 +358,9 @@ ui_titlebar_draw(UI_State *context)
 
         // Block OS-level titlebar drag when an ImGui window (e.g. a floating
         // window) overlaps the titlebar region
-        ImGuiWindow *hovered_window    = GImGui->HoveredWindow;
-        ImGuiWindow *titlebar_window   = ImGui::GetCurrentWindow();
-        b8           imgui_blocks_drag = in_titlebar &&
-                               hovered_window != nullptr &&
+        ImGuiWindow *hovered_window  = GImGui->HoveredWindow;
+        ImGuiWindow *titlebar_window = ImGui::GetCurrentWindow();
+        b8 imgui_blocks_drag = in_titlebar && hovered_window != nullptr &&
                                hovered_window != titlebar_window;
         context->platform->block_titlebar_drag = imgui_blocks_drag;
     }

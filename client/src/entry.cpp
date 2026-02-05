@@ -1,5 +1,6 @@
 #include "defines.hpp"
 #include "editor/editor_layer.hpp"
+#include "global_client_state.hpp"
 
 #ifdef DEBUG_BUILD
 #    include "debug/debug_layer.hpp"
@@ -24,12 +25,6 @@
 #if defined(PLATFORM_WINDOWS) && !defined(VOLTRUM_STATIC_LINKING)
 #    include <imgui.h>
 #endif
-
-// Client-specific state structure
-struct Global_Client_State
-{
-    b8 initialized;
-};
 
 // Memory debug callback function
 b8
@@ -71,26 +66,17 @@ client_initialize(Client *client_state)
 }
 
 b8
-client_update(Client *client_state, Frame_Context *ctx)
+client_update(Client *client, Frame_Context *ctx)
 {
-    static u64 alloc_count      = 0;
-    u64        prev_alloc_count = alloc_count;
-
-    alloc_count = memory_get_allocations_count();
-    if (input_is_key_pressed(Key_Code::M) && input_was_key_pressed(Key_Code::M))
-    {
-        CORE_DEBUG("Allocations: %llu (%llu this frame)",
-                   alloc_count,
-                   alloc_count - prev_alloc_count);
-    }
-
+    Global_Client_State *g_state = (Global_Client_State *)client->state;
 #ifdef DEBUG_BUILD
     {
         local_persist b8 f12_was_down = false;
-        b8               f12_is_down = input_is_key_pressed(Key_Code::F12);
+        b8               f12_is_down  = input_is_key_pressed(Key_Code::F12);
         if (f12_is_down && !f12_was_down)
         {
-            debug_toggle_layer();
+            // TODO: Delete the layer from the layer stack
+            g_state->is_debug_layer_visible = !g_state->is_debug_layer_visible;
         }
         f12_was_down = f12_is_down;
     }
@@ -128,8 +114,12 @@ client_shutdown(Client *client_state)
 
 // Menu callback - called by core UI to draw menu items
 void
-client_menu_callback()
+client_menu_callback(void *global_client_state)
 {
+    auto g_state = (Global_Client_State *)global_client_state;
+
+    local_persist b8 dummy_signal = true;
+
     if (ui::BeginMenu("File"))
     {
         if (ui::MenuItem(ICON_FA_RIGHT_FROM_BRACKET " Exit"))
@@ -146,29 +136,17 @@ client_menu_callback()
 
         ImGui::Separator();
 
-        b8 signal_visible = editor_is_signal_analyzer_visible();
-        if (ui::MenuItem(ICON_FA_BOLT " Signal Analyzer",
-                         nullptr,
-                         !signal_visible))
-        {
-            editor_toggle_signal_analyzer();
-        }
+        ui::MenuItem(ICON_FA_BOLT " Signal Analyzer",
+                     nullptr,
+                     &dummy_signal);
 
-        ImGui::Separator();
+        ui::MenuItem(ICON_FA_CODE " ImGui Demo",
+                     nullptr,
+                     &g_state->is_imgui_demo_visible);
 
-        b8 demo_visible = editor_is_demo_window_visible();
-        if (ui::MenuItem(ICON_FA_CODE " ImGui Demo", nullptr, !demo_visible))
-        {
-            editor_toggle_demo_window();
-        }
-
-        b8 implot_demo_visible = editor_is_implot_demo_window_visible();
-        if (ui::MenuItem(ICON_FA_CHART_LINE " ImPlot Demo",
-                         nullptr,
-                         !implot_demo_visible))
-        {
-            editor_toggle_implot_demo_window();
-        }
+        ui::MenuItem(ICON_FA_CHART_LINE " ImPlot Demo",
+                     nullptr,
+                     &g_state->is_implot_demo_visible);
         ui::EndMenu();
     }
 
@@ -187,14 +165,9 @@ client_menu_callback()
 #ifdef DEBUG_BUILD
     if (ui::BeginMenu("Debug"))
     {
-        b8 debug_visible = debug_is_layer_visible();
-        if (ui::MenuItem(
-                ICON_FA_BUG " Memory Inspector",
-                "F12",
-                debug_visible))
-        {
-            debug_toggle_layer();
-        }
+        ui::MenuItem(ICON_FA_BUG " Memory Inspector",
+                     "F12",
+                     &g_state->is_debug_layer_visible);
         ui::EndMenu();
     }
 #endif
@@ -206,7 +179,7 @@ request_client_config()
     App_Config client_config;
 
     // Set up client configuration
-    client_config.name   = STR("Voltrum EDA");
+    client_config.name   = STR_LIT("Voltrum EDA");
     client_config.width  = 1600;
     client_config.height = 900;
     client_config.theme  = UI_Theme::CATPPUCCIN;
@@ -227,6 +200,11 @@ create_client(Client *client)
 
     // Initialize state pointers
     client->state = push_struct(client->mode_arena, Global_Client_State);
+
+    auto g_state                  = (Global_Client_State *)client->state;
+    g_state->is_imgui_demo_visible  = true;
+    g_state->is_implot_demo_visible = true;
+
     auto editor_layer_state =
         push_struct(client->mode_arena, Editor_Layer_State);
 
@@ -237,8 +215,7 @@ create_client(Client *client)
     client->layers.add(create_editor_layer(editor_layer_state));
 
 #ifdef DEBUG_BUILD
-    auto debug_layer_state =
-        push_struct(client->mode_arena, Debug_Layer_State);
+    auto debug_layer_state = push_struct(client->mode_arena, Debug_Layer_State);
     client->layers.add(create_debug_layer(debug_layer_state));
 #endif
 

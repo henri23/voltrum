@@ -10,16 +10,16 @@
 
 // String construction and basic properties
 
-INTERNAL_FUNC u8 test_STR()
+INTERNAL_FUNC u8 test_STR_LIT()
 {
-    String s = STR("hello");
+    String s = STR_LIT("hello");
 
     expect_should_be((u64)5, s.size);
     expect_should_be('h', (char)s.str[0]);
     expect_should_be('o', (char)s.str[4]);
 
     // Empty literal
-    String empty = STR("");
+    String empty = STR_LIT("");
     expect_should_be((u64)0, empty.size);
 
     return true;
@@ -77,7 +77,7 @@ INTERNAL_FUNC u8 test_const_str_truncation()
 
 INTERNAL_FUNC u8 test_const_str_from_str()
 {
-    String s  = STR("test string");
+    String s  = STR_LIT("test string");
     auto   cs = const_str_from_str<64>(s);
     expect_should_be(s.size, cs.size);
 
@@ -91,10 +91,10 @@ INTERNAL_FUNC u8 test_const_str_from_str()
 
 INTERNAL_FUNC u8 test_str_match_exact()
 {
-    expect_should_be(true, str_match(STR("abc"), STR("abc")));
-    expect_should_be(false, str_match(STR("abc"), STR("def")));
-    expect_should_be(false, str_match(STR("abc"), STR("ab")));
-    expect_should_be(false, str_match(STR("ab"), STR("abc")));
+    expect_should_be(true, str_match(STR_LIT("abc"), STR_LIT("abc")));
+    expect_should_be(false, str_match(STR_LIT("abc"), STR_LIT("def")));
+    expect_should_be(false, str_match(STR_LIT("abc"), STR_LIT("ab")));
+    expect_should_be(false, str_match(STR_LIT("ab"), STR_LIT("abc")));
 
     // Empty strings match
     expect_should_be(true, str_match(str_zero(), str_zero()));
@@ -105,18 +105,18 @@ INTERNAL_FUNC u8 test_str_match_exact()
 INTERNAL_FUNC u8 test_str_match_case_insensitive()
 {
     expect_should_be(true,
-                     str_match(STR("Hello"),
-                               STR("hello"),
+                     str_match(STR_LIT("Hello"),
+                               STR_LIT("hello"),
                                String_Match_Flags::CASE_INSENSITIVE));
 
     expect_should_be(true,
-                     str_match(STR("ABC"),
-                               STR("abc"),
+                     str_match(STR_LIT("ABC"),
+                               STR_LIT("abc"),
                                String_Match_Flags::CASE_INSENSITIVE));
 
     expect_should_be(false,
-                     str_match(STR("Hello"),
-                               STR("World"),
+                     str_match(STR_LIT("Hello"),
+                               STR_LIT("World"),
                                String_Match_Flags::CASE_INSENSITIVE));
 
     return true;
@@ -125,8 +125,8 @@ INTERNAL_FUNC u8 test_str_match_case_insensitive()
 INTERNAL_FUNC u8 test_str_match_slash_insensitive()
 {
     expect_should_be(true,
-                     str_match(STR("path/to/file"),
-                               STR("path\\to\\file"),
+                     str_match(STR_LIT("path/to/file"),
+                               STR_LIT("path\\to\\file"),
                                String_Match_Flags::SLASH_INSENSITIVE));
 
     return true;
@@ -134,18 +134,18 @@ INTERNAL_FUNC u8 test_str_match_slash_insensitive()
 
 INTERNAL_FUNC u8 test_str_find_needle()
 {
-    String haystack = STR("hello world");
+    String haystack = STR_LIT("hello world");
 
     expect_should_be((u64)6,
-                     str_find_needle(haystack, 0, STR("world")));
+                     str_find_needle(haystack, 0, STR_LIT("world")));
     expect_should_be((u64)0,
-                     str_find_needle(haystack, 0, STR("hello")));
+                     str_find_needle(haystack, 0, STR_LIT("hello")));
     expect_should_be((u64)-1,
-                     str_find_needle(haystack, 0, STR("xyz")));
+                     str_find_needle(haystack, 0, STR_LIT("xyz")));
 
     // Start offset
     expect_should_be((u64)-1,
-                     str_find_needle(haystack, 7, STR("world")));
+                     str_find_needle(haystack, 7, STR_LIT("world")));
 
     // Empty needle
     expect_should_be((u64)-1,
@@ -158,11 +158,11 @@ INTERNAL_FUNC u8 test_str_find_needle()
 
 INTERNAL_FUNC u8 test_str_prefix()
 {
-    String s = STR("hello world");
+    String s = STR_LIT("hello world");
 
     String p = str_prefix(s, 5);
     expect_should_be((u64)5, p.size);
-    expect_should_be(true, str_match(p, STR("hello")));
+    expect_should_be(true, str_match(p, STR_LIT("hello")));
 
     // Prefix larger than string returns whole string
     String full = str_prefix(s, 100);
@@ -173,11 +173,11 @@ INTERNAL_FUNC u8 test_str_prefix()
 
 INTERNAL_FUNC u8 test_str_skip()
 {
-    String s = STR("hello world");
+    String s = STR_LIT("hello world");
 
     String skipped = str_skip(s, 6);
     expect_should_be((u64)5, skipped.size);
-    expect_should_be(true, str_match(skipped, STR("world")));
+    expect_should_be(true, str_match(skipped, STR_LIT("world")));
 
     // Skip more than size returns empty
     String empty = str_skip(s, 100);
@@ -188,11 +188,11 @@ INTERNAL_FUNC u8 test_str_skip()
 
 INTERNAL_FUNC u8 test_str_substr()
 {
-    String s = STR("hello world");
+    String s = STR_LIT("hello world");
 
     String sub = str_substr(s, 6, 5);
     expect_should_be((u64)5, sub.size);
-    expect_should_be(true, str_match(sub, STR("world")));
+    expect_should_be(true, str_match(sub, STR_LIT("world")));
 
     // Out of bounds start
     String empty = str_substr(s, 100, 5);
@@ -203,19 +203,19 @@ INTERNAL_FUNC u8 test_str_substr()
 
 INTERNAL_FUNC u8 test_str_trim_whitespace()
 {
-    String s = STR("  hello  ");
+    String s = STR_LIT("  hello  ");
 
     String trimmed = str_trim_whitespace(s);
     expect_should_be((u64)5, trimmed.size);
-    expect_should_be(true, str_match(trimmed, STR("hello")));
+    expect_should_be(true, str_match(trimmed, STR_LIT("hello")));
 
     // Already trimmed
-    String clean = STR("hello");
+    String clean = STR_LIT("hello");
     String same  = str_trim_whitespace(clean);
     expect_should_be(clean.size, same.size);
 
     // All whitespace
-    String ws      = STR("   ");
+    String ws      = STR_LIT("   ");
     String ws_trim = str_trim_whitespace(ws);
     expect_should_be((u64)0, ws_trim.size);
 
@@ -228,7 +228,7 @@ INTERNAL_FUNC u8 test_str_copy()
 {
     Arena *arena = arena_create();
 
-    String original = STR("hello");
+    String original = STR_LIT("hello");
     String copy     = str_copy(arena, original);
 
     expect_should_be(original.size, copy.size);
@@ -249,12 +249,12 @@ INTERNAL_FUNC u8 test_str_cat()
 {
     Arena *arena = arena_create();
 
-    String a      = STR("hello ");
-    String b      = STR("world");
+    String a      = STR_LIT("hello ");
+    String b      = STR_LIT("world");
     String result = str_cat(arena, a, b);
 
     expect_should_be((u64)11, result.size);
-    expect_should_be(true, str_match(result, STR("hello world")));
+    expect_should_be(true, str_match(result, STR_LIT("hello world")));
 
     arena_release(arena);
     return true;
@@ -267,7 +267,7 @@ INTERNAL_FUNC u8 test_str_fmt()
     String result = str_fmt(arena, "number: %d, float: %.1f", 42, 3.5f);
     expect_should_be(true,
                      str_match(result,
-                               STR("number: 42, float: 3.5")));
+                               STR_LIT("number: 42, float: 3.5")));
 
     arena_release(arena);
     return true;
@@ -277,34 +277,34 @@ INTERNAL_FUNC u8 test_str_fmt()
 
 INTERNAL_FUNC u8 test_str_path_helpers()
 {
-    String path = STR("/home/user/file.txt");
+    String path = STR_LIT("/home/user/file.txt");
 
     // chop_last_slash -> directory
     String dir = str_chop_last_slash(path);
-    expect_should_be(true, str_match(dir, STR("/home/user")));
+    expect_should_be(true, str_match(dir, STR_LIT("/home/user")));
 
     // skip_last_slash -> filename
     String file = str_skip_last_slash(path);
-    expect_should_be(true, str_match(file, STR("file.txt")));
+    expect_should_be(true, str_match(file, STR_LIT("file.txt")));
 
     // chop_last_dot -> without extension
     String no_ext = str_chop_last_dot(path);
     expect_should_be(true,
-                     str_match(no_ext, STR("/home/user/file")));
+                     str_match(no_ext, STR_LIT("/home/user/file")));
 
     // skip_last_dot -> extension
     String ext = str_skip_last_dot(path);
-    expect_should_be(true, str_match(ext, STR("txt")));
+    expect_should_be(true, str_match(ext, STR_LIT("txt")));
 
     // No slash
-    String name = STR("file.txt");
+    String name = STR_LIT("file.txt");
     expect_should_be(true,
                      str_match(str_chop_last_slash(name), name));
     expect_should_be(true,
                      str_match(str_skip_last_slash(name), name));
 
     // No dot
-    String no_dot = STR("Makefile");
+    String no_dot = STR_LIT("Makefile");
     expect_should_be(true,
                      str_match(str_chop_last_dot(no_dot), no_dot));
     expect_should_be((u64)0, str_skip_last_dot(no_dot).size);
@@ -317,19 +317,19 @@ INTERNAL_FUNC u8 test_str_path_join()
     Arena *arena = arena_create();
 
     String result = str_path_join(arena,
-                                  STR("/home/user"),
-                                  STR("file.txt"));
+                                  STR_LIT("/home/user"),
+                                  STR_LIT("file.txt"));
     expect_should_be(true,
                      str_match(result,
-                               STR("/home/user/file.txt")));
+                               STR_LIT("/home/user/file.txt")));
 
     // Dir already ends with slash
     String result2 = str_path_join(arena,
-                                   STR("/home/user/"),
-                                   STR("file.txt"));
+                                   STR_LIT("/home/user/"),
+                                   STR_LIT("file.txt"));
     expect_should_be(true,
                      str_match(result2,
-                               STR("/home/user/file.txt")));
+                               STR_LIT("/home/user/file.txt")));
 
     arena_release(arena);
     return true;
@@ -339,7 +339,7 @@ INTERNAL_FUNC u8 test_str_path_join()
 
 INTERNAL_FUNC u8 test_str_index_of()
 {
-    String s = STR("hello world");
+    String s = STR_LIT("hello world");
 
     expect_should_be((u64)4, str_index_of(s, 'o'));
     expect_should_be((u64)5, str_index_of(s, ' '));
@@ -351,12 +351,12 @@ INTERNAL_FUNC u8 test_str_index_of()
 INTERNAL_FUNC u8 test_str_hash()
 {
     // Same string should produce same hash
-    u64 h1 = str_hash(STR("hello"));
-    u64 h2 = str_hash(STR("hello"));
+    u64 h1 = str_hash(STR_LIT("hello"));
+    u64 h2 = str_hash(STR_LIT("hello"));
     expect_should_be(h1, h2);
 
     // Different strings should (very likely) produce different hashes
-    u64 h3 = str_hash(STR("world"));
+    u64 h3 = str_hash(STR_LIT("world"));
     expect_should_be(true, h1 != h3);
 
     // Empty string should produce a consistent hash
@@ -373,13 +373,13 @@ INTERNAL_FUNC u8 test_str_to_f32_valid()
 {
     f32 result;
 
-    expect_should_be(true, str_to_f32(STR("42.5"), &result));
+    expect_should_be(true, str_to_f32(STR_LIT("42.5"), &result));
     expect_float_to_be(42.5f, result);
 
-    expect_should_be(true, str_to_f32(STR("-123.456"), &result));
+    expect_should_be(true, str_to_f32(STR_LIT("-123.456"), &result));
     expect_float_to_be(-123.456f, result);
 
-    expect_should_be(true, str_to_f32(STR("0.0"), &result));
+    expect_should_be(true, str_to_f32(STR_LIT("0.0"), &result));
     expect_float_to_be(0.0f, result);
 
     return true;
@@ -390,8 +390,8 @@ INTERNAL_FUNC u8 test_str_to_f32_invalid()
     f32 result;
 
     expect_should_be(false, str_to_f32(str_zero(), &result));
-    expect_should_be(false, str_to_f32(STR("abc"), &result));
-    expect_should_be(false, str_to_f32(STR("42.5"), nullptr));
+    expect_should_be(false, str_to_f32(STR_LIT("abc"), &result));
+    expect_should_be(false, str_to_f32(STR_LIT("42.5"), nullptr));
 
     return true;
 }
@@ -401,7 +401,7 @@ INTERNAL_FUNC u8 test_str_to_vec4_valid()
     vec4 result;
 
     expect_should_be(true,
-                     str_to_vec4(STR("1.0 2.0 3.0 4.0"), &result));
+                     str_to_vec4(STR_LIT("1.0 2.0 3.0 4.0"), &result));
     expect_float_to_be(1.0f, result.x);
     expect_float_to_be(2.0f, result.y);
     expect_float_to_be(3.0f, result.z);
@@ -415,7 +415,7 @@ INTERNAL_FUNC u8 test_str_to_vec3_valid()
     vec3 result;
 
     expect_should_be(true,
-                     str_to_vec3(STR("1.0 2.0 3.0"), &result));
+                     str_to_vec3(STR_LIT("1.0 2.0 3.0"), &result));
     expect_float_to_be(1.0f, result.x);
     expect_float_to_be(2.0f, result.y);
     expect_float_to_be(3.0f, result.z);
@@ -428,7 +428,7 @@ INTERNAL_FUNC u8 test_str_to_vec2_valid()
     vec2 result;
 
     expect_should_be(true,
-                     str_to_vec2(STR("1.0 2.0"), &result));
+                     str_to_vec2(STR_LIT("1.0 2.0"), &result));
     expect_float_to_be(1.0f, result.x);
     expect_float_to_be(2.0f, result.y);
 
@@ -439,23 +439,23 @@ INTERNAL_FUNC u8 test_str_to_bool_valid()
 {
     b8 result;
 
-    expect_should_be(true, str_to_bool(STR("true"), &result));
+    expect_should_be(true, str_to_bool(STR_LIT("true"), &result));
     expect_should_be(true, result);
 
-    expect_should_be(true, str_to_bool(STR("false"), &result));
+    expect_should_be(true, str_to_bool(STR_LIT("false"), &result));
     expect_should_be(false, result);
 
-    expect_should_be(true, str_to_bool(STR("1"), &result));
+    expect_should_be(true, str_to_bool(STR_LIT("1"), &result));
     expect_should_be(true, result);
 
-    expect_should_be(true, str_to_bool(STR("0"), &result));
+    expect_should_be(true, str_to_bool(STR_LIT("0"), &result));
     expect_should_be(false, result);
 
     // Case insensitive
-    expect_should_be(true, str_to_bool(STR("TRUE"), &result));
+    expect_should_be(true, str_to_bool(STR_LIT("TRUE"), &result));
     expect_should_be(true, result);
 
-    expect_should_be(true, str_to_bool(STR("False"), &result));
+    expect_should_be(true, str_to_bool(STR_LIT("False"), &result));
     expect_should_be(false, result);
 
     return true;
@@ -465,8 +465,8 @@ INTERNAL_FUNC u8 test_str_to_bool_invalid()
 {
     b8 result;
 
-    expect_should_be(false, str_to_bool(STR("yes"), &result));
-    expect_should_be(false, str_to_bool(STR("2"), &result));
+    expect_should_be(false, str_to_bool(STR_LIT("yes"), &result));
+    expect_should_be(false, str_to_bool(STR_LIT("2"), &result));
     expect_should_be(false, str_to_bool(str_zero(), &result));
 
     return true;
@@ -478,8 +478,8 @@ void str_register_tests()
 {
     // Construction
     test_manager_register_test(
-        test_STR,
-        "Str: STR construction");
+        test_STR_LIT,
+        "Str: STR_LIT construction");
     test_manager_register_test(
         test_str_from_cstr,
         "Str: str_from_cstr construction");

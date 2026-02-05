@@ -421,17 +421,17 @@ str_to_bool(String s, b8 *out)
 
     String trimmed = str_trim_whitespace(s);
 
-    if (str_match(trimmed, STR("true"), String_Match_Flags::CASE_INSENSITIVE) ||
-        str_match(trimmed, STR("1")))
+    if (str_match(trimmed, STR_LIT("true"), String_Match_Flags::CASE_INSENSITIVE) ||
+        str_match(trimmed, STR_LIT("1")))
     {
         *out = true;
         return true;
     }
 
     if (str_match(trimmed,
-                  STR("false"),
+                  STR_LIT("false"),
                   String_Match_Flags::CASE_INSENSITIVE) ||
-        str_match(trimmed, STR("0")))
+        str_match(trimmed, STR_LIT("0")))
     {
         *out = false;
         return true;

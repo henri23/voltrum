@@ -27,12 +27,7 @@ struct Editor_Layer_State
     f32 fps_accumulator;
     u32 fps_frame_count;
 
-    // Demo windows
-    b8 show_demo_window;
-    b8 show_implot_demo_window;
-
     // Signal analyzer panel
-    b8  show_signal_analyzer;
     f32 signal_time;
 };
 
@@ -43,14 +38,3 @@ b8   editor_layer_on_render(void *state, f32 delta_time);
 
 UI_Layer create_editor_layer(Editor_Layer_State *state);
 
-// Demo window control - accessible from menu callback
-void editor_toggle_demo_window();
-b8   editor_is_demo_window_visible();
-
-// ImPlot demo window control
-void editor_toggle_implot_demo_window();
-b8   editor_is_implot_demo_window_visible();
-
-// Signal analyzer panel control
-void editor_toggle_signal_analyzer();
-b8   editor_is_signal_analyzer_visible();

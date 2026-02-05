@@ -56,7 +56,7 @@ thread_context_get_scratch(Arena **conflicting_arenas, u64 conflict_count)
         // not present in the array of arenas that are marked as conflicting
         for (u32 j = 0; j < conflict_count; ++j)
         {
-            if (*arena_ptr != *conflict_ptr)
+            if (*arena_ptr == *conflict_ptr)
             {
                 has_conflict = true;
                 break;

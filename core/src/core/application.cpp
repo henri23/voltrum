@@ -36,7 +36,7 @@ struct Engine_State
 
     // Client state management
     Arena  *client_arena;
-    Client *client_state;
+    Client *client;
 
     // Statuses
     b8  is_running;
@@ -168,9 +168,9 @@ app_on_resized_callback(const Event *event)
                 engine_state->is_suspended = false;
             }
 
-            engine_state->client_state->on_resize(engine_state->client_state,
-                                                  engine_state->width,
-                                                  engine_state->height);
+            engine_state->client->on_resize(engine_state->client,
+                                            engine_state->width,
+                                            engine_state->height);
 
             renderer_on_resize(engine_state->width, engine_state->height);
         }
@@ -200,8 +200,8 @@ application_init(App_Config *config)
     // Client state
     Client *client_state = push_struct(engine_state->client_arena, Client);
 
-    engine_state->client_state             = client_state;
-    engine_state->client_state->mode_arena = engine_state->client_arena;
+    engine_state->client             = client_state;
+    engine_state->client->mode_arena = engine_state->client_arena;
 
     if (!log_init())
     {
@@ -363,7 +363,7 @@ application_init(App_Config *config)
 
     CORE_INFO("All subsystems initialized correctly.");
 
-    return engine_state->client_state;
+    return engine_state->client;
 }
 
 void
@@ -376,11 +376,12 @@ application_run()
     }
 
     engine_state->ui = ui_init(engine_state->persistent_arena,
-                               &engine_state->client_state->layers,
+                               &engine_state->client->layers,
                                UI_Theme::CATPPUCCIN,
-                               engine_state->client_state->menu_callback,
+                               engine_state->client->menu_callback,
                                engine_state->config.name,
-                               engine_state->platform);
+                               engine_state->platform,
+                               engine_state->client->state);
 
     ENSURE(engine_state->ui);
 
@@ -390,9 +391,9 @@ application_run()
     absolute_clock_update(&engine_state->clock);
 
     // Call client initialize if provided
-    if (engine_state->client_state->initialize)
+    if (engine_state->client->initialize)
     {
-        if (!engine_state->client_state->initialize(engine_state->client_state))
+        if (!engine_state->client->initialize(engine_state->client))
         {
             CORE_ERROR("Client initialization failed");
             return;
@@ -434,22 +435,20 @@ application_run()
             // DEBUG: Check frame timing consistency
             // CORE_DEBUG("delta: %.4f ms", delta_time * 1000.0);
 
-            if (engine_state->client_state->update)
+            if (engine_state->client->update)
             {
-                if (!engine_state->client_state->update(
-                        engine_state->client_state,
-                        &frame_ctx))
+                if (!engine_state->client->update(engine_state->client,
+                                                  &frame_ctx))
                 {
                     CORE_FATAL("Client update failed. Aborting...");
                     engine_state->is_running = false;
                 }
             }
 
-            if (engine_state->client_state->render)
+            if (engine_state->client->render)
             {
-                if (!engine_state->client_state->render(
-                        engine_state->client_state,
-                        &frame_ctx))
+                if (!engine_state->client->render(engine_state->client,
+                                                  &frame_ctx))
                 {
                     CORE_FATAL("Client render failed. Aborting...");
                     engine_state->is_running = false;
@@ -516,10 +515,10 @@ application_shutdown()
     ui_shutdown_layers(engine_state->ui);
 
     // Call client shutdown if provided
-    if (engine_state->client_state->shutdown)
+    if (engine_state->client->shutdown)
     {
         CORE_DEBUG("Shutting down client...");
-        engine_state->client_state->shutdown(engine_state->client_state);
+        engine_state->client->shutdown(engine_state->client);
     }
 
     arena_release(engine_state->client_arena);

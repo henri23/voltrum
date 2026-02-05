@@ -187,16 +187,18 @@ ui_init(Arena                   *allocator,
         UI_Theme                 theme,
         PFN_menu_callback        menu_callback,
         String                   app_name,
-        Platform_State          *plat_state)
+        Platform_State          *plat_state,
+        void                    *global_client_state)
 {
     UI_State *state = push_struct(allocator, UI_State);
 
-    state->current_theme  = theme;
-    state->menu_callback  = menu_callback;
-    state->app_name       = C_STR(app_name);
-    state->is_initialized = true;
-    state->platform       = plat_state;
-    state->layers         = layers;
+    state->current_theme       = theme;
+    state->menu_callback       = menu_callback;
+    state->app_name            = C_STR(app_name);
+    state->is_initialized      = true;
+    state->platform            = plat_state;
+    state->layers              = layers;
+    state->global_client_state = global_client_state;
 
     load_default_fonts(state);
 
@@ -228,16 +230,20 @@ ui_shutdown_layers(UI_State *state)
 void
 ui_update_layers(UI_State *state, Frame_Context *ctx)
 {
+    ENSURE(state->global_client_state);
+
     for (auto &layer : *state->layers)
     {
         if (layer.on_update)
-            layer.on_update(layer.state, ctx);
+            layer.on_update(layer.state, state->global_client_state, ctx);
     }
 }
 
 ImDrawData *
 ui_draw_layers(UI_State *state, Frame_Context *ctx)
 {
+    ENSURE(state->global_client_state);
+
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
@@ -248,7 +254,7 @@ ui_draw_layers(UI_State *state, Frame_Context *ctx)
     for (auto &layer : *state->layers)
     {
         if (layer.on_render)
-            layer.on_render(layer.state, ctx);
+            layer.on_render(layer.state, state->global_client_state, ctx);
     }
 
     ImGui::Render();

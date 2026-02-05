@@ -10,10 +10,12 @@
 
 namespace ui {
 
-    // Rounded MenuItem - same API as ImGui::MenuItem but with rounded hover
+    // Rounded MenuItem with optional active-state checkmark at the end.
+    // If is_active is provided, a checkmark is rendered on the right when
+    // *is_active is true, and pressing the item auto-toggles the value.
     inline bool MenuItem(const char *label,
         const char *shortcut = nullptr,
-        bool selected = false,
+        b8 *is_active = nullptr,
         bool enabled = true) {
         ImGuiWindow *window = ImGui::GetCurrentWindow();
         if (window->SkipItems)
@@ -30,9 +32,16 @@ namespace ui {
                                ? shortcut_size.x + style.ItemSpacing.x * 2.0f
                                : 0.0f;
 
-        float min_w = window->DC.MenuColumns.TotalWidth + shortcut_w;
-        float w = ImMax(label_size.x + style.FramePadding.x * 2.0f + shortcut_w,
-            min_w);
+        float check_sz = g.FontSize;
+        float check_w = is_active
+                            ? check_sz + style.ItemSpacing.x
+                            : 0.0f;
+
+        float min_w = window->DC.MenuColumns.TotalWidth + shortcut_w + check_w;
+        float avail_w = ImGui::GetContentRegionAvail().x;
+        float w = ImMax(
+            label_size.x + style.FramePadding.x * 2.0f + shortcut_w + check_w,
+            ImMax(min_w, avail_w));
 
         ImVec2 size(w, label_size.y + style.FramePadding.y * 2.0f);
 
@@ -48,47 +57,44 @@ namespace ui {
             &held,
             ImGuiButtonFlags_PressedOnRelease);
 
-        // Render rounded background on hover (use WindowRounding for
-        // consistency)
+        // Render rounded background on hover
         if (hovered && enabled) {
             ImU32 col = ImGui::GetColorU32(
                 held ? ImGuiCol_HeaderActive : ImGuiCol_HeaderHovered);
-            window->DrawList->AddRectFilled(bb.Min,
-                bb.Max,
-                col,
-                style.WindowRounding);
-        }
-
-        // Render checkmark for selected items
-        if (selected) {
-            ImU32 col = ImGui::GetColorU32(
-                enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled);
-            float check_sz = g.FontSize;
-            float pad = ImMax(1.0f, (float)(int)(check_sz / 6.0f));
-            ImGui::RenderCheckMark(window->DrawList,
-                bb.Min +
-                    ImVec2(style.FramePadding.x, style.FramePadding.y + pad),
-                col,
-                check_sz - pad * 2.0f);
+            window->DrawList->AddRectFilled(
+                bb.Min, bb.Max, col, style.WindowRounding);
         }
 
         // Render text
-        ImU32 text_col =
-            ImGui::GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled);
         ImVec2 text_pos = bb.Min + style.FramePadding;
         ImGui::RenderText(text_pos, label);
 
         // Render shortcut
         if (shortcut) {
-            ImU32 shortcut_col = ImGui::GetColorU32(ImGuiCol_TextDisabled);
+            float shortcut_x =
+                bb.Max.x - style.FramePadding.x - shortcut_size.x - check_w;
             ImGui::RenderText(
-                ImVec2(bb.Max.x - style.FramePadding.x - shortcut_size.x,
-                    text_pos.y),
-                shortcut);
+                ImVec2(shortcut_x, text_pos.y), shortcut);
         }
 
-        // Close popup when menu item is activated
+        // Render checkmark at the right end when is_active is provided
+        if (is_active && *is_active) {
+            ImU32 col = ImGui::GetColorU32(
+                enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled);
+            float pad = ImMax(1.0f, (float)(int)(check_sz / 6.0f));
+            float check_x = bb.Max.x - style.FramePadding.x - check_sz;
+            float check_y = bb.Min.y + style.FramePadding.y + pad;
+            ImGui::RenderCheckMark(
+                window->DrawList,
+                ImVec2(check_x, check_y),
+                col,
+                check_sz - pad * 2.0f);
+        }
+
+        // Toggle active state and close popup when activated
         if (pressed && enabled) {
+            if (is_active)
+                *is_active = !(*is_active);
             ImGui::CloseCurrentPopup();
         }
 
@@ -99,6 +105,7 @@ namespace ui {
     struct MenuState {
         ImGuiID active_menu_id = 0;
         ImRect active_menu_rect = {};
+        bool alpha_pushed = false;
     };
 
     inline MenuState &GetMenuState() {
@@ -185,6 +192,8 @@ namespace ui {
                 char window_name[256];
                 snprintf(window_name, sizeof(window_name), "##Menu_%s", label);
 
+                ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.9f);
+
                 if (ImGui::Begin(window_name, nullptr, flags)) {
                     // Check if mouse is outside both menu item and popup
                     ImGuiWindow *popup_window = ImGui::GetCurrentWindow();
@@ -201,11 +210,15 @@ namespace ui {
                     if (!in_menu_item && !in_popup) {
                         menu_state.active_menu_id = 0;
                         ImGui::End();
+                        ImGui::PopStyleVar();
                         return false;
                     }
 
+                    menu_state.alpha_pushed = true;
                     return true;
                 }
+
+                ImGui::PopStyleVar();
             }
         } else {
             // Vertical layout (submenu) - use standard ImGui for now
@@ -215,6 +228,13 @@ namespace ui {
         return false;
     }
 
-    inline void EndMenu() { ImGui::End(); }
+    inline void EndMenu() {
+        MenuState &menu_state = GetMenuState();
+        ImGui::End();
+        if (menu_state.alpha_pushed) {
+            ImGui::PopStyleVar();
+            menu_state.alpha_pushed = false;
+        }
+    }
 
 } // namespace ui

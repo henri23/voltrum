@@ -82,27 +82,27 @@ material_loader_load(Arena      *arena,
             str_skip(trimmed, equal_index + 1));
 
         if (str_match(var_name,
-                      STR("version"),
+                      STR_LIT("version"),
                       String_Match_Flags::CASE_INSENSITIVE))
         {
             // TODO: handle version
         }
         else if (str_match(var_name,
-                           STR("name"),
+                           STR_LIT("name"),
                            String_Match_Flags::CASE_INSENSITIVE))
         {
             resource_data->name =
                 const_str_from_str<MATERIAL_NAME_MAX_LENGTH>(value);
         }
         else if (str_match(var_name,
-                           STR("diffuse_map_name"),
+                           STR_LIT("diffuse_map_name"),
                            String_Match_Flags::CASE_INSENSITIVE))
         {
             resource_data->diffuse_map_name =
                 const_str_from_str<TEXTURE_NAME_MAX_LENGTH>(value);
         }
         else if (str_match(var_name,
-                           STR("diffuse_color"),
+                           STR_LIT("diffuse_color"),
                            String_Match_Flags::CASE_INSENSITIVE))
         {
             if (!str_to_vec4(value, &resource_data->diffuse_color))

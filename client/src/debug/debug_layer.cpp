@@ -1,38 +1,33 @@
+#include "core/thread_context.hpp"
 #ifdef DEBUG_BUILD
 
-#include "debug_layer.hpp"
+#    include "debug_layer.hpp"
+#    include "global_client_state.hpp"
 
-#include <core/frame_context.hpp>
-#include <core/logger.hpp>
-#include <imgui.h>
-#include <implot.h>
-#include <memory/arena.hpp>
-#include <memory/arena_debug.hpp>
-#include <ui/icons.hpp>
-#include <utils/string.hpp>
-
-internal_var Debug_Layer_State *debug_state = nullptr;
+#    include <core/frame_context.hpp>
+#    include <core/logger.hpp>
+#    include <imgui.h>
+#    include <implot.h>
+#    include <memory/arena.hpp>
+#    include <memory/arena_debug.hpp>
+#    include <ui/icons.hpp>
+#    include <utils/string.hpp>
 
 // Catppuccin Mocha palette
-constexpr ImU32 CAT_MAUVE  = IM_COL32(203, 166, 247, 255);
-constexpr ImU32 CAT_BLUE   = IM_COL32(137, 180, 250, 255);
-constexpr ImU32 CAT_SKY    = IM_COL32(116, 199, 236, 255);
-constexpr ImU32 CAT_TEAL   = IM_COL32(148, 226, 213, 255);
-constexpr ImU32 CAT_GREEN  = IM_COL32(166, 227, 161, 255);
-constexpr ImU32 CAT_PEACH  = IM_COL32(250, 179, 135, 255);
-constexpr ImU32 CAT_PINK   = IM_COL32(245, 194, 231, 255);
-constexpr ImU32 CAT_RED    = IM_COL32(243, 139, 168, 255);
+constexpr ImU32 CAT_MAUVE = IM_COL32(203, 166, 247, 255);
+constexpr ImU32 CAT_BLUE  = IM_COL32(137, 180, 250, 255);
+constexpr ImU32 CAT_SKY   = IM_COL32(116, 199, 236, 255);
+constexpr ImU32 CAT_TEAL  = IM_COL32(148, 226, 213, 255);
+constexpr ImU32 CAT_GREEN = IM_COL32(166, 227, 161, 255);
+constexpr ImU32 CAT_PEACH = IM_COL32(250, 179, 135, 255);
+constexpr ImU32 CAT_PINK  = IM_COL32(245, 194, 231, 255);
+constexpr ImU32 CAT_RED   = IM_COL32(243, 139, 168, 255);
 
 // Allocation block color cycle (catppuccin)
-constexpr ImU32 ALLOC_COLORS[] = {
-    CAT_MAUVE,
-    CAT_BLUE,
-    CAT_SKY,
-    CAT_TEAL,
-    CAT_GREEN,
-    CAT_PEACH,
-    CAT_PINK};
-constexpr u32 ALLOC_COLOR_COUNT = sizeof(ALLOC_COLORS) / sizeof(ALLOC_COLORS[0]);
+constexpr ImU32 ALLOC_COLORS[] =
+    {CAT_MAUVE, CAT_BLUE, CAT_SKY, CAT_TEAL, CAT_GREEN, CAT_PEACH, CAT_PINK};
+constexpr u32 ALLOC_COLOR_COUNT =
+    sizeof(ALLOC_COLORS) / sizeof(ALLOC_COLORS[0]);
 
 // Other colors
 constexpr ImU32 COLOR_FREE       = IM_COL32(60, 65, 75, 255);
@@ -72,7 +67,7 @@ arena_display_name(const char *file, s32 line)
     String filename = str_skip_last_slash(path);
 
     if (filename.size == 0)
-        return STR("unknown");
+        return STR_LIT("unknown");
 
     return filename;
 }
@@ -96,13 +91,12 @@ imgui_tooltip_bytes(const char *label, u64 bytes)
 // zoom_level controls horizontal scaling (1.0 = fit to width).
 // scroll_x is the horizontal pan offset in normalized [0,1] range.
 INTERNAL_FUNC void
-render_arena_utilization_bar(
-    Arena             *arena,
-    Arena_Debug_Entry *entry,
-    f32                bar_width,
-    f32                bar_height,
-    f32                zoom_level,
-    f32               *scroll_x)
+render_arena_utilization_bar(Arena             *arena,
+                             Arena_Debug_Entry *entry,
+                             f32                bar_width,
+                             f32                bar_height,
+                             f32                zoom_level,
+                             f32               *scroll_x)
 {
     if (arena->committed_memory == 0)
         return;
@@ -110,80 +104,69 @@ render_arena_utilization_bar(
     ImDrawList *draw_list = ImGui::GetWindowDrawList();
     ImVec2      cursor    = ImGui::GetCursorScreenPos();
 
-    f32 total      = (f32)arena->committed_memory;
-    f32 zoomed_w   = bar_width * zoom_level;
-    f32 max_scroll = (zoomed_w > bar_width)
-                         ? (zoomed_w - bar_width) / zoomed_w
-                         : 0.0f;
-    f32 pan        = (scroll_x ? *scroll_x : 0.0f);
-    f32 pan_px     = pan * zoomed_w;
+    f32 total    = (f32)arena->committed_memory;
+    f32 zoomed_w = bar_width * zoom_level;
+    f32 max_scroll =
+        (zoomed_w > bar_width) ? (zoomed_w - bar_width) / zoomed_w : 0.0f;
+    f32 pan    = (scroll_x ? *scroll_x : 0.0f);
+    f32 pan_px = pan * zoomed_w;
 
     // Clip to visible region
-    ImGui::PushClipRect(
-        cursor,
-        ImVec2(cursor.x + bar_width, cursor.y + bar_height),
-        true);
+    ImGui::PushClipRect(cursor,
+                        ImVec2(cursor.x + bar_width, cursor.y + bar_height),
+                        true);
 
     f32 origin_x = cursor.x - pan_px;
 
     // Background (full committed extent = gray/free)
-    draw_list->AddRectFilled(
-        ImVec2(origin_x, cursor.y),
-        ImVec2(origin_x + zoomed_w, cursor.y + bar_height),
-        COLOR_FREE);
+    draw_list->AddRectFilled(ImVec2(origin_x, cursor.y),
+                             ImVec2(origin_x + zoomed_w, cursor.y + bar_height),
+                             COLOR_FREE);
 
     // Header block
     f32 header_x2 = origin_x + zoomed_w * ((f32)ARENA_HEADER_SIZE / total);
-    draw_list->AddRectFilled(
-        ImVec2(origin_x, cursor.y),
-        ImVec2(header_x2, cursor.y + bar_height),
-        COLOR_HEADER);
+    draw_list->AddRectFilled(ImVec2(origin_x, cursor.y),
+                             ImVec2(header_x2, cursor.y + bar_height),
+                             COLOR_HEADER);
 
     // Draw allocation blocks and padding gaps
     for (u32 i = 0; i < entry->record_count; ++i)
     {
         Arena_Allocation_Record *rec = &entry->records[i];
-        ImU32 alloc_color = ALLOC_COLORS[i % ALLOC_COLOR_COUNT];
+        ImU32 alloc_color            = ALLOC_COLORS[i % ALLOC_COLOR_COUNT];
 
         // Padding block (fragmentation)
         if (rec->padding > 0)
         {
-            f32 pad_x1 =
-                origin_x +
-                zoomed_w * ((f32)(rec->offset - rec->padding) / total);
-            f32 pad_x2 =
-                origin_x + zoomed_w * ((f32)rec->offset / total);
+            f32 pad_x1 = origin_x +
+                         zoomed_w * ((f32)(rec->offset - rec->padding) / total);
+            f32 pad_x2 = origin_x + zoomed_w * ((f32)rec->offset / total);
 
             if ((pad_x2 - pad_x1) >= 1.0f)
             {
-                draw_list->AddRectFilled(
-                    ImVec2(pad_x1, cursor.y),
-                    ImVec2(pad_x2, cursor.y + bar_height),
-                    COLOR_PADDING);
+                draw_list->AddRectFilled(ImVec2(pad_x1, cursor.y),
+                                         ImVec2(pad_x2, cursor.y + bar_height),
+                                         COLOR_PADDING);
             }
         }
 
         // Allocation block
-        f32 alloc_x1 =
-            origin_x + zoomed_w * ((f32)rec->offset / total);
+        f32 alloc_x1 = origin_x + zoomed_w * ((f32)rec->offset / total);
         f32 alloc_x2 =
-            origin_x +
-            zoomed_w * ((f32)(rec->offset + rec->size) / total);
+            origin_x + zoomed_w * ((f32)(rec->offset + rec->size) / total);
 
         if ((alloc_x2 - alloc_x1) < 1.0f)
             alloc_x2 = alloc_x1 + 1.0f;
 
-        draw_list->AddRectFilled(
-            ImVec2(alloc_x1, cursor.y),
-            ImVec2(alloc_x2, cursor.y + bar_height),
-            alloc_color);
+        draw_list->AddRectFilled(ImVec2(alloc_x1, cursor.y),
+                                 ImVec2(alloc_x2, cursor.y + bar_height),
+                                 alloc_color);
     }
 
     // Border
-    draw_list->AddRect(
-        cursor,
-        ImVec2(cursor.x + bar_width, cursor.y + bar_height),
-        COLOR_BAR_BORDER);
+    draw_list->AddRect(cursor,
+                       ImVec2(cursor.x + bar_width, cursor.y + bar_height),
+                       COLOR_BAR_BORDER);
 
     ImGui::PopClipRect();
 
@@ -210,8 +193,8 @@ render_arena_utilization_bar(
         }
 
         // Tooltip — identify which section the mouse is over
-        ImVec2 mouse = ImGui::GetMousePos();
-        f32    rel_x = mouse.x - cursor.x;
+        ImVec2 mouse        = ImGui::GetMousePos();
+        f32    rel_x        = mouse.x - cursor.x;
         f32    hover_offset = ((rel_x + pan_px) / zoomed_w) * total;
 
         if (hover_offset >= 0.0f && hover_offset < total)
@@ -220,9 +203,8 @@ render_arena_utilization_bar(
             if (hover_offset < (f32)ARENA_HEADER_SIZE)
             {
                 ImGui::BeginTooltip();
-                ImGui::TextColored(
-                    ImVec4(0.34f, 0.36f, 0.44f, 1.0f),
-                    "Arena Header");
+                ImGui::TextColored(ImVec4(0.34f, 0.36f, 0.44f, 1.0f),
+                                   "Arena Header");
                 ImGui::Text("Size: %llu B", (u64)ARENA_HEADER_SIZE);
                 ImGui::EndTooltip();
             }
@@ -235,12 +217,10 @@ render_arena_utilization_bar(
                     f32 block_start = (f32)(rec->offset - rec->padding);
                     f32 block_end   = (f32)(rec->offset + rec->size);
 
-                    if (hover_offset >= block_start &&
-                        hover_offset < block_end)
+                    if (hover_offset >= block_start && hover_offset < block_end)
                     {
-                        b8 on_padding =
-                            (rec->padding > 0) &&
-                            (hover_offset < (f32)rec->offset);
+                        b8 on_padding = (rec->padding > 0) &&
+                                        (hover_offset < (f32)rec->offset);
 
                         ImGui::BeginTooltip();
                         if (on_padding)
@@ -250,22 +230,19 @@ render_arena_utilization_bar(
                                 "Alignment Padding");
                             imgui_tooltip_bytes("Size", rec->padding);
                             ImGui::Separator();
-                            ImGui::TextDisabled(
-                                "Before allocation #%u", i + 1);
+                            ImGui::TextDisabled("Before allocation #%u", i + 1);
                         }
                         else
                         {
-                            String name = arena_display_name(
-                                rec->file, rec->line);
+                            String name =
+                                arena_display_name(rec->file, rec->line);
                             ImGui::Text("Allocation #%u", i + 1);
                             ImGui::Separator();
-                            ImGui::Text(
-                                "Source:  %.*s:%d",
-                                (int)name.size,
-                                C_STR(name),
-                                rec->line);
-                            ImGui::Text(
-                                "Offset:  0x%llX", rec->offset);
+                            ImGui::Text("Source:  %.*s:%d",
+                                        (s32)name.size,
+                                        C_STR(name),
+                                        rec->line);
+                            ImGui::Text("Offset:  0x%llX", rec->offset);
                             imgui_tooltip_bytes("Size", rec->size);
 
                             if (rec->padding > 0)
@@ -294,8 +271,7 @@ render_arena_utilization_bar(
 
                 if (!found)
                 {
-                    u64 free_bytes =
-                        arena->committed_memory - arena->offset;
+                    u64 free_bytes = arena->committed_memory - arena->offset;
                     ImGui::BeginTooltip();
                     ImGui::TextDisabled("Free (committed)");
                     imgui_tooltip_bytes("Size", free_bytes);
@@ -309,43 +285,34 @@ render_arena_utilization_bar(
 INTERNAL_FUNC void
 render_allocation_table(Arena_Debug_Entry *entry)
 {
-    ImGuiTableFlags flags =
-        ImGuiTableFlags_Borders |
-        ImGuiTableFlags_RowBg |
-        ImGuiTableFlags_ScrollY |
-        ImGuiTableFlags_Resizable |
-        ImGuiTableFlags_SizingStretchProp;
+    ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg |
+                            ImGuiTableFlags_ScrollY |
+                            ImGuiTableFlags_Resizable |
+                            ImGuiTableFlags_SizingStretchProp;
 
-    f32 table_height =
-        ImGui::GetContentRegionAvail().y -
-        ImGui::GetStyle().ChildRounding;
+    f32 available_height =
+        ImGui::GetContentRegionAvail().y - ImGui::GetStyle().ChildRounding;
+    f32 row_height       = ImGui::GetFrameHeightWithSpacing();
+    f32 min_table_height = row_height * 6.0f; // header + 5 rows minimum
+    f32 table_height     = MAX(available_height, min_table_height);
 
-    if (ImGui::BeginTable(
-            "##AllocationTable",
-            5,
-            flags,
-            ImVec2(0.0f, table_height)))
+    if (ImGui::BeginTable("##AllocationTable",
+                          5,
+                          flags,
+                          ImVec2(0.0f, table_height)))
     {
         ImGui::TableSetupScrollFreeze(0, 1);
-        ImGui::TableSetupColumn(
-            "#",
-            ImGuiTableColumnFlags_WidthFixed,
-            40.0f);
-        ImGui::TableSetupColumn(
-            "Offset",
-            ImGuiTableColumnFlags_WidthFixed,
-            90.0f);
-        ImGui::TableSetupColumn(
-            "Size",
-            ImGuiTableColumnFlags_WidthFixed,
-            80.0f);
-        ImGui::TableSetupColumn(
-            "Padding",
-            ImGuiTableColumnFlags_WidthFixed,
-            60.0f);
-        ImGui::TableSetupColumn(
-            "Source",
-            ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+        ImGui::TableSetupColumn("Offset",
+                                ImGuiTableColumnFlags_WidthFixed,
+                                90.0f);
+        ImGui::TableSetupColumn("Size",
+                                ImGuiTableColumnFlags_WidthFixed,
+                                80.0f);
+        ImGui::TableSetupColumn("Padding",
+                                ImGuiTableColumnFlags_WidthFixed,
+                                60.0f);
+        ImGui::TableSetupColumn("Source", ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
 
         for (u32 i = 0; i < entry->record_count; ++i)
@@ -354,7 +321,7 @@ render_allocation_table(Arena_Debug_Entry *entry)
 
             ImGui::TableNextRow();
 
-            ImU32  color = ALLOC_COLORS[i % ALLOC_COLOR_COUNT];
+            ImU32  color   = ALLOC_COLORS[i % ALLOC_COLOR_COUNT];
             ImVec4 color_v = ImGui::ColorConvertU32ToFloat4(color);
 
             ImGui::TableNextColumn();
@@ -374,10 +341,9 @@ render_allocation_table(Arena_Debug_Entry *entry)
             ImGui::TableNextColumn();
             if (rec->padding > 0)
             {
-                ImGui::TextColored(
-                    ImVec4(0.86f, 0.55f, 0.16f, 1.0f),
-                    "%llu B",
-                    rec->padding);
+                ImGui::TextColored(ImVec4(0.86f, 0.55f, 0.16f, 1.0f),
+                                   "%llu B",
+                                   rec->padding);
             }
             else
             {
@@ -386,11 +352,7 @@ render_allocation_table(Arena_Debug_Entry *entry)
 
             ImGui::TableNextColumn();
             String name = arena_display_name(rec->file, rec->line);
-            ImGui::Text(
-                "%.*s:%d",
-                (int)name.size,
-                C_STR(name),
-                rec->line);
+            ImGui::Text("%.*s:%d", (s32)name.size, C_STR(name), rec->line);
         }
 
         ImGui::EndTable();
@@ -398,9 +360,7 @@ render_allocation_table(Arena_Debug_Entry *entry)
 }
 
 INTERNAL_FUNC void
-render_arena_detail(
-    Arena_Debug_Entry *entry,
-    Debug_Layer_State *state)
+render_arena_detail(Arena_Debug_Entry *entry, Debug_Layer_State *state)
 {
     Arena *arena = entry->arena;
 
@@ -413,48 +373,40 @@ render_arena_detail(
     f32 utilization = 0.0f;
     if (arena->committed_memory > ARENA_HEADER_SIZE)
     {
-        utilization =
-            (f32)(arena->offset - ARENA_HEADER_SIZE) /
-            (f32)(arena->committed_memory - ARENA_HEADER_SIZE) * 100.0f;
+        utilization = (f32)(arena->offset - ARENA_HEADER_SIZE) /
+                      (f32)(arena->committed_memory - ARENA_HEADER_SIZE) *
+                      100.0f;
     }
 
     // Header info
-    String display = arena_display_name(
-        arena->allocation_file,
-        arena->allocation_line);
+    String display =
+        arena_display_name(arena->allocation_file, arena->allocation_line);
 
-    ImGui::Text(
-        ICON_FA_MICROCHIP " %.*s:%d",
-        (int)display.size,
-        C_STR(display),
-        arena->allocation_line);
+    ImGui::Text(ICON_FA_MICROCHIP " %.*s:%d",
+                (s32)display.size,
+                C_STR(display),
+                arena->allocation_line);
     ImGui::Separator();
 
     // Metrics row
     ImGui::Columns(4, nullptr, false);
 
     ImGui::Text("Reserved");
-    imgui_text_bytes_colored(
-        ImVec4(0.7f, 0.7f, 0.7f, 1.0f),
-        arena->reserved_memory);
+    imgui_text_bytes_colored(ImVec4(0.7f, 0.7f, 0.7f, 1.0f),
+                             arena->reserved_memory);
     ImGui::NextColumn();
 
     ImGui::Text("Committed");
-    imgui_text_bytes_colored(
-        ImVec4(0.54f, 0.71f, 0.98f, 1.0f),
-        arena->committed_memory);
+    imgui_text_bytes_colored(ImVec4(0.54f, 0.71f, 0.98f, 1.0f),
+                             arena->committed_memory);
     ImGui::NextColumn();
 
     ImGui::Text("Used");
-    imgui_text_bytes_colored(
-        ImVec4(0.65f, 0.89f, 0.63f, 1.0f),
-        arena->offset);
+    imgui_text_bytes_colored(ImVec4(0.65f, 0.89f, 0.63f, 1.0f), arena->offset);
     ImGui::NextColumn();
 
     ImGui::Text("Waste (padding)");
-    imgui_text_bytes_colored(
-        ImVec4(0.86f, 0.55f, 0.16f, 1.0f),
-        total_padding);
+    imgui_text_bytes_colored(ImVec4(0.86f, 0.55f, 0.16f, 1.0f), total_padding);
     ImGui::NextColumn();
     ImGui::Columns(1);
 
@@ -468,35 +420,23 @@ render_arena_detail(
         ImDrawList *dl    = ImGui::GetWindowDrawList();
         ImVec2      p     = ImGui::GetCursorScreenPos();
 
-        dl->AddRectFilled(
-            p,
-            ImVec2(p.x + bar_w, p.y + bar_h),
-            COLOR_BAR_BG);
+        dl->AddRectFilled(p, ImVec2(p.x + bar_w, p.y + bar_h), COLOR_BAR_BG);
 
         if (arena->reserved_memory > 0)
         {
-            f32 committed_w =
-                bar_w *
-                ((f32)arena->committed_memory /
-                 (f32)arena->reserved_memory);
-            dl->AddRectFilled(
-                p,
-                ImVec2(p.x + committed_w, p.y + bar_h),
-                IM_COL32(137, 180, 250, 100));
+            f32 committed_w = bar_w * ((f32)arena->committed_memory /
+                                       (f32)arena->reserved_memory);
+            dl->AddRectFilled(p,
+                              ImVec2(p.x + committed_w, p.y + bar_h),
+                              IM_COL32(137, 180, 250, 100));
 
             f32 used_w =
-                bar_w *
-                ((f32)arena->offset /
-                 (f32)arena->reserved_memory);
-            dl->AddRectFilled(
-                p,
-                ImVec2(p.x + used_w, p.y + bar_h),
-                IM_COL32(166, 227, 161, 150));
+                bar_w * ((f32)arena->offset / (f32)arena->reserved_memory);
+            dl->AddRectFilled(p,
+                              ImVec2(p.x + used_w, p.y + bar_h),
+                              IM_COL32(166, 227, 161, 150));
         }
-        dl->AddRect(
-            p,
-            ImVec2(p.x + bar_w, p.y + bar_h),
-            COLOR_BAR_BORDER);
+        dl->AddRect(p, ImVec2(p.x + bar_w, p.y + bar_h), COLOR_BAR_BORDER);
 
         ImGui::Dummy(ImVec2(bar_w, bar_h));
 
@@ -514,9 +454,10 @@ render_arena_detail(
 
     // Detailed memory map (disk-utilization style) with zoom
     ImGui::Text(
-        "Memory Map - %.1f%% utilized  (scroll to zoom, "
+        "Memory Map - %.1f%c utilized  (scroll to zoom, "
         "drag to pan)",
-        utilization);
+        utilization,
+        '%');
 
     // Legend
     ImGui::SameLine();
@@ -528,14 +469,10 @@ render_arena_detail(
         ImDrawList *tip_draw = ImGui::GetWindowDrawList();
         f32         sq       = 10.0f;
 
-        auto draw_legend_entry =
-            [&](ImU32 color, const char *label)
+        auto draw_legend_entry = [&](ImU32 color, const char *label)
         {
             ImVec2 p = ImGui::GetCursorScreenPos();
-            tip_draw->AddRectFilled(
-                p,
-                ImVec2(p.x + sq, p.y + sq),
-                color);
+            tip_draw->AddRectFilled(p, ImVec2(p.x + sq, p.y + sq), color);
             ImGui::Dummy(ImVec2(sq, sq));
             ImGui::SameLine();
             ImGui::Text("%s", label);
@@ -558,10 +495,8 @@ render_arena_detail(
     ImVec2 mouse      = ImGui::GetMousePos();
 
     b8 mouse_over_bar =
-        (mouse.x >= bar_cursor.x &&
-         mouse.x <= bar_cursor.x + bar_width &&
-         mouse.y >= bar_cursor.y &&
-         mouse.y <= bar_cursor.y + bar_height);
+        (mouse.x >= bar_cursor.x && mouse.x <= bar_cursor.x + bar_width &&
+         mouse.y >= bar_cursor.y && mouse.y <= bar_cursor.y + bar_height);
 
     if (mouse_over_bar)
     {
@@ -573,9 +508,9 @@ render_arena_detail(
             f32 rel_x      = mouse.x - bar_cursor.x;
             f32 norm_mouse = (rel_x + pan_px) / zoomed_w;
 
-            f32 old_zoom     = state->zoom_level;
+            f32 old_zoom = state->zoom_level;
             state->zoom_level *= (wheel > 0.0f) ? 1.2f : (1.0f / 1.2f);
-            state->zoom_level  = CLAMP(state->zoom_level, 1.0f, 2000.0f);
+            state->zoom_level = CLAMP(state->zoom_level, 1.0f, 2000.0f);
 
             // Adjust pan to keep the mouse-pointed region stationary
             f32 new_zoomed_w = bar_width * state->zoom_level;
@@ -583,7 +518,9 @@ render_arena_detail(
             f32 max_pan_px   = new_zoomed_w - bar_width;
 
             if (max_pan_px > 0.0f)
-                state->scroll_x = CLAMP(new_pan_px / new_zoomed_w, 0.0f, max_pan_px / new_zoomed_w);
+                state->scroll_x = CLAMP(new_pan_px / new_zoomed_w,
+                                        0.0f,
+                                        max_pan_px / new_zoomed_w);
             else
                 state->scroll_x = 0.0f;
         }
@@ -596,9 +533,9 @@ render_arena_detail(
 
             state->scroll_x -= dx / zoomed_w;
 
-            f32 max_pan = (zoomed_w > bar_width)
-                              ? (zoomed_w - bar_width) / zoomed_w
-                              : 0.0f;
+            f32 max_pan     = (zoomed_w > bar_width)
+                                  ? (zoomed_w - bar_width) / zoomed_w
+                                  : 0.0f;
             state->scroll_x = CLAMP(state->scroll_x, 0.0f, max_pan);
         }
     }
@@ -606,18 +543,15 @@ render_arena_detail(
     if (state->zoom_level > 1.01f)
     {
         ImGui::SameLine();
-        ImGui::TextDisabled(
-            "  %.0fx",
-            state->zoom_level);
+        ImGui::TextDisabled("  %.0fx", state->zoom_level);
     }
 
-    render_arena_utilization_bar(
-        arena,
-        entry,
-        bar_width,
-        bar_height,
-        state->zoom_level,
-        &state->scroll_x);
+    render_arena_utilization_bar(arena,
+                                 entry,
+                                 bar_width,
+                                 bar_height,
+                                 state->zoom_level,
+                                 &state->scroll_x);
 
     ImGui::Spacing();
     ImGui::Separator();
@@ -629,13 +563,8 @@ render_arena_detail(
         ImGui::Text("Allocation Size Distribution");
 
         constexpr u32 BUCKET_COUNT = 6;
-        const char   *bucket_labels[BUCKET_COUNT] = {
-            "1-64B",
-            "65-256B",
-            "257B-1K",
-            "1K-4K",
-            "4K-64K",
-            ">64K"};
+        const char   *bucket_labels[BUCKET_COUNT] =
+            {"1-64B", "65-256B", "257B-1K", "1K-4K", "4K-64K", ">64K"};
         f64 bucket_counts[BUCKET_COUNT] = {};
 
         for (u32 i = 0; i < entry->record_count; ++i)
@@ -659,31 +588,23 @@ render_arena_detail(
         for (u32 i = 0; i < BUCKET_COUNT; ++i)
             positions[i] = (f64)i;
 
-        if (ImPlot::BeginPlot(
-                "##SizeDist",
-                ImVec2(-1, 150),
-                ImPlotFlags_NoMouseText))
+        if (ImPlot::BeginPlot("##SizeDist",
+                              ImVec2(-1, 150),
+                              ImPlotFlags_NoMouseText))
         {
-            ImPlot::SetupAxes(
-                "Size Range",
-                "Count",
-                ImPlotAxisFlags_AutoFit,
-                ImPlotAxisFlags_AutoFit);
+            ImPlot::SetupAxes("Size Range",
+                              "Count",
+                              ImPlotAxisFlags_AutoFit,
+                              ImPlotAxisFlags_AutoFit);
 
-            ImPlot::SetupAxisTicks(
-                ImAxis_X1,
-                positions,
-                BUCKET_COUNT,
-                bucket_labels);
+            ImPlot::SetupAxisTicks(ImAxis_X1,
+                                   positions,
+                                   BUCKET_COUNT,
+                                   bucket_labels);
 
-            ImPlot::SetNextFillStyle(
-                ImVec4(0.80f, 0.65f, 0.97f, 0.85f));
+            ImPlot::SetNextFillStyle(ImVec4(0.80f, 0.65f, 0.97f, 0.85f));
 
-            ImPlot::PlotBars(
-                "Allocations",
-                bucket_counts,
-                BUCKET_COUNT,
-                0.6);
+            ImPlot::PlotBars("Allocations", bucket_counts, BUCKET_COUNT, 0.6);
 
             ImPlot::EndPlot();
         }
@@ -694,211 +615,16 @@ render_arena_detail(
     }
 
     // Allocation table
-    ImGui::Text(
-        "Allocations (%u records)", entry->record_count);
+    ImGui::Text("Allocations (%u records)", entry->record_count);
 
     render_allocation_table(entry);
-}
-
-INTERNAL_FUNC void
-render_debug_window(Debug_Layer_State *state)
-{
-    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.80f);
-    ImGui::Begin(
-        ICON_FA_BUG " Memory Inspector",
-        &state->show_debug_layer);
-
-    Arena_Debug_Registry *registry = arena_debug_get_registry();
-    if (!registry)
-    {
-        ImGui::Text("Debug registry not initialized.");
-        ImGui::End();
-        ImGui::PopStyleVar();
-        return;
-    }
-
-    // Overview: per-arena utilization bars (disk-usage style)
-    if (registry->active_count > 0)
-    {
-        ImGui::Text(
-            ICON_FA_DATABASE " Arena Overview (%u arenas)",
-            registry->active_count);
-        ImGui::Separator();
-
-        f32 overview_bar_width = ImGui::GetContentRegionAvail().x;
-
-        for (u32 i = 0; i < ARENA_DEBUG_MAX_ARENAS; ++i)
-        {
-            Arena_Debug_Entry *entry = &registry->entries[i];
-            if (!entry->active)
-                continue;
-
-            Arena *arena = entry->arena;
-
-            String name = arena_display_name(
-                arena->allocation_file,
-                arena->allocation_line);
-
-            f32 pct = 0.0f;
-            if (arena->committed_memory > 0)
-            {
-                pct = (f32)arena->offset /
-                      (f32)arena->committed_memory * 100.0f;
-            }
-
-            // Arena label with utilization %
-            if (arena->offset >= 1 * MiB)
-            {
-                ImGui::Text(
-                    "%.*s:%d  —  %.2f MiB / %.2f MiB  (%.0f%%)",
-                    (int)name.size,
-                    C_STR(name),
-                    arena->allocation_line,
-                    (f64)arena->offset / (f64)MiB,
-                    (f64)arena->committed_memory / (f64)MiB,
-                    pct);
-            }
-            else
-            {
-                ImGui::Text(
-                    "%.*s:%d  —  %.2f KiB / %.2f KiB  (%.0f%%)",
-                    (int)name.size,
-                    C_STR(name),
-                    arena->allocation_line,
-                    (f64)arena->offset / (f64)KiB,
-                    (f64)arena->committed_memory / (f64)KiB,
-                    pct);
-            }
-
-            // Mini utilization bar (no zoom for overview)
-            f32 no_scroll = 0.0f;
-            render_arena_utilization_bar(
-                arena,
-                entry,
-                overview_bar_width,
-                14.0f,
-                1.0f,
-                &no_scroll);
-
-            ImGui::Spacing();
-        }
-
-        ImGui::Separator();
-        ImGui::Spacing();
-    }
-
-    // Left panel: arena list
-    f32 list_width = 260.0f;
-
-    ImGui::BeginChild(
-        "##ArenaList",
-        ImVec2(list_width, 0),
-        ImGuiChildFlags_Border |
-            ImGuiChildFlags_ResizeX);
-
-    ImGui::Text(
-        ICON_FA_DATABASE " Arenas (%u)",
-        registry->active_count);
-    ImGui::Separator();
-
-    for (u32 i = 0; i < ARENA_DEBUG_MAX_ARENAS; ++i)
-    {
-        Arena_Debug_Entry *entry = &registry->entries[i];
-        if (!entry->active)
-            continue;
-
-        Arena *arena = entry->arena;
-
-        String name = arena_display_name(
-            arena->allocation_file,
-            arena->allocation_line);
-
-        b8 is_selected = (state->selected_arena_index == (s32)i);
-
-        ImGui::PushID((s32)i);
-
-        const char *file = arena->allocation_file;
-        const char *slash = file;
-        for (const char *p = file; *p; ++p)
-        {
-            if (*p == '/' || *p == '\\')
-                slash = p + 1;
-        }
-
-        if (ImGui::Selectable(
-                slash,
-                is_selected))
-        {
-            state->selected_arena_index = (s32)i;
-            state->zoom_level = 1.0f;
-            state->scroll_x   = 0.0f;
-        }
-
-        // Show summary below the selectable
-        if (arena->offset >= 1 * MiB)
-        {
-            ImGui::TextDisabled(
-                "  %.2f MiB / %.2f MiB  (%u allocs)",
-                (f64)arena->offset / (f64)MiB,
-                (f64)arena->committed_memory / (f64)MiB,
-                entry->record_count);
-        }
-        else
-        {
-            ImGui::TextDisabled(
-                "  %.2f KiB / %.2f KiB  (%u allocs)",
-                (f64)arena->offset / (f64)KiB,
-                (f64)arena->committed_memory / (f64)KiB,
-                entry->record_count);
-        }
-
-        ImGui::PopID();
-    }
-
-    ImGui::EndChild();
-
-    // Right panel: detail view
-    ImGui::SameLine();
-
-    ImGui::BeginChild(
-        "##ArenaDetail",
-        ImVec2(0, 0),
-        ImGuiChildFlags_Border);
-
-    if (state->selected_arena_index >= 0 &&
-        state->selected_arena_index < (s32)ARENA_DEBUG_MAX_ARENAS)
-    {
-        Arena_Debug_Entry *selected =
-            &registry->entries[state->selected_arena_index];
-
-        if (selected->active)
-        {
-            render_arena_detail(selected, state);
-        }
-        else
-        {
-            state->selected_arena_index = -1;
-            ImGui::TextDisabled("Select an arena from the list.");
-        }
-    }
-    else
-    {
-        ImGui::TextDisabled("Select an arena from the list.");
-    }
-
-    ImGui::EndChild();
-
-    ImGui::End();
-    ImGui::PopStyleVar();
 }
 
 void
 debug_layer_on_attach(void *state_ptr)
 {
     Debug_Layer_State *state = (Debug_Layer_State *)state_ptr;
-    debug_state              = state;
 
-    state->show_debug_layer     = false;
     state->selected_arena_index = -1;
     state->zoom_level           = 1.0f;
     state->scroll_x             = 0.0f;
@@ -909,32 +635,203 @@ debug_layer_on_attach(void *state_ptr)
 void
 debug_layer_on_detach(void *state_ptr)
 {
-    (void)state_ptr;
-    debug_state = nullptr;
-
     CLIENT_INFO("Debug layer detached");
 }
 
 b8
-debug_layer_on_update(
-    void          *state_ptr,
-    Frame_Context *ctx)
+debug_layer_on_update(void *state_ptr, void *global_state, Frame_Context *ctx)
 {
     (void)state_ptr;
+    (void)global_state;
     (void)ctx;
     return true;
 }
 
 b8
-debug_layer_on_render(
-    void          *state_ptr,
-    Frame_Context *ctx)
+debug_layer_on_render(void *layer_state, void *global_state, Frame_Context *ctx)
 {
-    Debug_Layer_State *state = (Debug_Layer_State *)state_ptr;
+    Debug_Layer_State   *l_state = (Debug_Layer_State *)layer_state;
+    Global_Client_State *g_state = (Global_Client_State *)global_state;
 
-    if (state->show_debug_layer)
+    if (g_state->is_debug_layer_visible)
     {
-        render_debug_window(state);
+        ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.80f);
+        ImGui::Begin(ICON_FA_BUG " Memory Inspector",
+                     &g_state->is_debug_layer_visible,
+                     ImGuiWindowFlags_NoDocking);
+
+        Arena_Debug_Registry *registry = arena_debug_get_registry();
+        if (!registry)
+        {
+            ImGui::Text("Debug registry not initialized.");
+            ImGui::End();
+            ImGui::PopStyleVar();
+            return true;
+        }
+
+        // Overview: per-arena utilization bars (disk-usage style)
+        if (registry->active_count > 0)
+        {
+            ImGui::Text(ICON_FA_DATABASE " Arena Overview (%u arenas)",
+                        registry->active_count);
+            ImGui::Separator();
+
+            f32 overview_bar_width = ImGui::GetContentRegionAvail().x;
+
+            for (u32 i = 0; i < ARENA_DEBUG_MAX_ARENAS; ++i)
+            {
+                Arena_Debug_Entry *entry = &registry->entries[i];
+                if (!entry->active)
+                    continue;
+
+                Arena *arena = entry->arena;
+
+                String name = arena_display_name(arena->allocation_file,
+                                                 arena->allocation_line);
+
+                f32 pct = 0.0f;
+                if (arena->committed_memory > 0)
+                {
+                    pct = (f32)arena->offset / (f32)arena->committed_memory *
+                          100.0f;
+                }
+
+                f64 measurement_unit = (f64)MiB;
+
+                // Arena label with utilization %
+                if (arena->offset < MiB)
+                    measurement_unit = (f64)KiB;
+
+                auto scratch_arena = scratch_begin(&arena, 1);
+
+                String arena_details =
+                    str_fmt(scratch_arena.arena,
+                            "%.*s:%d  —  %.2f MiB / %.2f MiB  (%.0f%c)",
+                            (s32)name.size,
+                            C_STR(name),
+                            arena->allocation_line,
+                            arena->offset / measurement_unit,
+                            arena->committed_memory / measurement_unit,
+                            pct,
+                            '%');
+
+                ImGui::TextUnformatted(C_STR(arena_details),
+                                       C_STR(arena_details) + arena_details.size);
+
+                scratch_end(scratch_arena);
+
+                // Mini utilization bar (no zoom for overview)
+                f32 no_scroll = 0.0f;
+                render_arena_utilization_bar(arena,
+                                             entry,
+                                             overview_bar_width,
+                                             14.0f,
+                                             1.0f,
+                                             &no_scroll);
+
+                ImGui::Spacing();
+            }
+
+            ImGui::Separator();
+            ImGui::Spacing();
+        }
+
+        // Left panel: arena list
+        f32 list_width = 260.0f;
+
+        ImGui::BeginChild("##ArenaList",
+                          ImVec2(list_width, 0),
+                          ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX);
+
+        ImGui::Text(ICON_FA_DATABASE " Arenas (%u)", registry->active_count);
+        ImGui::Separator();
+
+        for (u32 i = 0; i < ARENA_DEBUG_MAX_ARENAS; ++i)
+        {
+            Arena_Debug_Entry *entry = &registry->entries[i];
+            if (!entry->active)
+                continue;
+
+            Arena *arena = entry->arena;
+
+            String name = arena_display_name(arena->allocation_file,
+                                             arena->allocation_line);
+
+            b8 is_selected = (l_state->selected_arena_index == (s32)i);
+
+            ImGui::PushID((s32)i);
+
+            const char *file  = arena->allocation_file;
+            const char *slash = file;
+            for (const char *p = file; *p; ++p)
+            {
+                if (*p == '/' || *p == '\\')
+                    slash = p + 1;
+            }
+
+            if (ImGui::Selectable(slash, is_selected))
+            {
+                l_state->selected_arena_index = (s32)i;
+                l_state->zoom_level           = 1.0f;
+                l_state->scroll_x             = 0.0f;
+            }
+
+            auto scratch = scratch_begin(&arena, 1);
+
+            f64 measurement_unit = (f64)MiB;
+
+            // Arena label with utilization %
+            if (arena->offset < MiB)
+                measurement_unit = (f64)KiB;
+
+            String arena_summary =
+                str_fmt(scratch.arena,
+                        "  %.2f MiB / %.2f MiB  (%u allocs)",
+                        arena->offset / measurement_unit,
+                        arena->committed_memory / measurement_unit,
+                        entry->record_count);
+
+            ImGui::TextDisabled(C_STR(arena_summary));
+
+            scratch_end(scratch);
+
+            ImGui::PopID();
+        }
+
+        ImGui::EndChild();
+
+        // Right panel: detail view
+        ImGui::SameLine();
+
+        ImGui::BeginChild("##ArenaDetail",
+                          ImVec2(0, 0),
+                          ImGuiChildFlags_Border);
+
+        if (l_state->selected_arena_index >= 0 &&
+            l_state->selected_arena_index < (s32)ARENA_DEBUG_MAX_ARENAS)
+        {
+            Arena_Debug_Entry *selected =
+                &registry->entries[l_state->selected_arena_index];
+
+            if (selected->active)
+            {
+                render_arena_detail(selected, l_state);
+            }
+            else
+            {
+                l_state->selected_arena_index = -1;
+                ImGui::TextDisabled("Select an arena from the list.");
+            }
+        }
+        else
+        {
+            ImGui::TextDisabled("Select an arena from the list.");
+        }
+
+        ImGui::EndChild();
+
+        ImGui::End();
+        ImGui::PopStyleVar();
     }
 
     return true;
@@ -950,22 +847,6 @@ create_debug_layer(Debug_Layer_State *state)
     layer.on_render = debug_layer_on_render;
     layer.state     = state;
     return layer;
-}
-
-void
-debug_toggle_layer()
-{
-    if (debug_state)
-    {
-        debug_state->show_debug_layer =
-            !debug_state->show_debug_layer;
-    }
-}
-
-b8
-debug_is_layer_visible()
-{
-    return debug_state ? debug_state->show_debug_layer : false;
 }
 
 #endif // DEBUG_BUILD

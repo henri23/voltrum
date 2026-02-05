@@ -35,8 +35,11 @@ enum class String_Match_Flags : u32
 };
 ENABLE_BITMASK(String_Match_Flags)
 
-// Construction
-#define STR(string) (String{(const u8 *)(string), sizeof(string) - 1})
+// Construction from string literal (compile-time size via sizeof)
+#define STR_LIT(string) (String{(const u8 *)(string), sizeof(string) - 1})
+
+// Construction from const char* (runtime strlen)
+#define STR(cstr) str_from_cstr(cstr)
 
 // Cast String to C string (assumes underlying buffer is null-terminated)
 #define C_STR(string) ((const char *)(string).str)

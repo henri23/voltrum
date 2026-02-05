@@ -9,7 +9,7 @@
 #include <imgui.h>
 #include <implot.h>
 
-using PFN_menu_callback = void (*)();
+using PFN_menu_callback = void (*)(void *);
 
 enum class Font_Style : u8
 {
@@ -53,8 +53,13 @@ struct UI_Layer
     void (*on_attach)(void *state);
     void (*on_detach)(void *state);
 
-    b8 (*on_update)(void *state, struct Frame_Context *context);
-    b8 (*on_render)(void *state, struct Frame_Context *context);
+    b8 (*on_update)(void                 *state,
+                    void                 *global_state,
+                    struct Frame_Context *context);
+
+    b8 (*on_render)(void                 *state,
+                    void                 *global_state,
+                    struct Frame_Context *context);
 
     // TODO: Enable later
     // b8 (*on_event)(void *state, Event event);
@@ -72,4 +77,6 @@ struct UI_State
     UI_Titlebar_State        titlebar;
     UI_Dockspace_State       dockspace;
     struct Platform_State   *platform;
+
+    void *global_client_state;
 };

@@ -1,7 +1,9 @@
 #include "editor_layer.hpp"
 
+#include "global_client_state.hpp"
 #include "input/input.hpp"
 #include "input/input_codes.hpp"
+
 #include <core/frame_context.hpp>
 #include <core/logger.hpp>
 #include <imgui.h>
@@ -50,13 +52,8 @@ editor_layer_on_attach(void *state_ptr)
     state->fps_accumulator = 0.0f;
     state->fps_frame_count = 0;
 
-    // Demo windows
-    state->show_demo_window        = true;
-    state->show_implot_demo_window = true;
-
     // Signal analyzer
-    state->show_signal_analyzer = true;
-    state->signal_time          = 0.0f;
+    state->signal_time = 0.0f;
 
     u32 width  = 0;
     u32 height = 0;
@@ -77,45 +74,46 @@ editor_layer_on_detach(void *state_ptr)
 }
 
 b8
-editor_layer_on_update(void *state_ptr, Frame_Context *ctx)
+editor_layer_on_update(void *state_ptr, void *global_state, Frame_Context *ctx)
 {
-    Editor_Layer_State *state = (Editor_Layer_State *)state_ptr;
+    Editor_Layer_State  *l_state = (Editor_Layer_State *)state_ptr;
+    Global_Client_State *g_state = (Global_Client_State *)global_state;
 
-    b8 viewport_active = state->viewport_hovered;
+    b8 viewport_active = l_state->viewport_hovered;
     // b8 viewport_active = state->viewport_focused || state->viewport_hovered;
 
     b8 camera_moved =
-        viewport_camera_update(&state->camera, ctx->delta_t, viewport_active);
+        viewport_camera_update(&l_state->camera, ctx->delta_t, viewport_active);
 
     if (camera_moved)
     {
-        renderer_set_view(state->camera.view_matrix);
+        renderer_set_view(l_state->camera.view_matrix);
     }
 
     return true;
 }
 
 b8
-editor_layer_on_render(void *state_ptr, Frame_Context *ctx)
+editor_layer_on_render(void          *layer_state,
+                       void          *global_state,
+                       Frame_Context *ctx)
 {
-    Editor_Layer_State *state = (Editor_Layer_State *)state_ptr;
+    Editor_Layer_State  *l_state = (Editor_Layer_State *)layer_state;
+    Global_Client_State *g_state = (Global_Client_State *)global_state;
 
-    render_viewport_window(state, ctx->delta_t);
-    render_statistics_window(state, ctx->delta_t);
+    render_viewport_window(l_state, ctx->delta_t);
+    render_statistics_window(l_state, ctx->delta_t);
 
-    if (state->show_signal_analyzer)
+    render_signal_analyzer(l_state, ctx->delta_t);
+
+    if (g_state->is_imgui_demo_visible)
     {
-        render_signal_analyzer(state, ctx->delta_t);
+        ImGui::ShowDemoWindow(&g_state->is_imgui_demo_visible);
     }
 
-    if (state->show_demo_window)
+    if (g_state->is_implot_demo_visible)
     {
-        ImGui::ShowDemoWindow(&state->show_demo_window);
-    }
-
-    if (state->show_implot_demo_window)
-    {
-        ImPlot::ShowDemoWindow(&state->show_implot_demo_window);
+        ImPlot::ShowDemoWindow(&g_state->is_implot_demo_visible);
     }
 
     return true;
@@ -330,7 +328,7 @@ render_signal_analyzer(Editor_Layer_State *state, f32 delta_time)
         state->signal_time -= 2.0f;
     }
 
-    ImGui::Begin(ICON_FA_BOLT " Signal Analyzer", &state->show_signal_analyzer);
+    ImGui::Begin(ICON_FA_BOLT " Signal Analyzer");
 
     ImGui::Text("Electrical Signal Analysis");
     ImGui::Separator();
@@ -436,49 +434,3 @@ create_editor_layer(Editor_Layer_State *state)
     return layer;
 }
 
-void
-editor_toggle_demo_window()
-{
-    if (editor_state)
-    {
-        editor_state->show_demo_window = !editor_state->show_demo_window;
-    }
-}
-
-b8
-editor_is_demo_window_visible()
-{
-    return editor_state ? editor_state->show_demo_window : false;
-}
-
-void
-editor_toggle_implot_demo_window()
-{
-    if (editor_state)
-    {
-        editor_state->show_implot_demo_window =
-            !editor_state->show_implot_demo_window;
-    }
-}
-
-b8
-editor_is_implot_demo_window_visible()
-{
-    return editor_state ? editor_state->show_implot_demo_window : false;
-}
-
-void
-editor_toggle_signal_analyzer()
-{
-    if (editor_state)
-    {
-        editor_state->show_signal_analyzer =
-            !editor_state->show_signal_analyzer;
-    }
-}
-
-b8
-editor_is_signal_analyzer_visible()
-{
-    return editor_state ? editor_state->show_signal_analyzer : false;
-}
