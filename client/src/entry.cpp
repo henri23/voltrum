@@ -120,7 +120,7 @@ client_menu_callback(void *global_client_state)
 
     local_persist b8 dummy_signal = true;
 
-    if (ui::BeginMenu("File"))
+    if (ui::BeginMenu("FILE"))
     {
         if (ui::MenuItem(ICON_FA_RIGHT_FROM_BRACKET " Exit"))
         {
@@ -129,16 +129,14 @@ client_menu_callback(void *global_client_state)
         ui::EndMenu();
     }
 
-    if (ui::BeginMenu("View"))
+    if (ui::BeginMenu("VIEW"))
     {
         ui::MenuItem(ICON_FA_WINDOW_MAXIMIZE " Viewport");
         ui::MenuItem(ICON_FA_SLIDERS " Properties");
 
         ImGui::Separator();
 
-        ui::MenuItem(ICON_FA_BOLT " Signal Analyzer",
-                     nullptr,
-                     &dummy_signal);
+        ui::MenuItem(ICON_FA_BOLT " Signal Analyzer", nullptr, &dummy_signal);
 
         ui::MenuItem(ICON_FA_CODE " ImGui Demo",
                      nullptr,
@@ -150,20 +148,20 @@ client_menu_callback(void *global_client_state)
         ui::EndMenu();
     }
 
-    if (ui::BeginMenu("Help"))
+    if (ui::BeginMenu("HELP"))
     {
         ui::MenuItem(ICON_FA_CIRCLE_INFO " About");
         ui::EndMenu();
     }
 
-    if (ui::BeginMenu("Tools"))
+    if (ui::BeginMenu("TOOLS"))
     {
         ui::MenuItem(ICON_FA_GEARS " Explore");
         ui::EndMenu();
     }
 
 #ifdef DEBUG_BUILD
-    if (ui::BeginMenu("Debug"))
+    if (ui::BeginMenu("DEBUG"))
     {
         ui::MenuItem(ICON_FA_BUG " Memory Inspector",
                      "F12",
@@ -201,7 +199,7 @@ create_client(Client *client)
     // Initialize state pointers
     client->state = push_struct(client->mode_arena, Global_Client_State);
 
-    auto g_state                  = (Global_Client_State *)client->state;
+    auto g_state                    = (Global_Client_State *)client->state;
     g_state->is_imgui_demo_visible  = true;
     g_state->is_implot_demo_visible = true;
 

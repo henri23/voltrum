@@ -32,8 +32,9 @@ b8 vulkan_ui_backend_initialize(Vulkan_Context *context, void *window) {
     ImGuiIO &io = ImGui::GetIO();
 
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+    io.ConfigWindowsMoveFromTitleBarOnly = true;
 
 // SDL3 viewport support is experimental and can cause crashes
 // Only enable if explicitly requested and working properly
