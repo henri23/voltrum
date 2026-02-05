@@ -94,7 +94,7 @@ ui_titlebar_draw(UI_State *context)
                                           palette.titlebar_gradient_start);
 
     const f32 top_padding = 4.0f;
-    f32       logo_size   = 50.0f;
+    f32       logo_size   = 50.0f * UI_PLATFORM_SCALE;
     f32       logo_margin = 4.0f;
     ImVec2    logo_pos    = ImVec2(state->titlebar_min.x + logo_margin,
                              state->titlebar_min.y + top_padding);
@@ -195,7 +195,7 @@ ui_titlebar_draw(UI_State *context)
             draw_list->AddText(text_pos, palette.text, state->title_text);
         }
 
-        f32 button_size    = 26.0f;
+        f32 button_size    = 26.0f * UI_PLATFORM_SCALE;
         f32 button_spacing = 2.0f;
         f32 right_margin   = 4.0f;
 

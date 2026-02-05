@@ -179,7 +179,7 @@ load_default_fonts(UI_State *state)
     scratch_end(scratch);
 
     // Compensate for scaled font size so layout uses logical coordinates
-    io.FontGlobalScale = 1.0f / scale;
+    io.FontGlobalScale = (1.0f / scale) * UI_PLATFORM_SCALE;
 
     io.FontDefault = state->fonts[(u8)Font_Style::NORMAL];
     CORE_DEBUG("Font atlas built successfully with icon support (scale=%.2f)", scale);

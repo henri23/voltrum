@@ -22,6 +22,12 @@ enum class Font_Style : u8
 
 internal_var constexpr u8 FONT_MAX_COUNT = (u8)Font_Style::MAX_COUNT;
 
+#ifdef PLATFORM_APPLE
+internal_var constexpr f32 UI_PLATFORM_SCALE = 0.85f;
+#else
+internal_var constexpr f32 UI_PLATFORM_SCALE = 1.0f;
+#endif
+
 struct UI_Titlebar_State
 {
     const char *title_text;

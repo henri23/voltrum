@@ -75,8 +75,6 @@ platform_init(Arena *allocator, String application_name, s32 width, s32 height)
 
     // Create window with Vulkan graphics context
     SDL_DisplayID primary_display = SDL_GetPrimaryDisplay();
-    f32           main_scale      = SDL_GetDisplayContentScale(primary_display);
-    state->main_scale             = main_scale;
 
     // Clamp window size to fit within the usable display area. On macOS,
     // logical display resolutions are often smaller than on Windows/Linux
@@ -108,7 +106,14 @@ platform_init(Arena *allocator, String application_name, s32 width, s32 height)
         return nullptr;
     }
 
-    CORE_DEBUG("Window created successfully");
+    // Compute DPI scale from actual window pixel ratio. SDL_GetDisplayContentScale
+    // can return 1.0 on macOS even for Retina displays, so we derive it from the
+    // window's physical vs logical size which is always correct.
+    int logical_w, pixel_w;
+    SDL_GetWindowSize(state->window, &logical_w, nullptr);
+    SDL_GetWindowSizeInPixels(state->window, &pixel_w, nullptr);
+    state->main_scale = (logical_w > 0) ? (f32)pixel_w / (f32)logical_w : 1.0f;
+    CORE_DEBUG("Window created successfully (DPI scale: %.2f)", state->main_scale);
 
 #ifdef PLATFORM_WINDOWS
     // Enable Windows 11 rounded corners for borderless window
