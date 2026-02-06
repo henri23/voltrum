@@ -344,11 +344,28 @@ ui_titlebar_draw(UI_State *context)
             close_pos.y + button_size
         );
 
+        // SDL hit-test points are window-local. Store button regions in the
+        // same coordinate space, applying DPI scaling only where SDL reports
+        // physical-pixel hit-test coordinates.
+        ImVec2 local_button_min = ImVec2(
+            state->button_area_min.x - state->titlebar_min.x,
+            state->button_area_min.y - state->titlebar_min.y
+        );
+        ImVec2 local_button_max = ImVec2(
+            state->button_area_max.x - state->titlebar_min.x,
+            state->button_area_max.y - state->titlebar_min.y
+        );
+
+#ifdef PLATFORM_APPLE
+        f32 scale = 1.0f;
+#else
         f32 scale = context->platform->main_scale;
-        context->platform->button_area_min_x = state->button_area_min.x * scale;
-        context->platform->button_area_max_x = state->button_area_max.x * scale;
-        context->platform->button_area_min_y = state->button_area_min.y * scale;
-        context->platform->button_area_max_y = state->button_area_max.y * scale;
+#endif
+
+        context->platform->button_area_min_x = local_button_min.x * scale;
+        context->platform->button_area_max_x = local_button_max.x * scale;
+        context->platform->button_area_min_y = local_button_min.y * scale;
+        context->platform->button_area_max_y = local_button_max.y * scale;
 
         // Compute content bounds for client callback
         f32 content_start_x = logo_margin + logo_size + 8.0f;
