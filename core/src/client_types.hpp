@@ -30,7 +30,9 @@ struct Client
     // Client-specific state
     Dynamic_Array<UI_Layer> layers;
 
-    PFN_menu_callback menu_callback;
+    // Titlebar content callback and logo asset name
+    PFN_titlebar_content_callback titlebar_content_callback;
+    const char                   *logo_asset_name;
 
     void *state; // Client state
 };

@@ -375,13 +375,15 @@ application_run()
         return;
     }
 
-    engine_state->ui = ui_init(engine_state->persistent_arena,
-                               &engine_state->client->layers,
-                               UI_Theme::CATPPUCCIN,
-                               engine_state->client->menu_callback,
-                               engine_state->config.name,
-                               engine_state->platform,
-                               engine_state->client->state);
+    engine_state->ui = ui_init(
+        engine_state->persistent_arena,
+        &engine_state->client->layers,
+        UI_Theme::CATPPUCCIN,
+        engine_state->client->titlebar_content_callback,
+        engine_state->client->logo_asset_name,
+        engine_state->platform,
+        engine_state->client->state
+    );
 
     ENSURE(engine_state->ui);
 

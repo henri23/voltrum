@@ -553,6 +553,21 @@ platform_hit_test_callback(SDL_Window *win, const SDL_Point *area, void *data)
 
     if (area->y <= TITLEBAR_HEIGHT_THRESHOLD)
     {
+        // Check if mouse is over window control buttons - let ImGui handle clicks
+        if (state_ptr->button_area_max_x > 0)
+        {
+            f32 px = (f32)area->x;
+            f32 py = (f32)area->y;
+
+            if (px >= state_ptr->button_area_min_x &&
+                px <= state_ptr->button_area_max_x &&
+                py >= state_ptr->button_area_min_y &&
+                py <= state_ptr->button_area_max_y)
+            {
+                return SDL_HITTEST_NORMAL;
+            }
+        }
+
         // Let ImGui handle the input if an ImGui window overlaps the
         // titlebar area (e.g. a floating window dragged over it)
         if (state_ptr->block_titlebar_drag)

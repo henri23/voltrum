@@ -15,6 +15,13 @@ struct Platform_State
     // Set by the UI layer each frame to prevent OS titlebar drag
     // when an ImGui window overlaps the titlebar area
     b8 block_titlebar_drag;
+
+    // Button exclusion region for hit test (in physical pixels)
+    // Set by titlebar to allow window control buttons to receive clicks
+    f32 button_area_min_x;
+    f32 button_area_max_x;
+    f32 button_area_min_y;
+    f32 button_area_max_y;
 };
 
 struct Platform_System_Info

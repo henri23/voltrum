@@ -188,23 +188,25 @@ load_default_fonts(UI_State *state)
 }
 
 UI_State *
-ui_init(Arena                   *allocator,
-        Dynamic_Array<UI_Layer> *layers,
-        UI_Theme                 theme,
-        PFN_menu_callback        menu_callback,
-        String                   app_name,
-        Platform_State          *plat_state,
-        void                    *global_client_state)
+ui_init(
+    Arena                         *allocator,
+    Dynamic_Array<UI_Layer>       *layers,
+    UI_Theme                       theme,
+    PFN_titlebar_content_callback  titlebar_content_callback,
+    const char                    *logo_asset_name,
+    Platform_State                *plat_state,
+    void                          *global_client_state
+)
 {
     UI_State *state = push_struct(allocator, UI_State);
 
-    state->current_theme       = theme;
-    state->menu_callback       = menu_callback;
-    state->app_name            = C_STR(app_name);
-    state->is_initialized      = true;
-    state->platform            = plat_state;
-    state->layers              = layers;
-    state->global_client_state = global_client_state;
+    state->current_theme             = theme;
+    state->titlebar_content_callback = titlebar_content_callback;
+    state->logo_asset_name           = logo_asset_name;
+    state->is_initialized            = true;
+    state->platform                  = plat_state;
+    state->layers                    = layers;
+    state->global_client_state       = global_client_state;
 
     load_default_fonts(state);
 
@@ -212,7 +214,7 @@ ui_init(Arena                   *allocator,
 
     ui_themes_apply(state->current_theme, style);
 
-    ui_titlebar_setup(state, C_STR(app_name));
+    ui_titlebar_setup(state, logo_asset_name);
 
     // Register settings handler to persist OS window size in imgui.ini
     ImGuiSettingsHandler wh;

@@ -1,6 +1,7 @@
 #include "defines.hpp"
 #include "editor/editor_layer.hpp"
 #include "global_client_state.hpp"
+#include "titlebar/titlebar_content.hpp"
 
 #ifdef DEBUG_BUILD
 #    include "debug/debug_layer.hpp"
@@ -14,12 +15,9 @@
 #include <input/input.hpp>
 #include <input/input_codes.hpp>
 #include <memory/memory.hpp>
-#include <ui/icons.hpp>
-#include <ui/ui_widgets.hpp>
 
 // WARN: This is temporary, the renderer subsystem should not be
 // exposed outside the engine
-#include <platform/platform.hpp>
 #include <renderer/renderer_frontend.hpp>
 
 #if defined(PLATFORM_WINDOWS) && !defined(VOLTRUM_STATIC_LINKING)
@@ -112,65 +110,6 @@ client_shutdown(Client *client_state)
     CLIENT_INFO("Client shutdown complete.");
 }
 
-// Menu callback - called by core UI to draw menu items
-void
-client_menu_callback(void *global_client_state)
-{
-    auto g_state = (Global_Client_State *)global_client_state;
-
-    local_persist b8 dummy_signal = true;
-
-    if (ui::BeginMenu("FILE"))
-    {
-        if (ui::MenuItem(ICON_FA_RIGHT_FROM_BRACKET " Exit"))
-        {
-            platform_close_window();
-        }
-        ui::EndMenu();
-    }
-
-    if (ui::BeginMenu("VIEW"))
-    {
-        ui::MenuItem(ICON_FA_WINDOW_MAXIMIZE " Viewport");
-        ui::MenuItem(ICON_FA_SLIDERS " Properties");
-
-        ImGui::Separator();
-
-        ui::MenuItem(ICON_FA_BOLT " Signal Analyzer", nullptr, &dummy_signal);
-
-        ui::MenuItem(ICON_FA_CODE " ImGui Demo",
-                     nullptr,
-                     &g_state->is_imgui_demo_visible);
-
-        ui::MenuItem(ICON_FA_CHART_LINE " ImPlot Demo",
-                     nullptr,
-                     &g_state->is_implot_demo_visible);
-        ui::EndMenu();
-    }
-
-    if (ui::BeginMenu("HELP"))
-    {
-        ui::MenuItem(ICON_FA_CIRCLE_INFO " About");
-        ui::EndMenu();
-    }
-
-    if (ui::BeginMenu("TOOLS"))
-    {
-        ui::MenuItem(ICON_FA_GEARS " Explore");
-        ui::EndMenu();
-    }
-
-#ifdef DEBUG_BUILD
-    if (ui::BeginMenu("DEBUG"))
-    {
-        ui::MenuItem(ICON_FA_BUG " Memory Inspector",
-                     "F12",
-                     &g_state->is_debug_layer_visible);
-        ui::EndMenu();
-    }
-#endif
-}
-
 App_Config
 request_client_config()
 {
@@ -202,6 +141,11 @@ create_client(Client *client)
     auto g_state                    = (Global_Client_State *)client->state;
     g_state->is_imgui_demo_visible  = true;
     g_state->is_implot_demo_visible = true;
+    g_state->is_titlebar_menu_expanded = false;
+    g_state->titlebar_active_mode_index = 0;
+    g_state->titlebar_mode_anim_t = 0.0f;
+    g_state->titlebar_menu_overlay_t = 0.0f;
+    g_state->titlebar_menu_hover_open_t = 0.0f;
 
     auto editor_layer_state =
         push_struct(client->mode_arena, Editor_Layer_State);
@@ -217,8 +161,9 @@ create_client(Client *client)
     client->layers.add(create_debug_layer(debug_layer_state));
 #endif
 
-    // Set menu callback
-    client->menu_callback = client_menu_callback;
+    // Set titlebar content callback and logo asset
+    client->titlebar_content_callback = client_titlebar_content_callback;
+    client->logo_asset_name           = "voltrum_icon";
 
     return true;
 }

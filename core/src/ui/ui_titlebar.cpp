@@ -1,4 +1,5 @@
 #include "ui_titlebar.hpp"
+#include "icons.hpp"
 #include "renderer/renderer_frontend.hpp"
 #include "systems/texture_system.hpp"
 #include "ui_themes.hpp"
@@ -12,38 +13,47 @@
 #include <imgui_internal.h>
 
 void
-ui_titlebar_setup(UI_State *context, const char *app_name)
+ui_titlebar_setup(
+    UI_State   *context,
+    const char *logo_asset_name
+)
 {
     UI_Titlebar_State *state = &context->titlebar;
 
-    state->title_text = app_name;
+    state->app_icon_texture = texture_system_acquire(
+        logo_asset_name,
+        false,
+        true
+    );
 
-    state->app_icon_texture =
-        texture_system_acquire("voltrum_icon", false, true);
+    state->minimize_icon_texture = texture_system_acquire(
+        "window_minimize_icon",
+        false,
+        true
+    );
 
-    state->minimize_icon_texture =
-        texture_system_acquire("window_minimize_icon", false, true);
+    state->maximize_icon_texture = texture_system_acquire(
+        "window_maximize_icon",
+        false,
+        true
+    );
 
-    state->maximize_icon_texture =
-        texture_system_acquire("window_maximize_icon", false, true);
+    state->restore_icon_texture = texture_system_acquire(
+        "window_restore_icon",
+        false,
+        true
+    );
 
-    state->restore_icon_texture =
-        texture_system_acquire("window_restore_icon", false, true);
+    state->close_icon_texture = texture_system_acquire(
+        "window_close_icon",
+        false,
+        true
+    );
 
-    state->close_icon_texture =
-        texture_system_acquire("window_close_icon", false, true);
-
-    RUNTIME_ASSERT_MSG(state->app_icon_texture, "Failed to load app icon");
-
-    RUNTIME_ASSERT_MSG(state->minimize_icon_texture,
-                       "Failed to load minimize icon");
-
-    RUNTIME_ASSERT_MSG(state->maximize_icon_texture,
-                       "Failed to load maximize icon");
-
-    RUNTIME_ASSERT_MSG(state->restore_icon_texture,
-                       "Failed to load restore icon");
-
+    RUNTIME_ASSERT_MSG(state->app_icon_texture, "Failed to load logo icon");
+    RUNTIME_ASSERT_MSG(state->minimize_icon_texture, "Failed to load minimize icon");
+    RUNTIME_ASSERT_MSG(state->maximize_icon_texture, "Failed to load maximize icon");
+    RUNTIME_ASSERT_MSG(state->restore_icon_texture, "Failed to load restore icon");
     RUNTIME_ASSERT_MSG(state->close_icon_texture, "Failed to load close icon");
 
     CORE_INFO("Titlebar icons loaded successfully");
@@ -52,17 +62,18 @@ ui_titlebar_setup(UI_State *context, const char *app_name)
 void
 ui_titlebar_draw(UI_State *context)
 {
-    UI_Titlebar_State      *state = &context->titlebar;
-    const UI_Theme_Palette &palette =
-        ui_themes_get_palette(context->current_theme);
+    UI_Titlebar_State      *state   = &context->titlebar;
+    const UI_Theme_Palette &palette = ui_themes_get_palette(context->current_theme);
 
     ImGuiViewport *viewport    = ImGui::GetMainViewport();
     ImVec2         window_pos  = viewport->Pos;
     ImVec2         window_size = viewport->Size;
 
     state->titlebar_min = window_pos;
-    state->titlebar_max =
-        ImVec2(window_pos.x + window_size.x, window_pos.y + TITLEBAR_HEIGHT);
+    state->titlebar_max = ImVec2(
+        window_pos.x + window_size.x,
+        window_pos.y + TITLEBAR_HEIGHT
+    );
 
     ImGui::SetNextWindowPos(viewport->Pos);
     ImGui::SetNextWindowSize(ImVec2(window_size.x, TITLEBAR_HEIGHT));
@@ -77,212 +88,196 @@ ui_titlebar_draw(UI_State *context)
     ImDrawList *bg_draw_list   = ImGui::GetBackgroundDrawList(viewport);
     f32         titlebar_width = state->titlebar_max.x - state->titlebar_min.x;
 
-    bg_draw_list->AddRectFilled(state->titlebar_min,
-                                state->titlebar_max,
-                                palette.titlebar);
+    bg_draw_list->AddRectFilled(
+        state->titlebar_min,
+        state->titlebar_max,
+        palette.titlebar
+    );
 
+    // Gradient on left side
     f32    gradient_width = titlebar_width * 0.25f;
     ImVec2 gradient_min   = state->titlebar_min;
-    ImVec2 gradient_max =
-        ImVec2(state->titlebar_min.x + gradient_width, state->titlebar_max.y);
+    ImVec2 gradient_max   = ImVec2(
+        state->titlebar_min.x + gradient_width,
+        state->titlebar_max.y
+    );
 
-    bg_draw_list->AddRectFilledMultiColor(gradient_min,
-                                          gradient_max,
-                                          palette.titlebar_gradient_start,
-                                          palette.titlebar_gradient_end,
-                                          palette.titlebar_gradient_end,
-                                          palette.titlebar_gradient_start);
+    bg_draw_list->AddRectFilledMultiColor(
+        gradient_min,
+        gradient_max,
+        palette.titlebar_gradient_start,
+        palette.titlebar_gradient_end,
+        palette.titlebar_gradient_end,
+        palette.titlebar_gradient_start
+    );
 
-    const f32 top_padding = 4.0f;
+    // Logo
+    const f32 logo_margin = 4.0f;
     f32       logo_size   = 50.0f * UI_PLATFORM_SCALE;
-    f32       logo_margin = 4.0f;
-    ImVec2    logo_pos    = ImVec2(state->titlebar_min.x + logo_margin,
-                             state->titlebar_min.y + top_padding);
+    f32       logo_y      = state->titlebar_min.y + (TITLEBAR_HEIGHT - logo_size) * 0.5f;
+    ImVec2    logo_pos    = ImVec2(
+        state->titlebar_min.x + logo_margin,
+        logo_y
+    );
 
-    ImTextureID app_icon_id =
-        (ImTextureID)renderer_get_texture_draw_data(state->app_icon_texture);
+    ImTextureID app_icon_id = (ImTextureID)renderer_get_texture_draw_data(
+        state->app_icon_texture
+    );
     bg_draw_list->AddImage(
         app_icon_id,
         logo_pos,
         ImVec2(logo_pos.x + logo_size, logo_pos.y + logo_size),
         ImVec2(0, 1),
         ImVec2(1, 0),
-        IM_COL32_WHITE);
+        IM_COL32_WHITE
+    );
 
     if (ImGui::Begin("##CustomTitlebar", nullptr, flags))
     {
         ImGui::GetCurrentWindow()->DockNode = nullptr;
         ImDrawList *draw_list               = ImGui::GetWindowDrawList();
 
-        // Menu bar
-        {
-            f32 menu_x = logo_margin + logo_size + 8.0f;
-            f32 menu_y = top_padding;
-            ImGui::SetCursorPos(ImVec2(menu_x, menu_y));
+        // Window controls as a compact cluster with custom vector icons.
+        f32 button_size     = 30.0f * UI_PLATFORM_SCALE;
+        f32 button_spacing  = 2.0f * UI_PLATFORM_SCALE;
+        f32 button_rounding = 7.0f * UI_PLATFORM_SCALE;
+        f32 right_margin    = 10.0f * UI_PLATFORM_SCALE;
+        f32 cluster_padding = 2.0f * UI_PLATFORM_SCALE;
+        f32 cluster_rounding = 10.0f * UI_PLATFORM_SCALE;
+        f32 stroke          = 1.6f * UI_PLATFORM_SCALE;
 
-            ImVec2       menu_start = ImGui::GetCursorScreenPos();
-            ImGuiWindow *window     = ImGui::GetCurrentWindow();
-            const ImVec2 padding    = window->WindowPadding;
+        f32 cluster_width =
+            button_size * 3.0f + button_spacing * 2.0f + cluster_padding * 2.0f;
+        f32 cluster_height = button_size + cluster_padding * 2.0f;
 
-            // Setup menubar state (matching Walnut's BeginMenubar)
-            ImGui::BeginGroup();
-            ImGui::PushID("##menubar");
+        ImVec2 cluster_min = ImVec2(
+            state->titlebar_max.x - right_margin - cluster_width,
+            state->titlebar_min.y + (TITLEBAR_HEIGHT - cluster_height) * 0.5f
+        );
+        ImVec2 cluster_max = ImVec2(
+            cluster_min.x + cluster_width,
+            cluster_min.y + cluster_height
+        );
 
-            // Calculate bar rect and clip rect
-            ImRect bar_rect(
-                menu_start,
-                ImVec2(menu_start.x + window_size.x,
-                       menu_start.y + ImGui::GetFrameHeightWithSpacing()));
-            ImRect clip_rect(IM_ROUND(bar_rect.Min.x),
-                             IM_ROUND(bar_rect.Min.y),
-                             IM_ROUND(bar_rect.Max.x),
-                             IM_ROUND(bar_rect.Max.y));
-            clip_rect.ClipWith(window->OuterRectClipped);
-            ImGui::PushClipRect(clip_rect.Min, clip_rect.Max, false);
-
-            window->DC.CursorPos = window->DC.CursorMaxPos = menu_start;
-            window->DC.LayoutType       = ImGuiLayoutType_Horizontal;
-            window->DC.NavLayerCurrent  = ImGuiNavLayer_Menu;
-            window->DC.MenuBarAppending = true;
-            ImGui::AlignTextToFramePadding();
-
-            if (context->menu_callback)
-            {
-                // Push smaller horizontal padding for menu items
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding,
-                                    ImVec2(5.0f, 5.0f));
-                context->menu_callback(context->global_client_state);
-                ImGui::PopStyleVar();
-            }
-
-            // Track menu bar end position for hover detection
-            f32 menu_bar_end_x = window->DC.CursorPos.x;
-
-            // Cleanup menubar state (matching Walnut's EndMenubar)
-            ImGui::PopClipRect();
-            ImGui::PopID();
-            window->DC.MenuBarOffset.x = window->DC.CursorPos.x - window->Pos.x;
-            GImGui->GroupStack.back().EmitItem = false;
-            ImGui::EndGroup();
-            window->DC.LayoutType       = ImGuiLayoutType_Vertical;
-            window->DC.NavLayerCurrent  = ImGuiNavLayer_Main;
-            window->DC.MenuBarAppending = false;
-
-            // Check if menu is hovered for titlebar drag exclusion
-            ImVec2 mouse_pos = ImGui::GetMousePos();
-            state->is_menu_hovered =
-                mouse_pos.x >= menu_start.x && mouse_pos.x <= menu_bar_end_x &&
-                mouse_pos.y >= menu_start.y &&
-                mouse_pos.y <=
-                    menu_start.y + ImGui::GetFrameHeightWithSpacing();
-
-            // Close menu popups when clicking outside the menu area
-            if (ImGui::IsMouseClicked(0) && !state->is_menu_hovered &&
-                !ImGui::IsAnyItemHovered())
-            {
-                // Close any open popups by focusing the main window
-                ImGui::FocusWindow(window);
-            }
-        }
-
-        if (state->title_text)
-        {
-            ImVec2 text_size = ImGui::CalcTextSize(state->title_text);
-            f32    text_x =
-                state->titlebar_min.x + (titlebar_width - text_size.x) * 0.5f;
-            f32    text_y   = state->titlebar_min.y + top_padding;
-            ImVec2 text_pos = ImVec2(text_x, text_y);
-            draw_list->AddText(text_pos, palette.text, state->title_text);
-        }
-
-        f32 button_size    = 26.0f * UI_PLATFORM_SCALE;
-        f32 button_spacing = 2.0f;
-        f32 right_margin   = 4.0f;
-
-        f32 current_x = state->titlebar_max.x - right_margin;
-
-        current_x -= button_size;
-        ImVec2 close_pos =
-            ImVec2(current_x, state->titlebar_min.y + top_padding);
-        ImGui::SetCursorScreenPos(close_pos);
-        ImGui::PushID("close");
-        b8 close_clicked =
-            ImGui::InvisibleButton("##close_btn",
-                                   ImVec2(button_size, button_size));
-        u32 close_color = palette.titlebar;
-        if (ImGui::IsItemActive())
-        {
-            close_color = palette.highlight;
-        }
-        else if (ImGui::IsItemHovered())
-        {
-            close_color = palette.button_hovered;
-        }
         draw_list->AddRectFilled(
-            close_pos,
-            ImVec2(close_pos.x + button_size, close_pos.y + button_size),
-            close_color);
+            cluster_min,
+            cluster_max,
+            IM_COL32(255, 255, 255, 14),
+            cluster_rounding
+        );
+        draw_list->AddRect(
+            cluster_min,
+            cluster_max,
+            IM_COL32(255, 255, 255, 26),
+            cluster_rounding
+        );
 
-        ImTextureID close_icon_id = (ImTextureID)renderer_get_texture_draw_data(
-            state->close_icon_texture);
-        f32    icon_size = button_size * 0.6f;
-        ImVec2 icon_pos =
-            ImVec2(close_pos.x + (button_size - icon_size) * 0.5f,
-                   close_pos.y + (button_size - icon_size) * 0.5f);
-        u32 icon_color = ImGui::IsItemHovered() ? IM_COL32_WHITE : palette.text;
-        draw_list->AddImage(
-            close_icon_id,
-            icon_pos,
-            ImVec2(icon_pos.x + icon_size, icon_pos.y + icon_size),
-            ImVec2(0, 1),
-            ImVec2(1, 0),
-            icon_color);
-        if (close_clicked)
+        // Visual separation between titlebar content and control cluster.
+        f32 separator_x = cluster_min.x - 8.0f * UI_PLATFORM_SCALE;
+        draw_list->AddLine(
+            ImVec2(separator_x, state->titlebar_min.y + 11.0f * UI_PLATFORM_SCALE),
+            ImVec2(separator_x, state->titlebar_max.y - 11.0f * UI_PLATFORM_SCALE),
+            IM_COL32(255, 255, 255, 22),
+            1.0f
+        );
+
+        f32 button_y = cluster_min.y + cluster_padding;
+        ImVec2 min_pos = ImVec2(cluster_min.x + cluster_padding, button_y);
+        ImVec2 max_pos = ImVec2(min_pos.x + button_size + button_spacing, button_y);
+        ImVec2 close_pos = ImVec2(max_pos.x + button_size + button_spacing, button_y);
+
+        const u32 neutral_hover_bg  = IM_COL32(255, 255, 255, 26);
+        const u32 neutral_active_bg = IM_COL32(255, 255, 255, 42);
+        // Catppuccin-friendly red family for close button (idle/hover/active).
+        const u32 close_idle_bg   = IM_COL32(231, 130, 132, 190);
+        const u32 close_hover_bg  = IM_COL32(243, 139, 168, 255);
+        const u32 close_active_bg = IM_COL32(214, 110, 130, 255);
+
+        // Minimize button
+        ImGui::SetCursorScreenPos(min_pos);
+        ImGui::PushID("minimize");
+        b8 min_clicked = ImGui::InvisibleButton(
+            "##min_btn",
+            ImVec2(button_size, button_size)
+        );
+        b8 min_hovered = ImGui::IsItemHovered();
+        b8 min_active  = ImGui::IsItemActive();
+        if (min_hovered || min_active)
         {
-            platform_close_window();
+            draw_list->AddRectFilled(
+                min_pos,
+                ImVec2(min_pos.x + button_size, min_pos.y + button_size),
+                min_active ? neutral_active_bg : neutral_hover_bg,
+                button_rounding
+            );
+        }
+        {
+            u32    icon_col = min_hovered ? palette.text_brighter : palette.text;
+            ImVec2 c        = ImVec2(
+                min_pos.x + button_size * 0.5f,
+                min_pos.y + button_size * 0.5f + 3.0f * UI_PLATFORM_SCALE
+            );
+            f32 half = 5.0f * UI_PLATFORM_SCALE;
+            draw_list->AddLine(
+                ImVec2(c.x - half, c.y),
+                ImVec2(c.x + half, c.y),
+                icon_col,
+                stroke
+            );
+        }
+        if (min_clicked)
+        {
+            platform_minimize_window(context->platform);
         }
         ImGui::PopID();
 
-        current_x -= button_spacing;
-        current_x -= button_size;
-        b8       is_maximized = platform_is_window_maximized(context->platform);
-        Texture *max_icon     = is_maximized ? state->restore_icon_texture
-                                             : state->maximize_icon_texture;
-        ImVec2 max_pos = ImVec2(current_x, state->titlebar_min.y + top_padding);
+        // Maximize/Restore button
+        b8 is_maximized = platform_is_window_maximized(context->platform);
         ImGui::SetCursorScreenPos(max_pos);
         ImGui::PushID("maximize");
-        b8 max_clicked =
-            ImGui::InvisibleButton("##max_btn",
-                                   ImVec2(button_size, button_size));
-        u32 max_color = palette.titlebar;
-        if (ImGui::IsItemActive())
+        b8 max_clicked = ImGui::InvisibleButton(
+            "##max_btn",
+            ImVec2(button_size, button_size)
+        );
+        b8 max_hovered = ImGui::IsItemHovered();
+        b8 max_active  = ImGui::IsItemActive();
+        if (max_hovered || max_active)
         {
-            max_color = palette.highlight;
+            draw_list->AddRectFilled(
+                max_pos,
+                ImVec2(max_pos.x + button_size, max_pos.y + button_size),
+                max_active ? neutral_active_bg : neutral_hover_bg,
+                button_rounding
+            );
         }
-        else if (ImGui::IsItemHovered())
         {
-            max_color = palette.button_hovered;
+            u32    icon_col = max_hovered ? palette.text_brighter : palette.text;
+            ImVec2 c        = ImVec2(
+                max_pos.x + button_size * 0.5f,
+                max_pos.y + button_size * 0.5f
+            );
+            f32 half = 4.8f * UI_PLATFORM_SCALE;
+            if (is_maximized)
+            {
+                ImVec2 back_min = ImVec2(c.x - half + 2.0f, c.y - half - 2.0f);
+                ImVec2 back_max = ImVec2(c.x + half + 2.0f, c.y + half - 2.0f);
+                ImVec2 front_min = ImVec2(c.x - half - 2.0f, c.y - half + 2.0f);
+                ImVec2 front_max = ImVec2(c.x + half - 2.0f, c.y + half + 2.0f);
+                draw_list->AddRect(back_min, back_max, icon_col, 2.0f, 0, stroke);
+                draw_list->AddRect(front_min, front_max, icon_col, 2.0f, 0, stroke);
+            }
+            else
+            {
+                draw_list->AddRect(
+                    ImVec2(c.x - half, c.y - half),
+                    ImVec2(c.x + half, c.y + half),
+                    icon_col,
+                    2.0f,
+                    0,
+                    stroke
+                );
+            }
         }
-        draw_list->AddRectFilled(
-            max_pos,
-            ImVec2(max_pos.x + button_size, max_pos.y + button_size),
-            max_color);
-
-        ImTextureID max_icon_id =
-            (ImTextureID)renderer_get_texture_draw_data(max_icon);
-        f32    max_icon_size = button_size * 0.6f;
-        ImVec2 max_icon_pos =
-            ImVec2(max_pos.x + (button_size - max_icon_size) * 0.5f,
-                   max_pos.y + (button_size - max_icon_size) * 0.5f);
-        u32 max_icon_color =
-            ImGui::IsItemHovered() ? IM_COL32_WHITE : palette.text;
-        draw_list->AddImage(max_icon_id,
-                            max_icon_pos,
-                            ImVec2(max_icon_pos.x + max_icon_size,
-                                   max_icon_pos.y + max_icon_size),
-                            ImVec2(0, 1),
-                            ImVec2(1, 0),
-                            max_icon_color);
         if (max_clicked)
         {
             if (is_maximized)
@@ -296,68 +291,101 @@ ui_titlebar_draw(UI_State *context)
         }
         ImGui::PopID();
 
-        current_x -= button_spacing;
-        current_x -= button_size;
-        ImVec2 min_pos = ImVec2(current_x, state->titlebar_min.y + top_padding);
-        ImGui::SetCursorScreenPos(min_pos);
-        ImGui::PushID("minimize");
-        b8 min_clicked =
-            ImGui::InvisibleButton("##min_btn",
-                                   ImVec2(button_size, button_size));
-        u32 min_color = palette.titlebar;
-        if (ImGui::IsItemActive())
-        {
-            min_color = palette.highlight;
-        }
-        else if (ImGui::IsItemHovered())
-        {
-            min_color = palette.button_hovered;
-        }
+        // Close button
+        ImGui::SetCursorScreenPos(close_pos);
+        ImGui::PushID("close");
+        b8 close_clicked = ImGui::InvisibleButton(
+            "##close_btn",
+            ImVec2(button_size, button_size)
+        );
+        b8 close_hovered = ImGui::IsItemHovered();
+        b8 close_active  = ImGui::IsItemActive();
+        u32 close_bg = close_idle_bg;
+        if (close_hovered)
+            close_bg = close_hover_bg;
+        if (close_active)
+            close_bg = close_active_bg;
         draw_list->AddRectFilled(
-            min_pos,
-            ImVec2(min_pos.x + button_size, min_pos.y + button_size),
-            min_color);
-
-        ImTextureID min_icon_id = (ImTextureID)renderer_get_texture_draw_data(
-            state->minimize_icon_texture);
-        f32    min_icon_width  = button_size * 0.6f;
-        f32    min_icon_height = button_size * 0.15f;
-        ImVec2 min_icon_pos =
-            ImVec2(min_pos.x + (button_size - min_icon_width) * 0.5f,
-                   min_pos.y + button_size * 0.7f);
-        u32 min_icon_color =
-            ImGui::IsItemHovered() ? IM_COL32_WHITE : palette.text;
-        draw_list->AddImage(min_icon_id,
-                            min_icon_pos,
-                            ImVec2(min_icon_pos.x + min_icon_width,
-                                   min_icon_pos.y + min_icon_height),
-                            ImVec2(0, 1),
-                            ImVec2(1, 0),
-                            min_icon_color);
-        if (min_clicked)
+            close_pos,
+            ImVec2(close_pos.x + button_size, close_pos.y + button_size),
+            close_bg,
+            button_rounding
+        );
         {
-            platform_minimize_window(context->platform);
+            u32    icon_col = (close_hovered || close_active) ? IM_COL32_WHITE : palette.text;
+            ImVec2 c        = ImVec2(
+                close_pos.x + button_size * 0.5f,
+                close_pos.y + button_size * 0.5f
+            );
+            f32 half = 4.6f * UI_PLATFORM_SCALE;
+            draw_list->AddLine(
+                ImVec2(c.x - half, c.y - half),
+                ImVec2(c.x + half, c.y + half),
+                icon_col,
+                stroke
+            );
+            draw_list->AddLine(
+                ImVec2(c.x - half, c.y + half),
+                ImVec2(c.x + half, c.y - half),
+                icon_col,
+                stroke
+            );
+        }
+        if (close_clicked)
+        {
+            platform_close_window();
         }
         ImGui::PopID();
 
+        // Store button area for SDL hit test exclusion
+        state->button_area_min = min_pos;
+        state->button_area_max = ImVec2(
+            close_pos.x + button_size,
+            close_pos.y + button_size
+        );
+
+        f32 scale = context->platform->main_scale;
+        context->platform->button_area_min_x = state->button_area_min.x * scale;
+        context->platform->button_area_max_x = state->button_area_max.x * scale;
+        context->platform->button_area_min_y = state->button_area_min.y * scale;
+        context->platform->button_area_max_y = state->button_area_max.y * scale;
+
+        // Compute content bounds for client callback
+        f32 content_start_x = logo_margin + logo_size + 8.0f;
+        f32 content_end_x   = cluster_min.x - 10.0f * UI_PLATFORM_SCALE;
+
+        state->content_bounds.x      = state->titlebar_min.x + content_start_x;
+        state->content_bounds.y      = state->titlebar_min.y;
+        state->content_bounds.width  = content_end_x - content_start_x;
+        state->content_bounds.height = TITLEBAR_HEIGHT;
+
+        // Call client titlebar content callback
+        if (context->titlebar_content_callback)
+        {
+            context->titlebar_content_callback(
+                context->global_client_state,
+                state->content_bounds,
+                palette
+            );
+        }
+
+        // Update menu hover state from content bounds
+        ImVec2 mouse_pos       = ImGui::GetMousePos();
+        state->is_menu_hovered =
+            mouse_pos.x >= state->content_bounds.x &&
+            mouse_pos.x <= state->content_bounds.x + state->content_bounds.width &&
+            mouse_pos.y >= state->content_bounds.y &&
+            mouse_pos.y <= state->content_bounds.y + ImGui::GetFrameHeightWithSpacing();
+
         // Compute titlebar hover state for window dragging
-        // Titlebar is draggable when mouse is over it but NOT over interactive
-        // elements
-        ImVec2 mouse_pos   = ImGui::GetMousePos();
-        b8     in_titlebar = mouse_pos.x >= state->titlebar_min.x &&
+        b8 in_titlebar = mouse_pos.x >= state->titlebar_min.x &&
                          mouse_pos.x <= state->titlebar_max.x &&
                          mouse_pos.y >= state->titlebar_min.y &&
                          mouse_pos.y <= state->titlebar_max.y;
-        b8 any_item_hovered = ImGui::IsAnyItemHovered();
-        b8 new_hover_state  = in_titlebar && !any_item_hovered;
+        b8 any_item_hovered    = ImGui::IsAnyItemHovered();
+        state->is_titlebar_hovered = in_titlebar && !any_item_hovered;
 
-        if (new_hover_state != state->is_titlebar_hovered)
-        {
-            state->is_titlebar_hovered = new_hover_state;
-        }
-
-        // Block OS-level titlebar drag when an ImGui window (e.g. a floating
-        // window) overlaps the titlebar region
+        // Block OS-level titlebar drag when an ImGui window overlaps
         ImGuiWindow *hovered_window  = GImGui->HoveredWindow;
         ImGuiWindow *titlebar_window = ImGui::GetCurrentWindow();
         b8 imgui_blocks_drag = in_titlebar && hovered_window != nullptr &&

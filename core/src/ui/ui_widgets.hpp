@@ -1,6 +1,7 @@
 #pragma once
 
 #include "defines.hpp"
+#include "ui_themes.hpp"
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
@@ -9,6 +10,111 @@
 // Custom menu widgets with rounded corners
 
 namespace ui {
+
+    inline ImU32 WithAlpha(ImU32 color, f32 alpha_scale) {
+        ImVec4 c = ImGui::ColorConvertU32ToFloat4(color);
+        c.w = ImClamp(c.w * alpha_scale, 0.0f, 1.0f);
+        return ImGui::ColorConvertFloat4ToU32(c);
+    }
+
+    inline ImU32 BlendColor(ImU32 a, ImU32 b, f32 t) {
+        ImVec4 ca = ImGui::ColorConvertU32ToFloat4(a);
+        ImVec4 cb = ImGui::ColorConvertU32ToFloat4(b);
+        ImVec4 c = ImLerp(ca, cb, ImClamp(t, 0.0f, 1.0f));
+        return ImGui::ColorConvertFloat4ToU32(c);
+    }
+
+    struct GlassStyle {
+        ImU32 fill_idle;
+        ImU32 fill_hover;
+        ImU32 fill_active;
+        ImU32 border;
+        ImU32 text_idle;
+        ImU32 text_hover;
+        ImU32 accent;
+        f32 rounding;
+    };
+
+    inline GlassStyle MakeGlassStyle(
+        const UI_Theme_Palette& palette,
+        f32 accent_mix = 0.22f) {
+        const ImGuiStyle& style = ImGui::GetStyle();
+
+        ImU32 accent_tint = WithAlpha(palette.accent, 0.30f);
+        ImU32 base_fill = WithAlpha(palette.background_popup, 0.78f);
+
+        GlassStyle s = {};
+        s.fill_idle = base_fill;
+        s.fill_hover = BlendColor(base_fill, accent_tint, accent_mix);
+        s.fill_active = BlendColor(base_fill, accent_tint, accent_mix + 0.18f);
+        s.border = WithAlpha(palette.selection_muted, 0.72f);
+        s.text_idle = palette.text;
+        s.text_hover = palette.text_brighter;
+        s.accent = WithAlpha(palette.accent, 0.45f);
+        s.rounding = ImMax(4.0f, style.FrameRounding);
+        return s;
+    }
+
+    inline void GlassSurface(
+        ImDrawList* draw_list,
+        const ImVec2& min,
+        const ImVec2& max,
+        const GlassStyle& style,
+        ImU32 fill_override = 0,
+        ImU32 border_override = 0,
+        bool draw_accent = true) {
+        ImU32 fill = (fill_override != 0) ? fill_override : style.fill_idle;
+        ImU32 border = (border_override != 0) ? border_override : style.border;
+        draw_list->AddRectFilled(min, max, fill, style.rounding);
+        draw_list->AddRect(min, max, border, style.rounding);
+
+        if (draw_accent) {
+            draw_list->AddLine(
+                ImVec2(min.x + 2.0f, min.y + 1.0f),
+                ImVec2(max.x - 2.0f, min.y + 1.0f),
+                style.accent,
+                1.0f);
+        }
+    }
+
+    inline bool GlassIconButton(
+        const char* id,
+        const char* icon,
+        const char* tooltip,
+        ImDrawList* draw_list,
+        const ImVec2& min,
+        const ImVec2& size,
+        const GlassStyle& style,
+        bool draw_accent = true) {
+        ImGui::SetCursorScreenPos(min);
+        bool clicked = ImGui::InvisibleButton(id, size);
+        bool hovered = ImGui::IsItemHovered();
+        bool active = ImGui::IsItemActive();
+
+        ImU32 fill = style.fill_idle;
+        if (hovered)
+            fill = style.fill_hover;
+        if (active)
+            fill = style.fill_active;
+
+        ImVec2 max(min.x + size.x, min.y + size.y);
+        GlassSurface(draw_list, min, max, style, fill, 0, draw_accent);
+
+        ImVec2 text_size = ImGui::CalcTextSize(icon);
+        // FontAwesome glyph bounds can look top-clipped with strict centering.
+        const f32 text_y_bias = 1.0f;
+        draw_list->AddText(
+            ImVec2(
+                min.x + (size.x - text_size.x) * 0.5f,
+                min.y + (size.y - text_size.y) * 0.5f + text_y_bias),
+            hovered ? style.text_hover : style.text_idle,
+            icon);
+
+        if (hovered && tooltip)
+            ImGui::SetTooltip("%s", tooltip);
+
+        return clicked;
+    }
 
     // Rounded MenuItem with optional active-state checkmark at the end.
     // If is_active is provided, a checkmark is rendered on the right when
