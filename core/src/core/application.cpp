@@ -96,17 +96,6 @@ application_set_window_icon()
 }
 
 INTERNAL_FUNC b8
-app_escape_key_callback(const Event *event)
-{
-    if (event->key.key_code == Key_Code::ESCAPE && !event->key.repeat)
-    {
-        CORE_INFO("ESC key pressed - closing application");
-        engine_state->is_running = false;
-    }
-    return false; // Don't consume, let other callbacks process
-}
-
-INTERNAL_FUNC b8
 app_on_debug_event(const Event *event)
 {
     const char *names[3] = {"metal", "space_parallax", "yellow_track"};
@@ -129,7 +118,7 @@ app_on_debug_event(const Event *event)
                 texture_system_get_default_texture();
         }
 
-        texture_system_release(old_name);
+        // texture_system_release(old_name);
     }
 
     return true;
@@ -263,94 +252,24 @@ application_init(App_Config *config)
         geometry_system_init(engine_state->persistent_arena, geometry_config);
     ENSURE(engine_state->geometries);
 
-    // TODO: Temp
-    // internal_state->test_geometry = geometry_system_get_default();
-
-    // -- PLANE GEOMETRY (commented out) --
-    // Geometry_Config g_config = geometry_system_generate_plane_config(10.0f,
-    //     5.0f,
-    //     5,
-    //     5,
-    //     5.0f,
-    //     2.0f,
-    //     "test geometry",
-    //     "test_material");
-
-    // -- CUBE GEOMETRY (delete later) --
-    Geometry_Config g_config;
-    g_config.vertex_count = 24;
-    g_config.vertices =
-        push_array(engine_state->persistent_arena, vertex_3d, 24);
-    g_config.index_count = 36;
-    g_config.indices     = push_array(engine_state->persistent_arena, u32, 36);
-
-    g_config.name = const_str_from_cstr<GEOMETRY_NAME_MAX_LENGTH>("test_cube");
-    g_config.material_name =
-        const_str_from_cstr<MATERIAL_NAME_MAX_LENGTH>("test_material");
-
-    f32 s = 1.0f; // half-size
-
-    // Vertices wound CLOCKWISE when viewed from outside each face
-    // (CW = front face with negative viewport height in Vulkan)
-
-    // Front face (+Z) - looking from +Z toward origin
-    g_config.vertices[0] = {{-s, -s, s}, {0, 1}}; // bottom-left
-    g_config.vertices[1] = {{-s, s, s}, {0, 0}};  // top-left
-    g_config.vertices[2] = {{s, s, s}, {1, 0}};   // top-right
-    g_config.vertices[3] = {{s, -s, s}, {1, 1}};  // bottom-right
-
-    // Back face (-Z) - looking from -Z toward origin
-    g_config.vertices[4] = {{s, -s, -s}, {0, 1}};  // bottom-left
-    g_config.vertices[5] = {{s, s, -s}, {0, 0}};   // top-left
-    g_config.vertices[6] = {{-s, s, -s}, {1, 0}};  // top-right
-    g_config.vertices[7] = {{-s, -s, -s}, {1, 1}}; // bottom-right
-
-    // Top face (+Y) - looking from +Y toward origin
-    g_config.vertices[8]  = {{-s, s, s}, {0, 1}};  // bottom-left
-    g_config.vertices[9]  = {{-s, s, -s}, {0, 0}}; // top-left
-    g_config.vertices[10] = {{s, s, -s}, {1, 0}};  // top-right
-    g_config.vertices[11] = {{s, s, s}, {1, 1}};   // bottom-right
-
-    // Bottom face (-Y) - looking from -Y toward origin
-    g_config.vertices[12] = {{-s, -s, -s}, {0, 1}}; // bottom-left
-    g_config.vertices[13] = {{-s, -s, s}, {0, 0}};  // top-left
-    g_config.vertices[14] = {{s, -s, s}, {1, 0}};   // top-right
-    g_config.vertices[15] = {{s, -s, -s}, {1, 1}};  // bottom-right
-
-    // Right face (+X) - looking from +X toward origin
-    g_config.vertices[16] = {{s, -s, s}, {0, 1}};  // bottom-left
-    g_config.vertices[17] = {{s, s, s}, {0, 0}};   // top-left
-    g_config.vertices[18] = {{s, s, -s}, {1, 0}};  // top-right
-    g_config.vertices[19] = {{s, -s, -s}, {1, 1}}; // bottom-right
-
-    // Left face (-X) - looking from -X toward origin
-    g_config.vertices[20] = {{-s, -s, -s}, {0, 1}}; // bottom-left
-    g_config.vertices[21] = {{-s, s, -s}, {0, 0}};  // top-left
-    g_config.vertices[22] = {{-s, s, s}, {1, 0}};   // top-right
-    g_config.vertices[23] = {{-s, -s, s}, {1, 1}};  // bottom-right
-
-    // Indices: two triangles per face (0,1,2) and (0,2,3)
-    u32 base_idx[] = {0, 1, 2, 0, 2, 3};
-    for (u32 f = 0; f < 6; ++f)
-    {
-        for (u32 i = 0; i < 6; ++i)
-        {
-            g_config.indices[f * 6 + i] = f * 4 + base_idx[i];
-        }
-    }
+    // TODO: Temp - test plane geometry
+    Geometry_Config g_config = geometry_system_generate_plane_config(
+        engine_state->persistent_arena,
+        2.0f,
+        2.0f,
+        1,
+        1,
+        1.0f,
+        1.0f,
+        "test_plane",
+        "test_material");
     engine_state->cube_rotation = 0.0f;
-    // -- END CUBE GEOMETRY --
 
     engine_state->test_geometry =
         geometry_system_acquire_by_config(g_config, true);
 
     // Vertices and indices are arena-allocated and will be freed with the arena
     // TODO: Temp
-
-    // Register application ESC key handler with HIGH priority to always work
-    events_register_callback(Event_Type::KEY_PRESSED,
-                             app_escape_key_callback,
-                             Event_Priority::HIGH);
 
     events_register_callback(Event_Type::WINDOW_RESIZED,
                              app_on_resized_callback,
@@ -375,15 +294,13 @@ application_run()
         return;
     }
 
-    engine_state->ui = ui_init(
-        engine_state->persistent_arena,
-        &engine_state->client->layers,
-        UI_Theme::CATPPUCCIN,
-        engine_state->client->titlebar_content_callback,
-        engine_state->client->logo_asset_name,
-        engine_state->platform,
-        engine_state->client->state
-    );
+    engine_state->ui = ui_init(engine_state->persistent_arena,
+                               &engine_state->client->layers,
+                               engine_state->config.theme,
+                               engine_state->client->titlebar_content_callback,
+                               STR(engine_state->client->logo_asset_name),
+                               engine_state->platform,
+                               engine_state->client->state);
 
     ENSURE(engine_state->ui);
 
@@ -463,12 +380,12 @@ application_run()
             // TODO: temp - viewport geometry
             Geometry_Render_Data test_render;
             test_render.geometry = engine_state->test_geometry;
-            // Rotate cube over time
+            // Rotate plane around Z axis (2D rotation)
             engine_state->cube_rotation += delta_time;
             test_render.model =
-                mat4_euler_xyz(engine_state->cube_rotation,
-                               engine_state->cube_rotation * 0.7f,
-                               0.0f);
+                mat4_euler_xyz(0.0f,
+                               0.0f,
+                               engine_state->cube_rotation);
 
             packet->geometry_count = 1;
             packet->geometries     = &test_render;

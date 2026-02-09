@@ -11,7 +11,7 @@ VOLTRUM_API UI_State *ui_init(
     Dynamic_Array<UI_Layer>       *layers,
     UI_Theme                       theme,
     PFN_titlebar_content_callback  titlebar_content_callback,
-    const char                    *logo_asset_name,
+    String                         logo_asset_name,
     struct Platform_State         *plat_state,
     void                          *global_client_state
 );
@@ -23,3 +23,11 @@ VOLTRUM_API void ui_update_layers(UI_State             *state,
 
 VOLTRUM_API struct ImDrawData *ui_draw_layers(UI_State             *state,
                                               struct Frame_Context *frame_ctx);
+
+VOLTRUM_API void ui_set_theme(UI_Theme theme);
+
+VOLTRUM_API UI_Theme ui_get_current_theme();
+
+VOLTRUM_API void ui_set_theme_palette(const UI_Theme_Palette *palette);
+
+VOLTRUM_API void ui_get_theme_palette(UI_Theme_Palette *out_palette);

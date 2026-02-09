@@ -47,9 +47,9 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context *context,
     // Enable backface culling
     rasterizer_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
 
-    // Decides what is considered the front face of a triangle
-    // CW because negative viewport height flips winding
-    rasterizer_create_info.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    // Decides what is considered the front face of a triangle.
+    // We render with a negative viewport height, so keep mesh winding as CCW.
+    rasterizer_create_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
     // Disables depth bias. Depth bias is used to tweak depth values to avoid
     // z-fighting. typically for decals or shadow mapping

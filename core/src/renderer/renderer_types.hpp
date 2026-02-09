@@ -49,6 +49,8 @@ struct Renderer_Backend
     b8 (*finish_renderpass)(struct Frame_Context *frame_ctx, Renderpass_Type type);
 
     void (*draw_geometry)(Geometry_Render_Data data);
+    void (*draw_grid)(mat4 projection, mat4 view, vec4 grid_color, f32 grid_spacing);
+    void (*set_viewport_clear_color)(vec4 color);
     void (*draw_ui)(UI_Render_Data data);
 
     // Resource management

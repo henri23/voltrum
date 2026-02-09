@@ -116,16 +116,18 @@ events_unregister_callback(Event_Type event_type, PFN_event_callback callback)
 {
     ENSURE(state_ptr);
 
-    RUNTIME_ASSERT((u32)event_type >= (u32)Event_Type::MAX_EVENTS);
+    RUNTIME_ASSERT((u32)event_type < (u32)Event_Type::MAX_EVENTS);
 
-    Event_Listener *listeners = state_ptr->callback_buckets->listeners;
+    Event_Callback_Bucket *bucket =
+        &state_ptr->callback_buckets[(u32)event_type];
 
     for (u32 i = 0; i < DEFAULT_EVENT_CALLBACK_COUNT; ++i)
     {
-        if (listeners[i].callback == callback)
+        if (bucket->listeners[i].callback == callback)
         {
-            listeners[i].callback = nullptr;
-            listeners[i].listener = nullptr;
+            bucket->listeners[i].callback = nullptr;
+            bucket->listeners[i].listener = nullptr;
+            --bucket->count;
 
             CORE_DEBUG("Event callback unregistered for event type: %d",
                        (int)event_type);

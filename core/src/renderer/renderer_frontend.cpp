@@ -19,6 +19,9 @@ struct Renderer_System_State
 
     f32 near_clip;
     f32 far_clip;
+
+    vec4 grid_color;
+    f32  grid_spacing;
 };
 
 internal_var Renderer_System_State *state_ptr;
@@ -44,13 +47,16 @@ renderer_init(
 
     state->backend.initialize(allocator, platform, application_name);
 
-    state->projection = mat4_project_perspective(deg_to_rad(45.0f),
-                                                 1280 / 720.0f,
-                                                 state->near_clip,
-                                                 state->far_clip);
+    // Default orthographic projection until the editor sets its own
+    state->projection = mat4_project_orthographic(
+        -9.0f, 9.0f, -5.5f, 5.5f, -1.0f, 1.0f);
 
     // Default view to identity until the client provides a camera
     state->view = mat4_identity();
+
+    // Default grid color until set by theme
+    state->grid_color = vec4{0.5f, 0.5f, 0.5f, 0.7f};
+    state->grid_spacing = 1.0f;
 
     state_ptr = state;
 
@@ -81,6 +87,13 @@ renderer_draw_frame(Frame_Context *frame_ctx, Render_Context *render_ctx)
                 "Application shutting down...");
             return false;
         }
+
+        // Draw grid as background layer before scene geometry
+        state_ptr->backend.draw_grid(
+            state_ptr->projection,
+            state_ptr->view,
+            state_ptr->grid_color,
+            state_ptr->grid_spacing);
 
         state_ptr->backend.update_global_viewport_state(state_ptr->projection,
                                                         state_ptr->view,
@@ -145,6 +158,34 @@ void
 renderer_set_view(mat4 view)
 {
     state_ptr->view = view;
+}
+
+void
+renderer_set_projection(mat4 projection)
+{
+    state_ptr->projection = projection;
+}
+
+void
+renderer_set_viewport_clear_color(vec4 color)
+{
+    state_ptr->backend.set_viewport_clear_color(color);
+}
+
+void
+renderer_set_grid_color(vec4 color)
+{
+    state_ptr->grid_color = color;
+}
+
+void
+renderer_set_grid_spacing(f32 spacing)
+{
+    if (spacing <= 0.0f)
+    {
+        spacing = 0.000001f;
+    }
+    state_ptr->grid_spacing = spacing;
 }
 
 void
@@ -221,16 +262,6 @@ void
 renderer_resize_viewport(u32 width, u32 height)
 {
     state_ptr->backend.resize_viewport(width, height);
-
-    // Update projection matrix for new aspect ratio
-    if (height > 0)
-    {
-        f32 aspect            = width / (f32)height;
-        state_ptr->projection = mat4_project_perspective(deg_to_rad(45.0f),
-                                                         aspect,
-                                                         state_ptr->near_clip,
-                                                         state_ptr->far_clip);
-    }
 }
 
 void

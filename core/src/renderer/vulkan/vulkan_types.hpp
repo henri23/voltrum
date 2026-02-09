@@ -10,8 +10,6 @@
 
 #define VK_CHECK(expr) RUNTIME_ASSERT(expr == VK_SUCCESS);
 
-struct Platform_State;
-
 struct Vulkan_Buffer
 {
     u64                total_size;
@@ -262,6 +260,32 @@ struct Vulkan_Material_Shader_Pipeline
     Vulkan_Material_Shader_Global_Ubo global_ubo;
 };
 
+constexpr const u32 VULKAN_GRID_SHADER_STAGE_COUNT = 2;
+
+struct Vulkan_Grid_Shader_Global_Ubo
+{
+    mat4 projection;          // 64 bytes
+    mat4 inv_view;            // 64 bytes
+    vec4 grid_color;          // 16 bytes
+    f32  grid_spacing_world;  // world-space grid spacing
+    f32  point_size_px;       // point size in screen pixels
+    f32  zoom_px_per_world;   // pixels per world-space unit
+};
+
+struct Vulkan_Grid_Shader_Pipeline
+{
+    Vulkan_Shader_Stage stages[VULKAN_GRID_SHADER_STAGE_COUNT];
+    Vulkan_Pipeline     pipeline;
+
+    VkDescriptorPool      global_descriptor_pool;
+    VkDescriptorSetLayout global_descriptor_set_layout;
+    VkDescriptorSet       global_descriptor_sets[3];
+    Vulkan_Buffer         global_uniform_buffer;
+    u64                   global_ubo_stride;
+
+    Vulkan_Grid_Shader_Global_Ubo global_ubo;
+};
+
 constexpr const u32 VULKAN_IMGUI_SHADER_MAX_TEXTURE_COUNT = 1024;
 
 struct Vulkan_ImGui_Shader_Pipeline
@@ -290,7 +314,7 @@ struct Vulkan_Context
 {
     f32 frame_delta_time;
 
-    Platform_State *platform;
+    struct Platform_State *platform;
 
     VkInstance             instance;
     VkSurfaceKHR           surface;
@@ -310,6 +334,7 @@ struct Vulkan_Context
 
     // List of shaders
     Vulkan_Material_Shader_Pipeline material_shader;
+    Vulkan_Grid_Shader_Pipeline     grid_shader;
     Vulkan_ImGui_Shader_Pipeline    imgui_shader;
 
     Vulkan_Device device;

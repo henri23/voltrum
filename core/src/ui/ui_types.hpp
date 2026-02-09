@@ -3,27 +3,18 @@
 #include "data_structures/dynamic_array.hpp"
 #include "defines.hpp"
 
+#include "math/math_types.hpp"
 #include "ui_themes.hpp"
 
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui.h>
 #include <implot.h>
 
-// Content bounds for the client-provided titlebar content area
-struct Titlebar_Content_Bounds
-{
-    f32 x;      // Left edge of content area (after logo)
-    f32 y;      // Top of titlebar
-    f32 width;  // Available width (before window buttons)
-    f32 height; // Full titlebar height
-};
-
 // Callback type for titlebar content rendering
-using PFN_titlebar_content_callback = void (*)(
-    void                          *client_state,
-    const Titlebar_Content_Bounds &bounds,
-    const UI_Theme_Palette        &palette
-);
+using PFN_titlebar_content_callback = void (*)(void *client_state,
+                                               vec2  content_area_min,
+                                               vec2  content_area_max,
+                                               const UI_Theme_Palette &palette);
 
 enum class Font_Style : u8
 {
@@ -60,7 +51,8 @@ struct UI_Titlebar_State
     ImVec2 button_area_max;
 
     // Content area for client callback
-    Titlebar_Content_Bounds content_bounds;
+    vec2 content_area_min;
+    vec2 content_area_max;
 
     b8 is_titlebar_hovered;
     b8 is_menu_hovered;
@@ -96,8 +88,9 @@ struct UI_State
 {
     PFN_titlebar_content_callback titlebar_content_callback;
     UI_Theme                      current_theme;
-    const char                   *app_name;
-    const char                   *logo_asset_name;
+    UI_Theme_Palette              active_palette;
+    String                        app_name;
+    String                        logo_asset_name;
     b8                            is_initialized;
     ImFont                       *fonts[FONT_MAX_COUNT];
 
