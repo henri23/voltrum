@@ -7,6 +7,7 @@
 
 #include "core/asserts.hpp"
 #include "core/logger.hpp"
+#include "core/thread_context.hpp"
 
 #include "platform/platform.hpp"
 
@@ -27,9 +28,11 @@ ui_titlebar_setup(
 )
 {
     UI_Titlebar_State *state = &context->titlebar;
+    Scratch_Arena      scratch = scratch_begin(nullptr, 0);
+    String             logo_name_copy = string_copy(scratch.arena, logo_asset_name);
 
     state->app_icon_texture = texture_system_acquire(
-        C_STR(logo_asset_name),
+        logo_name_copy.buff ? logo_name_copy.buff : "",
         false,
         true
     );
@@ -64,6 +67,8 @@ ui_titlebar_setup(
     RUNTIME_ASSERT_MSG(state->restore_icon_texture, "Failed to load restore icon");
     RUNTIME_ASSERT_MSG(state->close_icon_texture, "Failed to load close icon");
 
+    scratch_end(scratch);
+
     CORE_INFO("Titlebar icons loaded successfully");
 }
 
@@ -71,7 +76,7 @@ void
 ui_titlebar_draw(UI_State *context)
 {
     UI_Titlebar_State      *state   = &context->titlebar;
-    const UI_Theme_Palette &palette = context->active_palette;
+    const UI_Theme_Palette *palette = &context->active_palette;
 
     ImGuiViewport *viewport    = ImGui::GetMainViewport();
     ImVec2         window_pos  = viewport->Pos;
@@ -99,7 +104,7 @@ ui_titlebar_draw(UI_State *context)
     bg_draw_list->AddRectFilled(
         state->titlebar_min,
         state->titlebar_max,
-        palette.titlebar
+        palette->titlebar
     );
 
     // Gradient on left side
@@ -113,10 +118,10 @@ ui_titlebar_draw(UI_State *context)
     bg_draw_list->AddRectFilledMultiColor(
         gradient_min,
         gradient_max,
-        palette.titlebar_gradient_start,
-        palette.titlebar_gradient_end,
-        palette.titlebar_gradient_end,
-        palette.titlebar_gradient_start
+        palette->titlebar_gradient_start,
+        palette->titlebar_gradient_end,
+        palette->titlebar_gradient_end,
+        palette->titlebar_gradient_start
     );
 
     // Logo
@@ -191,10 +196,10 @@ ui_titlebar_draw(UI_State *context)
         const u32 neutral_hover_bg  = IM_COL32(255, 255, 255, 26);
         const u32 neutral_active_bg = IM_COL32(255, 255, 255, 42);
         const u32 close_idle_bg   =
-            ui_color_with_alpha_scale(palette.component_primary, 0.76f);
-        const u32 close_hover_bg  = palette.component_primary;
+            ui_color_with_alpha_scale(palette->component_primary, 0.76f);
+        const u32 close_hover_bg  = palette->component_primary;
         const u32 close_active_bg =
-            ui_color_with_alpha_scale(palette.component_primary, 0.88f);
+            ui_color_with_alpha_scale(palette->component_primary, 0.88f);
 
         // Minimize button
         ImGui::SetCursorScreenPos(min_pos);
@@ -215,7 +220,7 @@ ui_titlebar_draw(UI_State *context)
             );
         }
         {
-            u32    icon_col = min_hovered ? palette.text_brighter : palette.text;
+            u32    icon_col = min_hovered ? palette->text_brighter : palette->text;
             ImVec2 c        = ImVec2(
                 min_pos.x + button_size * 0.5f,
                 min_pos.y + button_size * 0.5f + 3.0f * UI_PLATFORM_SCALE
@@ -254,7 +259,7 @@ ui_titlebar_draw(UI_State *context)
             );
         }
         {
-            u32    icon_col = max_hovered ? palette.text_brighter : palette.text;
+            u32    icon_col = max_hovered ? palette->text_brighter : palette->text;
             ImVec2 c        = ImVec2(
                 max_pos.x + button_size * 0.5f,
                 max_pos.y + button_size * 0.5f
@@ -315,7 +320,8 @@ ui_titlebar_draw(UI_State *context)
             button_rounding
         );
         {
-            u32    icon_col = (close_hovered || close_active) ? IM_COL32_WHITE : palette.text;
+            u32    icon_col =
+                (close_hovered || close_active) ? IM_COL32_WHITE : palette->text;
             ImVec2 c        = ImVec2(
                 close_pos.x + button_size * 0.5f,
                 close_pos.y + button_size * 0.5f

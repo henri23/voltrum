@@ -18,7 +18,7 @@ struct App_Config
 // Application structure - similar to Game struct in koala_engine
 struct Client
 {
-    Arena *mode_arena;
+    Arena *project_arena;
 
     // Lifecycle callbacks - client implements these
     b8 (*initialize)(Client *);

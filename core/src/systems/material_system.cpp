@@ -115,8 +115,10 @@ material_system_acquire(const char *name)
 Material *
 material_system_acquire_from_config(Material_Config config)
 {
-    if (str_match(config.name,
-                  str_from_cstr(DEFAULT_MATERIAL_NAME),
+    String config_name = STR(config.name);
+
+    if (string_match(config_name,
+                  STR(DEFAULT_MATERIAL_NAME),
                   String_Match_Flags::CASE_INSENSITIVE))
     {
         return &state_ptr->default_material;
@@ -125,20 +127,18 @@ material_system_acquire_from_config(Material_Config config)
     Material_Reference ref;
     Material          *material = nullptr;
 
-    if (state_ptr->material_registry.find(config.name, &ref))
+    if (state_ptr->material_registry.find(config_name, &ref))
     {
         CORE_DEBUG(
             "Material '%.*s' already present in the registry. Returning...",
-            (int)config.name.size,
-            (const char *)config.name.data);
+            (s32)(config_name).size, (config_name).buff ? (const char *)(config_name).buff : "");
         ref.reference_count++;
         material = &state_ptr->registered_materials[ref.handle];
     }
     else
     {
         CORE_DEBUG("Material '%.*s' not present in the registry. Loading...",
-                   (int)config.name.size,
-                   (const char *)config.name.data);
+                   (s32)(config_name).size, (config_name).buff ? (const char *)(config_name).buff : "");
 
         // Find the index for the material to be stored
         u32 index = 0;
@@ -166,9 +166,7 @@ material_system_acquire_from_config(Material_Config config)
         // Material not present so we need to load first
         if (!load_material(config, material))
         {
-            CORE_ERROR("Failed to load material '%.*s'",
-                       (int)config.name.size,
-                       (const char *)config.name.data);
+            CORE_ERROR("Failed to load material '%.*s'", (s32)(config_name).size, (config_name).buff ? (const char *)(config_name).buff : "");
             return nullptr;
         }
 
@@ -179,7 +177,7 @@ material_system_acquire_from_config(Material_Config config)
         ref.reference_count = 1;
     }
 
-    state_ptr->material_registry.add(config.name, &ref, true);
+    state_ptr->material_registry.add(config_name, &ref, true);
 
     return material;
 }
@@ -188,8 +186,8 @@ void
 material_system_release(const char *name)
 {
 
-    if (str_match(str_from_cstr(name),
-                  str_from_cstr(DEFAULT_MATERIAL_NAME),
+    if (string_match(STR(name),
+                  STR(DEFAULT_MATERIAL_NAME),
                   String_Match_Flags::CASE_INSENSITIVE))
     {
         CORE_WARN(
@@ -200,12 +198,12 @@ material_system_release(const char *name)
 
     Material_Reference ref;
 
-    if (state_ptr->material_registry.find(str_from_cstr(name), &ref))
+    if (state_ptr->material_registry.find(STR(name), &ref))
     {
         ref.reference_count--;
 
         char name_copy[MATERIAL_NAME_MAX_LENGTH];
-        u64  len = str_from_cstr(name).size;
+        u64  len = STR(name).size;
         memory_copy(name_copy, name, len);
         name_copy[len] = '\0';
 
@@ -221,7 +219,7 @@ material_system_release(const char *name)
             destroy_material(&state_ptr->registered_materials[ref.handle]);
             CORE_DEBUG("Resources of material destroyed from renderer");
 
-            if (!state_ptr->material_registry.remove(str_from_cstr(name_copy)))
+            if (!state_ptr->material_registry.remove(STR(name_copy)))
             {
                 CORE_FATAL("Error while removing material from registry");
             }
@@ -231,7 +229,7 @@ material_system_release(const char *name)
 
         // Update material reference with the new reference count
         state_ptr->material_registry.add(
-            str_from_cstr(name_copy), &ref, true);
+            STR(name_copy), &ref, true);
     }
     else
     {
@@ -247,8 +245,7 @@ create_default_material(Material_System_State *state)
 
     state->default_material.id         = INVALID_ID;
     state->default_material.generation = INVALID_ID;
-    state->default_material.name =
-        const_str_from_cstr<MATERIAL_NAME_MAX_LENGTH>(DEFAULT_MATERIAL_NAME);
+    string_set(state->default_material.name, DEFAULT_MATERIAL_NAME);
 
     state->default_material.diffuse_color    = vec4_one();
     state->default_material.diffuse_map.type = Texture_Type::MAP_DIFFUSE;
@@ -268,13 +265,12 @@ INTERNAL_FUNC void
 destroy_material(Material *material)
 {
     CORE_TRACE("Destroying material '%.*s'",
-               (int)material->name.size,
-               (const char *)material->name.data);
+               (int)STR(material->name).size,
+               material->name);
 
     if (material->diffuse_map.texture)
     {
-        texture_system_release(
-            (const char *)material->diffuse_map.texture->name.data);
+        texture_system_release(material->diffuse_map.texture->name);
     }
 
     renderer_destroy_material(material);
@@ -289,27 +285,25 @@ load_material(Material_Config config, Material *material)
 {
     memory_zero(material, sizeof(Material));
 
-    material->name = config.name;
+    string_set(material->name, config.name);
 
     material->diffuse_color = config.diffuse_color;
 
-    if (config.diffuse_map_name.size > 0)
+    String config_name        = STR(config.name);
+    String diffuse_map_name   = STR(config.diffuse_map_name);
+    if (diffuse_map_name.size > 0)
     {
 
         material->diffuse_map.type = Texture_Type::MAP_DIFFUSE;
-        material->diffuse_map.texture =
-            texture_system_acquire(
-                (const char *)config.diffuse_map_name.data);
+        material->diffuse_map.texture = texture_system_acquire(config.diffuse_map_name);
 
         if (!material->diffuse_map.texture)
         {
             CORE_WARN(
                 "Failed to load texture '%.*s' for material '%.*s', using "
                 "default.",
-                (int)config.diffuse_map_name.size,
-                (const char *)config.diffuse_map_name.data,
-                (int)config.name.size,
-                (const char *)config.name.data);
+                (s32)(diffuse_map_name).size, (diffuse_map_name).buff ? (const char *)(diffuse_map_name).buff : "",
+                (s32)(config_name).size, (config_name).buff ? (const char *)(config_name).buff : "");
 
             material->diffuse_map.texture =
                 texture_system_get_default_texture();
@@ -324,8 +318,7 @@ load_material(Material_Config config, Material *material)
     if (!renderer_create_material(material))
     {
         CORE_ERROR("Failed to acquire renderer resources for material '%.*s'",
-                   (int)config.name.size,
-                   (const char *)config.name.data);
+                   (s32)(config_name).size, (config_name).buff ? (const char *)(config_name).buff : "");
         return false;
     }
 

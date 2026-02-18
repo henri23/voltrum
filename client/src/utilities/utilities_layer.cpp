@@ -2,7 +2,6 @@
 
 #include "components/command_palette_component.hpp"
 #include "components/toolbar_component.hpp"
-#include "core/thread_context.hpp"
 #include "global_client_state.hpp"
 
 #include <core/frame_context.hpp>
@@ -40,16 +39,21 @@ lerp_color_u32(u32 from, u32 to, f32 t)
 }
 
 INTERNAL_FUNC UI_Theme_Palette
-lerp_palette(const UI_Theme_Palette &from, const UI_Theme_Palette &to, f32 t)
+lerp_palette(const UI_Theme_Palette *from, const UI_Theme_Palette *to, f32 t)
 {
+    if (!from || !to)
+    {
+        return {};
+    }
+
     static_assert(sizeof(UI_Theme_Palette) % sizeof(u32) == 0,
                   "UI_Theme_Palette must be u32-packed");
 
-    UI_Theme_Palette result      = from;
+    UI_Theme_Palette result      = *from;
     constexpr u32    color_count = sizeof(UI_Theme_Palette) / sizeof(u32);
 
-    const u32 *from_colors = (const u32 *)&from;
-    const u32 *to_colors   = (const u32 *)&to;
+    const u32 *from_colors = (const u32 *)from;
+    const u32 *to_colors   = (const u32 *)to;
     u32       *out_colors  = (u32 *)&result;
 
     for (u32 i = 0; i < color_count; ++i)
@@ -61,12 +65,17 @@ lerp_palette(const UI_Theme_Palette &from, const UI_Theme_Palette &to, f32 t)
 }
 
 INTERNAL_FUNC void
-apply_renderer_theme(const UI_Theme_Palette &palette)
+apply_renderer_theme(const UI_Theme_Palette *palette)
 {
-    ImVec4 clear = ImGui::ColorConvertU32ToFloat4(palette.clear_color);
+    if (!palette)
+    {
+        return;
+    }
+
+    ImVec4 clear = ImGui::ColorConvertU32ToFloat4(palette->clear_color);
     renderer_set_viewport_clear_color({clear.x, clear.y, clear.z, clear.w});
 
-    ImVec4 muted = ImGui::ColorConvertU32ToFloat4(palette.muted);
+    ImVec4 muted = ImGui::ColorConvertU32ToFloat4(palette->muted);
     renderer_set_grid_color({muted.x, muted.y, muted.z, 0.7f});
 }
 
@@ -117,8 +126,8 @@ update_theme_state(Global_Client_State *global_state, f32 delta_time)
 
         const f32 eased = ease_in_out_cubic(global_state->theme_transition_t);
         global_state->theme_palette =
-            lerp_palette(global_state->theme_transition_from,
-                         global_state->theme_transition_to,
+            lerp_palette(&global_state->theme_transition_from,
+                         &global_state->theme_transition_to,
                          eased);
 
         if (global_state->theme_transition_t >= 1.0f)
@@ -128,123 +137,25 @@ update_theme_state(Global_Client_State *global_state, f32 delta_time)
         }
     }
 
-    ui_set_theme_palette(&global_state->theme_palette);
-    apply_renderer_theme(global_state->theme_palette);
-}
-
-INTERNAL_FUNC void
-on_theme_command_execute(void *global_state, void *user_data)
-{
-    if (!global_state || !user_data)
-    {
-        return;
-    }
-
-    auto    *g_state              = (Global_Client_State *)global_state;
-    UI_Theme theme                = *(UI_Theme *)user_data;
-    g_state->requested_theme      = theme;
-    g_state->request_theme_change = true;
-}
-
-INTERNAL_FUNC String
-resolve_theme_command_description(Arena *arena,
-                                  void  *global_state,
-                                  void  *user_data,
-                                  String base_description)
-{
-    if (!arena || !global_state || !user_data)
-    {
-        return base_description;
-    }
-
-    auto    *g_state          = (Global_Client_State *)global_state;
-    UI_Theme theme            = *(UI_Theme *)user_data;
-    const b8 is_current_theme = theme == g_state->target_theme;
-
-    if (is_current_theme && g_state->is_theme_transitioning)
-    {
-        return str_fmt(arena, "%s  -  Applying...", C_STR(base_description));
-    }
-
-    if (is_current_theme)
-    {
-        return str_fmt(arena, "%s  -  Current", C_STR(base_description));
-    }
-
-    return base_description;
-}
-
-INTERNAL_FUNC void
-register_command_palette_entries(Command_Palette_State *command_palette_state)
-{
-    if (!command_palette_state)
-    {
-        return;
-    }
-
-    static UI_Theme registered_themes[(u32)UI_Theme::MAX_COUNT] = {};
-
-    static const String theme_selector_section_id =
-        STR_LIT("section.theme_selector");
-
-    command_palette_clear_registry(command_palette_state);
-
-    Command_Palette_Command_Definition section = {};
-    section.id                                 = theme_selector_section_id;
-    section.parent_id                          = str_zero();
-    section.label                              = STR_LIT("Theme Selector");
-    section.description = STR_LIT("Browse and apply the built-in themes");
-    section.keywords    = STR_LIT("themes colors style appearance");
-    section.on_execute  = nullptr;
-    section.resolve_description = nullptr;
-    section.user_data           = nullptr;
-    section.close_on_execute    = false;
-    command_palette_register(command_palette_state, &section);
-
-    Scratch_Arena scratch = scratch_begin(nullptr, 0);
-    for (u32 i = 0; i < (u32)UI_Theme::MAX_COUNT; ++i)
-    {
-        UI_Theme theme               = (UI_Theme)i;
-        registered_themes[i]         = theme;
-        String            theme_name = ui_themes_get_name(theme);
-        UI_Theme_Metadata meta       = ui_themes_get_metadata(theme);
-
-        Command_Palette_Command_Definition command = {};
-        command.id                  = str_fmt(scratch.arena, "theme.%u", i);
-        command.parent_id           = theme_selector_section_id;
-        command.label               = theme_name;
-        command.description         = meta.description;
-        command.keywords            = meta.keywords;
-        command.on_execute          = on_theme_command_execute;
-        command.resolve_description = resolve_theme_command_description;
-        command.user_data           = &registered_themes[i];
-        command.close_on_execute    = true;
-        command_palette_register(command_palette_state, &command);
-    }
-    scratch_end(scratch);
-
-    command_palette_reset_state(command_palette_state);
+    ui_set_theme_state(nullptr, &global_state->theme_palette);
+    apply_renderer_theme(&global_state->theme_palette);
 }
 
 void
 utilities_layer_on_attach(void *state_ptr)
 {
-    auto *state                         = (Utilities_Layer_State *)state_ptr;
-    state->toolbar_position_initialized = false;
-    state->toolbar_pos_x                = 0.0f;
-    state->toolbar_pos_y                = 0.0f;
-    state->toolbar_emphasis             = 0.0f;
-    state->active_tool_index            = 0;
-
-    register_command_palette_entries(state->command_palette_state);
+    auto *l_state                         = (Utilities_Layer_State *)state_ptr;
+    l_state->toolbar_position_initialized = false;
+    l_state->toolbar_pos_x                = 0.0f;
+    l_state->toolbar_pos_y                = 0.0f;
+    l_state->toolbar_emphasis             = 0.0f;
+    l_state->active_tool_index            = 0;
 }
 
 void
 utilities_layer_on_detach(void *state_ptr)
 {
-    auto *state = (Utilities_Layer_State *)state_ptr;
-    command_palette_clear_registry(state ? state->command_palette_state
-                                         : nullptr);
+    (void)state_ptr;
 }
 
 b8
@@ -277,7 +188,7 @@ utilities_layer_on_render(void                 *state_ptr,
     }
     else
     {
-        ui_get_theme_palette(&palette);
+        ui_get_theme_state(nullptr, &palette);
     }
 
     b8 position_seeded_this_frame = false;
@@ -335,8 +246,9 @@ utilities_layer_on_render(void                 *state_ptr,
         f32    dot_x_spacing = 6.0f;
         f32    dot_y_spacing = 7.0f;
         f32    start_x       = handle_min.x + 4.0f;
-        f32    start_y = handle_min.y + (handle_size.y - dot_y_spacing * 2.0f) * 0.5f;
-        u32    dot_col =
+        f32    start_y =
+            handle_min.y + (handle_size.y - dot_y_spacing * 2.0f) * 0.5f;
+        u32 dot_col =
             ImGui::GetColorU32(ImVec4(text_col.x,
                                       text_col.y,
                                       text_col.z,

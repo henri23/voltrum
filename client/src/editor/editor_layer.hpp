@@ -9,12 +9,31 @@ struct Viewport_Camera_2D
     vec2 position;    // World-space center of the view
     f32  zoom;        // Current pixels per world unit (animated)
     f32  target_zoom; // Target zoom level for smooth animation
+    b8   zoom_anchor_active;
+    vec2 zoom_anchor_viewport_local;
+    vec2 zoom_anchor_world;
     b8   dirty;
 };
+
+#ifdef DEBUG_BUILD
+struct Viewport_Camera_3D_Debug
+{
+    b8   enabled;
+    vec3 position;
+    f32  yaw_degrees;
+    f32  pitch_degrees;
+    f32  move_speed;
+    b8   orbit_active;
+    vec3 orbit_pivot;
+};
+#endif
 
 struct Editor_Layer_State
 {
     Viewport_Camera_2D camera;
+#ifdef DEBUG_BUILD
+    Viewport_Camera_3D_Debug debug_camera;
+#endif
     b8                 viewport_focused;
     b8                 viewport_hovered;
     vec2               viewport_size;

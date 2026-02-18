@@ -44,7 +44,7 @@ b8 vulkan_graphics_pipeline_create(Vulkan_Context *context,
     rasterizer_create_info.polygonMode =
         is_wireframe ? VK_POLYGON_MODE_LINE : VK_POLYGON_MODE_FILL;
 
-    // Enable backface culling
+    // Default to one-sided rendering so front/back orientation is unambiguous.
     rasterizer_create_info.cullMode = VK_CULL_MODE_BACK_BIT;
 
     // Decides what is considered the front face of a triangle.

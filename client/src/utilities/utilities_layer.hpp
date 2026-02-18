@@ -1,5 +1,6 @@
 #pragma once
 
+#include "components/theme_selector_component.hpp"
 #include "defines.hpp"
 #include "ui/ui_types.hpp"
 
@@ -10,6 +11,9 @@ struct Utilities_Layer_State
     f32 toolbar_pos_y;
     f32 toolbar_emphasis;
     s32 active_tool_index;
+
+    Theme_Selector_Component_State theme_selector_component_state;
+
     struct Command_Palette_State *command_palette_state;
 };
 

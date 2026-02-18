@@ -18,5 +18,14 @@ layout(location = 1) in struct dto {
 } in_dto;
 
 void main() {
-    out_colour = object_ubo.diffuse_colour * texture(diffuse_sampler, in_dto.texture_coordinate);
+    vec4 base_colour =
+        object_ubo.diffuse_colour * texture(diffuse_sampler, in_dto.texture_coordinate);
+
+    // Make face orientation visible while inspecting stacked planes in 3D.
+    // Back-faces get a cool tint so front/back cannot look identical.
+    if (!gl_FrontFacing) {
+        base_colour.rgb *= vec3(0.55, 0.75, 1.10);
+    }
+
+    out_colour = base_colour;
 }

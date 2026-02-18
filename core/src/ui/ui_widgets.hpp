@@ -3,9 +3,10 @@
 #include "defines.hpp"
 #include "ui_themes.hpp"
 
+#include <cfloat>
 #include <imgui.h>
 #include <imgui_internal.h>
-#include <cfloat>
+#include <utils/string.hpp>
 
 #include "ui_animation.hpp"
 
@@ -44,12 +45,12 @@ namespace ui
     }
 
     inline void
-    add_crisp_rounded_border(ImDrawList *draw_list,
+    add_crisp_rounded_border(ImDrawList   *draw_list,
                              const ImVec2 &min_pos,
                              const ImVec2 &max_pos,
-                             ImU32 color,
-                             f32 rounding,
-                             f32 thickness = 1.0f)
+                             ImU32         color,
+                             f32           rounding,
+                             f32           thickness = 1.0f)
     {
         if (!draw_list)
         {
@@ -93,9 +94,9 @@ namespace ui
             return;
         }
 
-        const f32 radius  = snap_scalar(rounding >= 0.0f
-                                ? rounding
-                                : ImMax(8.0f, ImGui::GetStyle().WindowRounding));
+        const f32 radius = snap_scalar(
+            rounding >= 0.0f ? rounding
+                             : ImMax(8.0f, ImGui::GetStyle().WindowRounding));
         const f32 rounded = ImMax(0.0f, snap_scalar(radius - 1.0f));
 
         const ImU32 base_fill =
@@ -116,9 +117,9 @@ namespace ui
              ++layer_index)
         {
             const f32 t = (f32)(layer_index + 1) / (f32)(frost_layer_count + 1);
-            const f32 inset     = snap_scalar(t * 9.0f);
-            ImVec2    layer_min = snap_pos(ImVec2(min.x + inset, min.y + inset));
-            ImVec2    layer_max = snap_pos(ImVec2(max.x - inset, max.y - inset));
+            const f32 inset  = snap_scalar(t * 9.0f);
+            ImVec2 layer_min = snap_pos(ImVec2(min.x + inset, min.y + inset));
+            ImVec2 layer_max = snap_pos(ImVec2(max.x - inset, max.y - inset));
             if (layer_max.x <= layer_min.x || layer_max.y <= layer_min.y)
             {
                 continue;
@@ -169,9 +170,9 @@ namespace ui
              ++layer_index)
         {
             const f32 t = (f32)(layer_index + 1) / (f32)vignette_layer_count;
-            const f32 inset     = snap_scalar(t * vignette_span);
-            ImVec2    layer_min = snap_pos(ImVec2(min.x + inset, min.y + inset));
-            ImVec2    layer_max = snap_pos(ImVec2(max.x - inset, max.y - inset));
+            const f32 inset  = snap_scalar(t * vignette_span);
+            ImVec2 layer_min = snap_pos(ImVec2(min.x + inset, min.y + inset));
+            ImVec2 layer_max = snap_pos(ImVec2(max.x - inset, max.y - inset));
             if (layer_max.x <= layer_min.x || layer_max.y <= layer_min.y)
             {
                 continue;
@@ -194,8 +195,12 @@ namespace ui
         }
 
         // borders
-        add_crisp_rounded_border(
-            draw_list, min, max, outer_border, rounded, 1.0f);
+        add_crisp_rounded_border(draw_list,
+                                 min,
+                                 max,
+                                 outer_border,
+                                 rounded,
+                                 1.0f);
         add_crisp_rounded_border(draw_list,
                                  ImVec2(min.x + 1.0f, min.y + 1.0f),
                                  ImVec2(max.x - 1.0f, max.y - 1.0f),
@@ -235,33 +240,34 @@ namespace ui
     }
 
     inline glass_content_scope
-    begin_glass_content(const UI_Theme_Palette &palette,
+    begin_glass_content(const UI_Theme_Palette      &palette,
                         const glass_content_options &options)
     {
-        glass_content_scope scope        = {};
-        scope.active                     = true;
-        scope.pushed_width_constraints   = false;
-        scope.pushed_content_clip        = false;
-        scope.palette                    = &palette;
-        scope.options                    = options;
-        scope.options.width              = ImMax(scope.options.width, 1.0f);
-        scope.draw_list                  = ImGui::GetWindowDrawList();
+        glass_content_scope scope      = {};
+        scope.active                   = true;
+        scope.pushed_width_constraints = false;
+        scope.pushed_content_clip      = false;
+        scope.palette                  = &palette;
+        scope.options                  = options;
+        scope.options.width            = ImMax(scope.options.width, 1.0f);
+        scope.draw_list                = ImGui::GetWindowDrawList();
 
         scope.draw_list->ChannelsSplit(2);
         scope.draw_list->ChannelsSetCurrent(1);
 
-        ImVec2 start_pos      = snap_pos(ImGui::GetCursorScreenPos());
-        scope.container_min   = start_pos;
+        ImVec2 start_pos    = snap_pos(ImGui::GetCursorScreenPos());
+        scope.container_min = start_pos;
         const f32 content_width =
             ImMax(1.0f, scope.options.width - (scope.options.padding.x * 2.0f));
-        const ImVec2 content_min = snap_pos(
-            ImVec2(start_pos.x + scope.options.padding.x,
-                   start_pos.y + scope.options.padding.y));
+        const ImVec2 content_min =
+            snap_pos(ImVec2(start_pos.x + scope.options.padding.x,
+                            start_pos.y + scope.options.padding.y));
         const ImVec2 content_clip_max =
             ImVec2(content_min.x + content_width, FLT_MAX);
 
         ImGui::PushItemWidth(content_width);
-        ImGui::PushTextWrapPos(start_pos.x + scope.options.padding.x + content_width);
+        ImGui::PushTextWrapPos(start_pos.x + scope.options.padding.x +
+                               content_width);
         ImGui::PushClipRect(content_min, content_clip_max, true);
         scope.pushed_width_constraints = true;
         scope.pushed_content_clip      = true;
@@ -296,11 +302,12 @@ namespace ui
         const ImVec2 content_max = ImGui::GetItemRectMax();
 
         ImVec2 container_min = snap_pos(scope->container_min);
-        ImVec2 container_max = snap_pos(
-            ImVec2(container_min.x + scope->options.width,
-                   content_max.y + scope->options.padding.y));
-        container_max.y = ImMax(
-            container_max.y, container_min.y + (scope->options.padding.y * 2.0f) + 1.0f);
+        ImVec2 container_max =
+            snap_pos(ImVec2(container_min.x + scope->options.width,
+                            content_max.y + scope->options.padding.y));
+        container_max.y =
+            ImMax(container_max.y,
+                  container_min.y + (scope->options.padding.y * 2.0f) + 1.0f);
 
         scope->draw_list->ChannelsSetCurrent(0);
         draw_glass_container(scope->draw_list,
@@ -316,6 +323,9 @@ namespace ui
         if (container_max.y > cursor_pos.y)
         {
             ImGui::SetCursorScreenPos(ImVec2(cursor_pos.x, container_max.y));
+            // ImGui requires a submitted item after SetCursor* when extending
+            // parent boundaries.
+            ImGui::Dummy(ImVec2(0.0f, 0.0f));
         }
 
         scope->active = false;
@@ -377,7 +387,7 @@ namespace ui
         bool    held    = ImGui::IsItemActive();
         ImGuiID item_id = ImGui::GetItemID();
 
-        ImRect bb = ImRect(snap_pos(ImGui::GetItemRectMin()),
+        ImRect      bb        = ImRect(snap_pos(ImGui::GetItemRectMin()),
                            snap_pos(ImGui::GetItemRectMax()));
         ImDrawList *draw_list = ImGui::GetWindowDrawList();
         const f32   dt        = ImGui::GetIO().DeltaTime;
@@ -408,8 +418,12 @@ namespace ui
                                                   style.border_hover,
                                                   hover_t);
         }
-        add_crisp_rounded_border(
-            draw_list, bb.Min, bb.Max, final_border, rounded, 1.0f);
+        add_crisp_rounded_border(draw_list,
+                                 bb.Min,
+                                 bb.Max,
+                                 final_border,
+                                 rounded,
+                                 1.0f);
 
         const f32 left_pad = 12.0f;
         const f32 top_pad  = 9.0f;
@@ -430,6 +444,350 @@ namespace ui
         return clicked;
     }
 
+    struct icon_selector_item
+    {
+        String icon;
+        String label;
+        String tooltip;
+    };
+
+    struct icon_selector_overrides
+    {
+        f32 icon_gap                            = -1.0f;
+        f32 horizontal_padding                  = -1.0f;
+        f32 vertical_padding                    = -1.0f;
+        f32 active_text_gap                     = -1.0f;
+        f32 active_text_padding                 = -1.0f;
+        f32 rounding                            = -1.0f;
+        f32 container_bg_alpha                  = -1.0f;
+        f32 container_border_alpha              = -1.0f;
+        f32 hover_overlay_alpha                 = -1.0f;
+        f32 active_outline_alpha                = -1.0f;
+        f32 active_outline_thickness            = -1.0f;
+        f32 active_anim_sharpness               = -1.0f;
+        f32 tooltip_border_alpha                = -1.0f;
+        s8  show_active_label                   = -1;
+        s8  allow_hovered_when_blocked_by_popup = -1;
+    };
+
+    inline void
+    tooltip_text(String                  text,
+                 const UI_Theme_Palette &palette,
+                 f32                     border_alpha = 0.82f)
+    {
+        if (text.size <= 0)
+        {
+            return;
+        }
+
+        const ImGuiStyle &style = ImGui::GetStyle();
+
+        ImVec4 bg_col =
+            ImGui::ColorConvertU32ToFloat4(palette.background_popup);
+        bg_col.w = ImClamp(bg_col.w * 0.96f, 0.0f, 1.0f);
+
+        ImVec4 border_col = ImGui::ColorConvertU32ToFloat4(palette.accent);
+        border_col.w      = ImClamp(border_col.w * border_alpha, 0.0f, 1.0f);
+
+        ImVec4 text_col = ImGui::ColorConvertU32ToFloat4(palette.text_brighter);
+        text_col.w      = ImClamp(text_col.w * 0.98f, 0.0f, 1.0f);
+
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding,
+                            style.FrameRounding + 2.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize,
+                            border_alpha > 0.0f ? 1.0f : 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(9.0f, 6.0f));
+        ImGui::PushStyleColor(ImGuiCol_PopupBg, bg_col);
+        ImGui::PushStyleColor(ImGuiCol_Border, border_col);
+        ImGui::PushStyleColor(ImGuiCol_Text, text_col);
+
+        ImGui::BeginTooltip();
+        const char *text_begin = text.buff ? (const char *)text.buff : "";
+        const char *text_end   = text_begin + (text.buff ? text.size : 0);
+        ImGui::TextUnformatted(text_begin, text_end);
+        ImGui::EndTooltip();
+
+        ImGui::PopStyleColor(3);
+        ImGui::PopStyleVar(3);
+    }
+
+    inline b8
+    icon_selector(const char                    *id,
+                  const icon_selector_item      *items,
+                  s32                            item_count,
+                  s32                           *active_index,
+                  f32                            height,
+                  const UI_Theme_Palette        &palette,
+                  const icon_selector_overrides *overrides = nullptr)
+    {
+        if (!items || item_count <= 0 || !active_index || height <= 0.0f)
+        {
+            return false;
+        }
+
+        ImGuiWindow *window = ImGui::GetCurrentWindow();
+        if (!window || window->SkipItems)
+        {
+            return false;
+        }
+
+        if (*active_index < 0 || *active_index >= item_count)
+        {
+            *active_index = 0;
+        }
+
+        const ImGuiStyle &style = ImGui::GetStyle();
+        const f32         scale = ImMax(0.35f, height / 40.0f);
+
+        const f32 icon_gap = (overrides && overrides->icon_gap >= 0.0f)
+                                 ? overrides->icon_gap
+                                 : snap_scalar(8.0f * scale);
+        const f32 pad_x = (overrides && overrides->horizontal_padding >= 0.0f)
+                              ? overrides->horizontal_padding
+                              : snap_scalar(2.0f * scale);
+        const f32 pad_y = (overrides && overrides->vertical_padding >= 0.0f)
+                              ? overrides->vertical_padding
+                              : snap_scalar(2.0f * scale);
+        const f32 active_text_gap =
+            (overrides && overrides->active_text_gap >= 0.0f)
+                ? overrides->active_text_gap
+                : snap_scalar(8.0f * scale);
+        const f32 active_text_pad =
+            (overrides && overrides->active_text_padding >= 0.0f)
+                ? overrides->active_text_padding
+                : snap_scalar(11.0f * scale);
+        const f32 rounding = (overrides && overrides->rounding >= 0.0f)
+                                 ? overrides->rounding
+                                 : ImMax(2.0f, style.FrameRounding * scale);
+        const f32 container_bg_alpha =
+            (overrides && overrides->container_bg_alpha >= 0.0f)
+                ? overrides->container_bg_alpha
+                : 0.45f;
+        const f32 container_border_alpha =
+            (overrides && overrides->container_border_alpha >= 0.0f)
+                ? overrides->container_border_alpha
+                : 0.0f;
+        const f32 hover_overlay_alpha =
+            (overrides && overrides->hover_overlay_alpha >= 0.0f)
+                ? overrides->hover_overlay_alpha
+                : 0.32f;
+        const f32 active_outline_alpha =
+            (overrides && overrides->active_outline_alpha >= 0.0f)
+                ? overrides->active_outline_alpha
+                : 0.70f;
+        const f32 active_anim_sharpness =
+            (overrides && overrides->active_anim_sharpness > 0.0f)
+                ? overrides->active_anim_sharpness
+                : 28.0f;
+        const f32 tooltip_border_alpha =
+            (overrides && overrides->tooltip_border_alpha >= 0.0f)
+                ? overrides->tooltip_border_alpha
+                : 0.82f;
+        const f32 active_outline_thickness =
+            (overrides && overrides->active_outline_thickness > 0.0f)
+                ? overrides->active_outline_thickness
+                : ((style.FrameBorderSize > 0.0f)
+                       ? (style.FrameBorderSize + 0.8f)
+                       : 1.8f);
+
+        const bool allow_hovered_when_blocked_by_popup =
+            overrides && overrides->allow_hovered_when_blocked_by_popup > 0;
+
+        bool has_labels = false;
+        for (s32 i = 0; i < item_count; ++i)
+        {
+            if (items[i].label.size > 0)
+            {
+                has_labels = true;
+                break;
+            }
+        }
+
+        const bool show_active_label =
+            (overrides && overrides->show_active_label >= 0)
+                ? overrides->show_active_label > 0
+                : has_labels;
+
+        const f32 slot_size = ImMax(1.0f, snap_scalar(height - (pad_y * 2.0f)));
+
+        f32 max_label_width = 0.0f;
+        if (show_active_label)
+        {
+            for (s32 i = 0; i < item_count; ++i)
+            {
+                const char *label_begin =
+                    items[i].label.buff ? (const char *)items[i].label.buff
+                                        : "";
+                const char *label_end =
+                    label_begin +
+                    (items[i].label.buff ? items[i].label.size : 0);
+                const f32 label_width =
+                    ImGui::CalcTextSize(label_begin, label_end).x;
+                if (label_width > max_label_width)
+                {
+                    max_label_width = label_width;
+                }
+            }
+        }
+
+        const f32 active_slot_width =
+            slot_size + ((show_active_label && max_label_width > 0.0f)
+                             ? (active_text_gap + max_label_width +
+                                (active_text_pad * 2.0f))
+                             : 0.0f);
+
+        f32 strip_width = 0.0f;
+        for (s32 i = 0; i < item_count; ++i)
+        {
+            strip_width += (i == *active_index) ? active_slot_width : slot_size;
+        }
+        strip_width += icon_gap * (f32)(item_count - 1);
+
+        const f32 container_width  = (pad_x * 2.0f) + strip_width;
+        const f32 container_height = (pad_y * 2.0f) + slot_size;
+
+        const char *widget_id = id ? id : "icon_selector";
+        ImGui::PushID(widget_id);
+
+        ImVec2 container_pos = ImGui::GetCursorScreenPos();
+        ImGui::Dummy(ImVec2(container_width, container_height));
+
+        ImDrawList *draw_list = ImGui::GetWindowDrawList();
+        if (container_bg_alpha > 0.0f)
+        {
+            draw_list->AddRectFilled(
+                container_pos,
+                ImVec2(container_pos.x + container_width,
+                       container_pos.y + container_height),
+                with_alpha(palette.window_bg, container_bg_alpha),
+                rounding);
+        }
+        if (container_border_alpha > 0.0f)
+        {
+            draw_list->AddRect(
+                container_pos,
+                ImVec2(container_pos.x + container_width,
+                       container_pos.y + container_height),
+                with_alpha(palette.group_header, container_border_alpha),
+                rounding);
+        }
+
+        f32 active_target_offset = pad_x;
+        for (s32 i = 0; i < *active_index; ++i)
+        {
+            active_target_offset += slot_size + icon_gap;
+        }
+
+        ImGuiStorage *storage = &window->StateStorage;
+        f32          *active_offset =
+            storage->GetFloatRef(ImGui::GetID("active_offset_x"),
+                                 active_target_offset);
+        *active_offset = anim::exp_decay_to(*active_offset,
+                                            active_target_offset,
+                                            active_anim_sharpness,
+                                            ImGui::GetIO().DeltaTime);
+
+        const ImVec2 active_min =
+            ImVec2(container_pos.x + *active_offset, container_pos.y + pad_y);
+        const ImVec2 active_max =
+            ImVec2(active_min.x + active_slot_width, active_min.y + slot_size);
+        draw_list->AddRectFilled(active_min,
+                                 active_max,
+                                 palette.tab_active,
+                                 rounding);
+        draw_list->AddRect(active_min,
+                           active_max,
+                           with_alpha(palette.accent, active_outline_alpha),
+                           rounding,
+                           0,
+                           active_outline_thickness);
+
+        b8  changed = false;
+        f32 slot_x  = container_pos.x + pad_x;
+        for (s32 i = 0; i < item_count; ++i)
+        {
+            const icon_selector_item &item      = items[i];
+            const b8                  is_active = i == *active_index;
+            const f32    slot_width = is_active ? active_slot_width : slot_size;
+            const ImVec2 button_min = ImVec2(slot_x, container_pos.y + pad_y);
+
+            ImGui::SetCursorScreenPos(button_min);
+            ImGui::PushID(i);
+            if (ImGui::InvisibleButton("##slot", ImVec2(slot_width, slot_size)))
+            {
+                *active_index = i;
+                changed       = true;
+            }
+
+            ImGuiHoveredFlags hover_flags = 0;
+            if (allow_hovered_when_blocked_by_popup)
+            {
+                hover_flags |= ImGuiHoveredFlags_AllowWhenBlockedByPopup;
+            }
+            const b8 hovered = ImGui::IsItemHovered(hover_flags);
+            if (hovered && !is_active && hover_overlay_alpha > 0.0f)
+            {
+                draw_list->AddRectFilled(
+                    button_min,
+                    ImVec2(button_min.x + slot_width, button_min.y + slot_size),
+                    with_alpha(palette.text_darker, hover_overlay_alpha),
+                    rounding);
+            }
+
+            if (hovered && item.tooltip.size > 0)
+            {
+                tooltip_text(item.tooltip, palette, tooltip_border_alpha);
+            }
+
+            const char *icon_begin =
+                item.icon.buff ? (const char *)item.icon.buff : "";
+            const char *icon_end =
+                icon_begin + (item.icon.buff ? item.icon.size : 0);
+            const ImVec2 icon_size = ImGui::CalcTextSize(icon_begin, icon_end);
+            if (is_active && show_active_label && item.label.size > 0)
+            {
+                const ImVec2 icon_pos =
+                    ImVec2(button_min.x + active_text_pad,
+                           button_min.y + (slot_size - icon_size.y) * 0.5f);
+                draw_list->AddText(icon_pos,
+                                   palette.text_brighter,
+                                   icon_begin,
+                                   icon_end);
+
+                const char *label_begin =
+                    item.label.buff ? (const char *)item.label.buff : "";
+                const char *label_end =
+                    label_begin + (item.label.buff ? item.label.size : 0);
+                const ImVec2 label_size =
+                    ImGui::CalcTextSize(label_begin, label_end);
+                const ImVec2 label_pos =
+                    ImVec2(icon_pos.x + icon_size.x + active_text_gap,
+                           button_min.y + (slot_size - label_size.y) * 0.5f);
+                draw_list->AddText(label_pos,
+                                   palette.text_brighter,
+                                   label_begin,
+                                   label_end);
+            }
+            else
+            {
+                const ImVec2 icon_pos =
+                    ImVec2(button_min.x + (slot_size - icon_size.x) * 0.5f,
+                           button_min.y + (slot_size - icon_size.y) * 0.5f);
+                draw_list->AddText(icon_pos,
+                                   is_active ? palette.text_brighter
+                                             : palette.text,
+                                   icon_begin,
+                                   icon_end);
+            }
+
+            ImGui::PopID();
+            slot_x += slot_width + icon_gap;
+        }
+
+        ImGui::PopID();
+        return changed;
+    }
+
     inline bool &
     menu_item_close_requested()
     {
@@ -442,9 +800,9 @@ namespace ui
     // *is_active is true, and pressing the item auto-toggles the value.
     inline bool
     menu_item(const char *label,
-              const char *shortcut  = nullptr,
-              b8         *is_active = nullptr,
-              bool        enabled   = true,
+              const char *shortcut          = nullptr,
+              b8         *is_active         = nullptr,
+              bool        enabled           = true,
               bool        close_on_activate = true)
     {
         ImGuiWindow *window = ImGui::GetCurrentWindow();
@@ -755,7 +1113,8 @@ namespace ui
 
 } // namespace ui
 
-#define UI_BEGIN_GLASS_CONTENT(scope_name, palette_value, options_value) \
-    ui::glass_content_scope scope_name = ui::begin_glass_content((palette_value), (options_value))
+#define UI_BEGIN_GLASS_CONTENT(scope_name, palette_value, options_value)       \
+    ui::glass_content_scope scope_name =                                       \
+        ui::begin_glass_content((palette_value), (options_value))
 
 #define UI_END_GLASS_CONTENT(scope_name) ui::end_glass_content(&(scope_name))

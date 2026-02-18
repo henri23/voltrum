@@ -97,11 +97,11 @@ struct UI_Theme_Metadata
 };
 
 // Apply a theme to ImGui style
-void ui_themes_apply(UI_Theme theme, struct ImGuiStyle &style);
+void ui_themes_apply(UI_Theme theme, struct ImGuiStyle *style);
 
 // Apply a palette to ImGui style
-void ui_themes_apply_palette(const UI_Theme_Palette &palette,
-                             ImGuiStyle             &style);
+void ui_themes_apply_palette(const UI_Theme_Palette *palette,
+                             ImGuiStyle             *style);
 
 // Copy the palette for a theme into an output buffer
 void ui_themes_copy_palette(UI_Theme theme, UI_Theme_Palette *out_palette);

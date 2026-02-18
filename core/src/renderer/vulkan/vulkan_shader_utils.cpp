@@ -8,28 +8,25 @@
 #include "utils/string.hpp"
 
 b8
-create_shader_module(Vulkan_Context        *context,
-                     const char            *name,
-                     const char            *type_str,
-                     VkShaderStageFlagBits  shader_stage_flag,
-                     u32                    stage_index,
-                     Vulkan_Shader_Stage   *shader_stages)
+create_shader_module(Vulkan_Context       *context,
+                     const char           *name,
+                     const char           *type_str,
+                     VkShaderStageFlagBits shader_stage_flag,
+                     u32                   stage_index,
+                     Vulkan_Shader_Stage  *shader_stages)
 {
     Scratch_Arena scratch = scratch_begin(nullptr, 0);
 
-    String file_name = str_fmt(scratch.arena,
-                               "shaders/%s.%s.spv",
-                               name,
-                               type_str);
+    String file_name =
+        string_fmt(scratch.arena, "shaders/%s.%s.spv", name, type_str);
 
     Resource binary_resource;
     if (!resource_system_load(scratch.arena,
-                              (const char *)file_name.str,
+                              file_name.buff,
                               Resource_Type::BINARY,
                               &binary_resource))
     {
-        CORE_ERROR("Unable to read shader module: %s",
-                   (const char *)file_name.str);
+        CORE_ERROR("Unable to read shader module: %s", file_name.buff);
         scratch_end(scratch);
         return false;
     }
@@ -39,8 +36,7 @@ create_shader_module(Vulkan_Context        *context,
 
     shader_stages[stage_index].create_info.sType =
         VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    shader_stages[stage_index].create_info.codeSize =
-        binary_resource.data_size;
+    shader_stages[stage_index].create_info.codeSize = binary_resource.data_size;
     shader_stages[stage_index].create_info.pCode =
         static_cast<u32 *>(binary_resource.data);
 
@@ -50,7 +46,7 @@ create_shader_module(Vulkan_Context        *context,
                                   &shader_stages[stage_index].handle));
 
     CORE_DEBUG("Shader module created for %s - size: %zu bytes",
-               (const char *)file_name.str,
+               file_name.buff,
                binary_resource.data_size);
 
     scratch_end(scratch);

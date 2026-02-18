@@ -21,7 +21,7 @@ int main() {
     test_manager_end_module();
 
     test_manager_begin_module("String");
-    str_register_tests();
+    string_register_tests();
     test_manager_run_tests();
     test_manager_end_module();
 

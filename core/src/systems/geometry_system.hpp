@@ -22,8 +22,8 @@ struct Geometry_Config
     vertex_3d *vertices;
     u32        index_count;
     u32       *indices;
-    Const_String<GEOMETRY_NAME_MAX_LENGTH>  name;
-    Const_String<MATERIAL_NAME_MAX_LENGTH> material_name;
+    char       name[GEOMETRY_NAME_MAX_LENGTH];
+    char       material_name[MATERIAL_NAME_MAX_LENGTH];
 };
 
 struct Geometry_Reference

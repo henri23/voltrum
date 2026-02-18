@@ -38,7 +38,7 @@ constexpr u32 TEXTURE_NAME_MAX_LENGTH = 256;
 
 struct Texture
 {
-    Const_String<TEXTURE_NAME_MAX_LENGTH> name;
+    char name[TEXTURE_NAME_MAX_LENGTH];
 
     Texture_ID id;
     u32        width;
@@ -72,8 +72,8 @@ constexpr u32 MATERIAL_NAME_MAX_LENGTH = 256;
 
 struct Material_Config
 {
-    Const_String<MATERIAL_NAME_MAX_LENGTH> name;
-    Const_String<TEXTURE_NAME_MAX_LENGTH>  diffuse_map_name;
+    char name[MATERIAL_NAME_MAX_LENGTH];
+    char diffuse_map_name[TEXTURE_NAME_MAX_LENGTH];
 
     b8   auto_release;
     vec4 diffuse_color;
@@ -81,7 +81,7 @@ struct Material_Config
 
 struct Material
 {
-    Const_String<MATERIAL_NAME_MAX_LENGTH> name;
+    char name[MATERIAL_NAME_MAX_LENGTH];
 
     Material_ID id;
     u32         generation;
@@ -96,7 +96,7 @@ constexpr u32 GEOMETRY_NAME_MAX_LENGTH = 256;
 
 struct Geometry
 {
-    Const_String<GEOMETRY_NAME_MAX_LENGTH> name;
+    char name[GEOMETRY_NAME_MAX_LENGTH];
 
     Geometry_ID id;
     u32         internal_id;

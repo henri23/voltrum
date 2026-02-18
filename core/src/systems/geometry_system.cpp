@@ -236,21 +236,25 @@ geometry_system_generate_plane_config(Arena       *arena,
 
             v0->position.x            = min_x;
             v0->position.y            = min_y;
+            v0->position.z            = 0.0f;
             v0->texture_coordinates.x = min_uvx;
             v0->texture_coordinates.y = min_uvy;
 
             v1->position.x            = max_x;
             v1->position.y            = max_y;
+            v1->position.z            = 0.0f;
             v1->texture_coordinates.x = max_uvx;
             v1->texture_coordinates.y = max_uvy;
 
             v2->position.x            = min_x;
             v2->position.y            = max_y;
+            v2->position.z            = 0.0f;
             v2->texture_coordinates.x = min_uvx;
             v2->texture_coordinates.y = max_uvy;
 
             v3->position.x            = max_x;
             v3->position.y            = min_y;
+            v3->position.z            = 0.0f;
             v3->texture_coordinates.x = max_uvx;
             v3->texture_coordinates.y = min_uvy;
 
@@ -264,26 +268,22 @@ geometry_system_generate_plane_config(Arena       *arena,
         }
     }
 
-    if (name && str_from_cstr(name).size > 0)
+    if (name && STR(name).size > 0)
     {
-        config.name =
-            const_str_from_cstr<GEOMETRY_NAME_MAX_LENGTH>(name);
+        string_set(config.name, name);
     }
     else
     {
-        config.name =
-            const_str_from_cstr<GEOMETRY_NAME_MAX_LENGTH>(DEFAULT_GEOMETRY_NAME);
+        string_set(config.name, DEFAULT_GEOMETRY_NAME);
     }
 
-    if (material_name && str_from_cstr(material_name).size > 0)
+    if (material_name && STR(material_name).size > 0)
     {
-        config.material_name =
-            const_str_from_cstr<MATERIAL_NAME_MAX_LENGTH>(material_name);
+        string_set(config.material_name, material_name);
     }
     else
     {
-        config.material_name =
-            const_str_from_cstr<MATERIAL_NAME_MAX_LENGTH>(DEFAULT_MATERIAL_NAME);
+        string_set(config.material_name, DEFAULT_MATERIAL_NAME);
     }
 
     return config;
@@ -312,10 +312,9 @@ create_geometry(Geometry_System_State *state,
         return false;
     }
 
-    if (config.material_name.size > 0)
+    if (STR(config.material_name).size > 0)
     {
-        geometry->material =
-            material_system_acquire((const char *)config.material_name.data);
+        geometry->material = material_system_acquire(config.material_name);
         if (!geometry->material)
         {
             // If the requested material fails to be acquired, fallback to
@@ -335,13 +334,13 @@ destroy_geometry(Geometry_System_State *state, Geometry *geometry)
     geometry->internal_id = INVALID_ID;
     geometry->generation  = INVALID_ID;
 
-    geometry->name = {};
+    geometry->name[0] = '\0';
 
     // Release the material
-    if (geometry->material && geometry->material->name.size > 0)
+    if (geometry->material &&
+        STR(geometry->material->name).size > 0)
     {
-        material_system_release(
-            (const char *)geometry->material->name.data);
+        material_system_release(geometry->material->name);
         geometry->material = nullptr;
     }
 }

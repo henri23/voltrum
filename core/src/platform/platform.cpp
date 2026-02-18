@@ -93,7 +93,7 @@ platform_init(Arena *allocator, String application_name, s32 width, s32 height)
                                    SDL_WINDOW_HIGH_PIXEL_DENSITY |
                                    SDL_WINDOW_BORDERLESS;
 
-    state->window = SDL_CreateWindow((const char *)application_name.str,
+    state->window = SDL_CreateWindow((const char *)application_name.buff,
                                      width,
                                      height,
                                      window_flags);

@@ -17,7 +17,7 @@ font_loader_load(Arena      *arena,
     }
 
     // Try .ttf first
-    String full_path = str_fmt(arena,
+    String full_path = string_fmt(arena,
                                "%s/%s/%s%s",
                                resource_system_base_path(),
                                "fonts",
@@ -25,9 +25,9 @@ font_loader_load(Arena      *arena,
                                ".ttf");
 
     // If .ttf doesn't exist, try .otf
-    if (!filesystem_exists((const char *)full_path.str))
+    if (!filesystem_exists((const char *)full_path.buff))
     {
-        full_path = str_fmt(arena,
+        full_path = string_fmt(arena,
                             "%s/%s/%s%s",
                             resource_system_base_path(),
                             "fonts",
@@ -35,10 +35,10 @@ font_loader_load(Arena      *arena,
                             ".otf");
     }
 
-    out_resource->full_path = (char *)full_path.str;
+    out_resource->full_path = (char *)full_path.buff;
 
     File_Handle file;
-    if (!filesystem_open((const char *)full_path.str,
+    if (!filesystem_open((const char *)full_path.buff,
                          File_Modes::READ,
                          true,
                          &file))
@@ -46,7 +46,7 @@ font_loader_load(Arena      *arena,
         CORE_ERROR(
             "font_loader_load - unable to open font file for "
             "reading: '%s'",
-            (const char *)full_path.str);
+            (const char *)full_path.buff);
         return false;
     }
 
@@ -54,7 +54,7 @@ font_loader_load(Arena      *arena,
     if (!filesystem_size(&file, &file_size))
     {
         CORE_ERROR("font_loader_load - Unable to read file: '%s'",
-                   (const char *)full_path.str);
+                   (const char *)full_path.buff);
         filesystem_close(&file);
         return false;
     }
@@ -65,7 +65,7 @@ font_loader_load(Arena      *arena,
     if (!filesystem_read_all_bytes(&file, resource_data, &read_size))
     {
         CORE_ERROR("font_loader_load - Unable to read font '%s'",
-                   (const char *)full_path.str);
+                   (const char *)full_path.buff);
         filesystem_close(&file);
         return false;
     }

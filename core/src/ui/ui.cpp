@@ -12,11 +12,64 @@
 #include <imgui_impl_vulkan.h>
 #include <imgui_internal.h>
 
-internal_var UI_State *active_ui_state = nullptr;
+internal_var UI_State *state_ptr;
 
 static const String DOCKSPACE_WINDOW_NAME    = STR_LIT("DockSpace");
 static const String MAIN_DOCKSPACE_ID        = STR_LIT("MainDockspace");
 static const String APP_WINDOW_SETTINGS_NAME = STR_LIT("AppWindow");
+
+INTERNAL_FUNC b8
+parse_s32(String s, s32 *out_value)
+{
+    if (!out_value || !s.buff || s.size == 0)
+    {
+        return false;
+    }
+
+    s = string_trim_whitespace(s);
+    if (s.size == 0)
+    {
+        return false;
+    }
+
+    b8  is_negative = false;
+    u64 i           = 0;
+
+    if (s.buff[0] == '-' || s.buff[0] == '+')
+    {
+        is_negative = (s.buff[0] == '-');
+        i           = 1;
+    }
+
+    if (i >= s.size)
+    {
+        return false;
+    }
+
+    s64 value = 0;
+    for (; i < s.size; ++i)
+    {
+        const char c = s.buff[i];
+        if (c < '0' || c > '9')
+        {
+            return false;
+        }
+
+        value = (value * 10) + (s64)(c - '0');
+        if (!is_negative && value > 2147483647LL)
+        {
+            return false;
+        }
+
+        if (is_negative && value > 2147483648LL)
+        {
+            return false;
+        }
+    }
+
+    *out_value = is_negative ? (s32)(-value) : (s32)value;
+    return true;
+}
 
 INTERNAL_FUNC void
 ui_dockspace_render(UI_State *state)
@@ -27,7 +80,8 @@ ui_dockspace_render(UI_State *state)
 
     if (dockspace->dockspace_id == 0)
     {
-        dockspace->dockspace_id = ImGui::GetID(C_STR(MAIN_DOCKSPACE_ID));
+        dockspace->dockspace_id =
+            ImGui::GetID((const char *)MAIN_DOCKSPACE_ID.buff);
         CORE_DEBUG("Generated dockspace ID: %u", dockspace->dockspace_id);
     }
 
@@ -52,7 +106,7 @@ ui_dockspace_render(UI_State *state)
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
 
-    ImGui::Begin(C_STR(DOCKSPACE_WINDOW_NAME),
+    ImGui::Begin((const char *)DOCKSPACE_WINDOW_NAME.buff,
                  &dockspace->dockspace_open,
                  window_flags);
     dockspace->window_began = true;
@@ -106,7 +160,7 @@ load_default_fonts(UI_State *state)
 
     // Load icon font once (will be merged with each text font)
     if (resource_system_load(scratch.arena,
-                             C_STR(icon_font_resource_path),
+                             (const char *)icon_font_resource_path.buff,
                              Resource_Type::FONT,
                              &icon_resource))
     {
@@ -120,15 +174,18 @@ load_default_fonts(UI_State *state)
 
     for (u8 s = 0; s < FONT_MAX_COUNT; ++s)
     {
-        String font_resource_path =
-            str_fmt(scratch.arena, "jetbrains/jetbrains_%s", C_STR(style_names[s]));
+        String font_resource_path = string_fmt(scratch.arena,
+                                            "jetbrains/jetbrains_%s",
+                                            (const char *)style_names[s].buff);
+        const char *font_resource_path_cstr =
+            font_resource_path.buff ? (const char *)font_resource_path.buff : "";
 
         if (!resource_system_load(scratch.arena,
-                                  C_STR(font_resource_path),
+                                  font_resource_path_cstr,
                                   Resource_Type::FONT,
                                   &font_resources[s]))
         {
-            CORE_ERROR("Failed to load font: %s", C_STR(font_resource_path));
+            CORE_ERROR("Failed to load font: %.*s", (s32)(font_resource_path).size, (font_resource_path).buff ? (const char *)(font_resource_path).buff : "");
             state->fonts[s] = nullptr;
             continue;
         }
@@ -145,8 +202,8 @@ load_default_fonts(UI_State *state)
 
         if (state->fonts[s])
         {
-            CORE_DEBUG("Loaded font: %s at %.0fpt (scale=%.2f)",
-                       C_STR(font_resource_path),
+            CORE_DEBUG("Loaded font: %.*s at %.0fpt (scale=%.2f)",
+                       (s32)(font_resource_path).size, (font_resource_path).buff ? (const char *)(font_resource_path).buff : "",
                        font_size,
                        scale);
         }
@@ -202,7 +259,7 @@ ui_init(Arena                        *allocator,
 {
     UI_State *state = push_struct(allocator, UI_State);
 
-    state->current_theme             = theme;
+    state->current_theme = theme;
     ui_themes_copy_palette(theme, &state->active_palette);
     state->titlebar_content_callback = titlebar_content_callback;
     state->logo_asset_name           = logo_asset_name;
@@ -213,16 +270,14 @@ ui_init(Arena                        *allocator,
 
     load_default_fonts(state);
 
-    ImGuiStyle &style = ImGui::GetStyle();
-
-    ui_themes_apply_palette(state->active_palette, style);
+    ui_themes_apply_palette(&state->active_palette, &ImGui::GetStyle());
 
     ui_titlebar_setup(state, logo_asset_name);
 
     // Register settings handler to persist OS window size in imgui.ini
     ImGuiSettingsHandler wh;
-    wh.TypeName   = C_STR(APP_WINDOW_SETTINGS_NAME);
-    wh.TypeHash   = ImHashStr(C_STR(APP_WINDOW_SETTINGS_NAME));
+    wh.TypeName   = (const char *)APP_WINDOW_SETTINGS_NAME.buff;
+    wh.TypeHash   = ImHashStr((const char *)APP_WINDOW_SETTINGS_NAME.buff);
     wh.UserData   = (void *)plat_state->window;
     wh.ReadOpenFn = [](ImGuiContext *,
                        ImGuiSettingsHandler *,
@@ -233,11 +288,49 @@ ui_init(Arena                        *allocator,
                        const char *line)
     {
         SDL_Window *win = (SDL_Window *)handler->UserData;
-        int         a, b;
-        if (sscanf(line, "Size=%d,%d", &a, &b) == 2)
-            SDL_SetWindowSize(win, a, b);
-        else if (sscanf(line, "Pos=%d,%d", &a, &b) == 2)
-            SDL_SetWindowPosition(win, a, b);
+
+        char line_buffer[512] = {};
+        string_set(line_buffer, line);
+        String line_str = string_capped(line_buffer, line_buffer + sizeof(line_buffer));
+
+        static const String SIZE_PREFIX = STR_LIT("Size=");
+        static const String POS_PREFIX  = STR_LIT("Pos=");
+
+        s32 a = 0;
+        s32 b = 0;
+
+        if (line_str.size >= SIZE_PREFIX.size &&
+            string_match(string_prefix(line_str, SIZE_PREFIX.size), SIZE_PREFIX))
+        {
+            String values      = string_skip(line_str, SIZE_PREFIX.size);
+            u64    comma_index = string_index_of(values, ',');
+            if (comma_index != (u64)-1)
+            {
+                String first_value  = string_prefix(values, comma_index);
+                String second_value = string_skip(values, comma_index + 1);
+
+                if (parse_s32(first_value, &a) && parse_s32(second_value, &b))
+                {
+                    SDL_SetWindowSize(win, a, b);
+                }
+            }
+        }
+        else if (line_str.size >= POS_PREFIX.size &&
+                 string_match(string_prefix(line_str, POS_PREFIX.size), POS_PREFIX))
+        {
+            String values      = string_skip(line_str, POS_PREFIX.size);
+            u64    comma_index = string_index_of(values, ',');
+            if (comma_index != (u64)-1)
+            {
+                String first_value  = string_prefix(values, comma_index);
+                String second_value = string_skip(values, comma_index + 1);
+
+                if (parse_s32(first_value, &a) && parse_s32(second_value, &b))
+                {
+                    SDL_SetWindowPosition(win, a, b);
+                }
+            }
+        }
     };
     wh.WriteAllFn =
         [](ImGuiContext *, ImGuiSettingsHandler *handler, ImGuiTextBuffer *buf)
@@ -246,11 +339,22 @@ ui_init(Arena                        *allocator,
         int         w, h, x, y;
         SDL_GetWindowSize(win, &w, &h);
         SDL_GetWindowPosition(win, &x, &y);
-        buf->appendf("[AppWindow][Main]\nSize=%d,%d\nPos=%d,%d\n\n",
-                     w,
-                     h,
-                     x,
-                     y);
+
+        Scratch_Arena scratch  = scratch_begin(nullptr, 0);
+        String        settings = string_fmt(scratch.arena,
+                                  "[AppWindow][Main]\nSize=%d,%d\nPos=%d,%d\n\n",
+                                  w,
+                                  h,
+                                  x,
+                                  y);
+
+        if (settings.buff && settings.size > 0)
+        {
+            buf->append((const char *)settings.buff,
+                        (const char *)settings.buff + settings.size);
+        }
+
+        scratch_end(scratch);
     };
     ImGui::GetCurrentContext()->SettingsHandlers.push_back(wh);
 
@@ -260,7 +364,7 @@ ui_init(Arena                        *allocator,
             layer.on_attach(layer.state);
     }
 
-    active_ui_state = state;
+    state_ptr = state;
 
     return state;
 }
@@ -274,9 +378,9 @@ ui_shutdown_layers(UI_State *state)
             layer.on_detach(layer.state);
     }
 
-    if (active_ui_state == state)
+    if (state_ptr == state)
     {
-        active_ui_state = nullptr;
+        state_ptr = nullptr;
     }
 }
 
@@ -316,39 +420,93 @@ ui_draw_layers(UI_State *state, Frame_Context *ctx)
 }
 
 void
-ui_set_theme(UI_Theme theme)
+ui_set_theme_state(const UI_Theme *theme, const UI_Theme_Palette *palette)
 {
-    if (!active_ui_state)
+    if (!state_ptr)
     {
         return;
     }
 
-    active_ui_state->current_theme = theme;
-    ui_themes_copy_palette(theme, &active_ui_state->active_palette);
-    ui_themes_apply_palette(active_ui_state->active_palette, ImGui::GetStyle());
+    if (!theme && !palette)
+    {
+        return;
+    }
+
+    if (theme)
+    {
+        state_ptr->current_theme = *theme;
+
+        if (!palette)
+        {
+            ui_themes_copy_palette(*theme, &state_ptr->active_palette);
+        }
+    }
+
+    if (palette)
+    {
+        state_ptr->active_palette = *palette;
+    }
+
+    ui_themes_apply_palette(&state_ptr->active_palette, &ImGui::GetStyle());
+}
+
+void
+ui_get_theme_state(UI_Theme *out_theme, UI_Theme_Palette *out_palette)
+{
+    if (!out_theme && !out_palette)
+    {
+        return;
+    }
+
+    if (!state_ptr)
+    {
+        if (out_theme)
+        {
+            *out_theme = UI_Theme::DARK;
+        }
+
+        if (out_palette)
+        {
+            ui_themes_copy_palette(UI_Theme::DARK, out_palette);
+        }
+
+        return;
+    }
+
+    if (out_theme)
+    {
+        *out_theme = state_ptr->current_theme;
+    }
+
+    if (out_palette)
+    {
+        *out_palette = state_ptr->active_palette;
+    }
+}
+
+void
+ui_set_theme(UI_Theme theme)
+{
+    ui_set_theme_state(&theme, nullptr);
 }
 
 UI_Theme
 ui_get_current_theme()
 {
-    if (!active_ui_state)
-    {
-        return UI_Theme::DARK;
-    }
-
-    return active_ui_state->current_theme;
+    UI_Theme theme = UI_Theme::DARK;
+    ui_get_theme_state(&theme, nullptr);
+    return theme;
 }
 
 void
 ui_set_theme_palette(const UI_Theme_Palette *palette)
 {
-    if (!active_ui_state || !palette)
+    if (!palette)
     {
         return;
     }
 
-    active_ui_state->active_palette = *palette;
-    ui_themes_apply_palette(active_ui_state->active_palette, ImGui::GetStyle());
+    ui_set_theme_state(nullptr, palette);
 }
 
 void
@@ -359,11 +517,5 @@ ui_get_theme_palette(UI_Theme_Palette *out_palette)
         return;
     }
 
-    if (!active_ui_state)
-    {
-        ui_themes_copy_palette(UI_Theme::DARK, out_palette);
-        return;
-    }
-
-    *out_palette = active_ui_state->active_palette;
+    ui_get_theme_state(nullptr, out_palette);
 }

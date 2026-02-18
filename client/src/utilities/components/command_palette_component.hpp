@@ -3,72 +3,53 @@
 #include "defines.hpp"
 #include "utils/string.hpp"
 
-constexpr u64 COMMAND_PALETTE_ID_MAX_LENGTH          = 96;
-constexpr u64 COMMAND_PALETTE_LABEL_MAX_LENGTH       = 96;
-constexpr u64 COMMAND_PALETTE_DESCRIPTION_MAX_LENGTH = 192;
-constexpr u64 COMMAND_PALETTE_KEYWORDS_MAX_LENGTH    = 192;
-constexpr u64 COMMAND_PALETTE_FILTER_MAX_LENGTH      = 160;
-constexpr s32 COMMAND_PALETTE_MAX_COMMAND_COUNT      = 256;
+struct UI_Theme_Palette;
+struct Global_Client_State;
 
-typedef void (*PFN_Command_Palette_Execute)(void *global_state,
-                                            void *user_data);
-typedef String (*PFN_Command_Palette_Resolve_Description)(
-    struct Arena *arena,
-    void         *global_state,
-    void         *user_data,
-    String        base_description);
+constexpr u64 COMMAND_PALETTE_FILTER_MAX_LENGTH   = 160;
+constexpr s32 COMMAND_PALETTE_MAX_COMPONENT_COUNT = 64;
 
-struct Command_Palette_Registered_Command
-{
-    Const_String<COMMAND_PALETTE_ID_MAX_LENGTH>          id;
-    Const_String<COMMAND_PALETTE_ID_MAX_LENGTH>          parent_id;
-    Const_String<COMMAND_PALETTE_LABEL_MAX_LENGTH>       label;
-    Const_String<COMMAND_PALETTE_DESCRIPTION_MAX_LENGTH> description;
-    Const_String<COMMAND_PALETTE_KEYWORDS_MAX_LENGTH>    keywords;
+typedef void (*PFN_Command_Palette_Component_On_Open)(
+    void                *component_state,
+    Global_Client_State *global_state);
 
-    PFN_Command_Palette_Execute             on_execute;
-    PFN_Command_Palette_Resolve_Description resolve_description;
-    void                                   *user_data;
-    b8                                      close_on_execute;
-};
+typedef void (*PFN_Command_Palette_Component_Render)(
+    void                   *component_state,
+    Global_Client_State    *global_state,
+    const UI_Theme_Palette &palette,
+    String                  filter,
+    b8                     *request_close);
 
-struct Command_Palette_State
-{
-    b8 initialized;
-
-    f32 intro_t;
-    s32 selection;
-    b8  focus_filter;
-
-    char command_filter[COMMAND_PALETTE_FILTER_MAX_LENGTH];
-    Const_String<COMMAND_PALETTE_ID_MAX_LENGTH> active_parent_id;
-
-    Command_Palette_Registered_Command
-        commands[COMMAND_PALETTE_MAX_COMMAND_COUNT];
-    s32 command_count;
-};
-
-struct Command_Palette_Command_Definition
+struct Command_Palette_Component
 {
     String id;
-    String parent_id;
     String label;
     String description;
     String keywords;
 
-    PFN_Command_Palette_Execute             on_execute;
-    PFN_Command_Palette_Resolve_Description resolve_description;
-    void                                   *user_data;
-    b8                                      close_on_execute;
+    PFN_Command_Palette_Component_On_Open on_open;
+    PFN_Command_Palette_Component_Render  on_render;
+    void                                 *component_state;
 };
 
-void command_palette_init(Command_Palette_State *state);
-void command_palette_reset_state(Command_Palette_State *state);
-void command_palette_clear_registry(Command_Palette_State *state);
-b8   command_palette_register(Command_Palette_State                    *state,
-                              const Command_Palette_Command_Definition *command);
+struct Command_Palette_State
+{
+    f32 intro_t;
+    s32 selection;
+    s32 active_component_index;
+    b8  focus_filter;
 
-void command_palette_component_render(Command_Palette_State      *state,
-                                      struct Global_Client_State *global_state,
+    char command_filter[COMMAND_PALETTE_FILTER_MAX_LENGTH];
+
+    Command_Palette_Component components[COMMAND_PALETTE_MAX_COMPONENT_COUNT];
+    s32                       component_count;
+};
+
+void command_palette_init(Command_Palette_State           *state,
+                          const Command_Palette_Component *components,
+                          s32                              component_count);
+
+void command_palette_component_render(Command_Palette_State *state,
+                                      Global_Client_State   *global_state,
                                       const struct UI_Theme_Palette &palette,
                                       f32 delta_time);

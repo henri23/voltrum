@@ -14,7 +14,7 @@
 using PFN_titlebar_content_callback = void (*)(void *client_state,
                                                vec2  content_area_min,
                                                vec2  content_area_max,
-                                               const UI_Theme_Palette &palette);
+                                               const UI_Theme_Palette *palette);
 
 enum class Font_Style : u8
 {

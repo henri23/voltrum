@@ -23,7 +23,7 @@ icon_loader_load(Arena      *arena,
     // Icons should NOT be flipped vertically (unlike textures)
     stbi_set_flip_vertically_on_load(false);
 
-    String full_path = str_fmt(arena,
+    String full_path = string_fmt(arena,
                                "%s/%s/%s%s",
                                resource_system_base_path(),
                                "icons",
@@ -34,7 +34,7 @@ icon_loader_load(Arena      *arena,
     s32 height;
     s32 channel_count;
 
-    u8 *data = stbi_load((const char *)full_path.str,
+    u8 *data = stbi_load((const char *)full_path.buff,
                          &width,
                          &height,
                          &channel_count,
@@ -44,7 +44,7 @@ icon_loader_load(Arena      *arena,
     {
         const char *fail_reason = stbi_failure_reason();
         CORE_ERROR("Icon resource loader failed to load file '%s': '%s'",
-                   (const char *)full_path.str,
+                   (const char *)full_path.buff,
                    fail_reason ? fail_reason : "unknown error");
         return false;
     }
@@ -58,7 +58,7 @@ icon_loader_load(Arena      *arena,
     // Free stbi allocated memory immediately
     stbi_image_free(data);
 
-    out_resource->full_path = (char *)full_path.str;
+    out_resource->full_path = (char *)full_path.buff;
 
     Image_Resource_Data *resource_data =
         push_struct(arena, Image_Resource_Data);
