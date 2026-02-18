@@ -26,8 +26,13 @@ layout(location = 1) out struct data_transfer_object {
 void main() {
     out_mode = 0;
     out_dto.texture_coordinate = in_texture_coordinate;
-    gl_Position = global_ubo.projection *
-            global_ubo.view *
-            u_push_constants.model *
-            vec4(in_position, 1.0);
+    vec4 clip_position = global_ubo.projection *
+                         global_ubo.view *
+                         u_push_constants.model *
+                         vec4(in_position, 1.0);
+
+    // CPU projection matrices are OpenGL-style (NDC z in [-1, 1]).
+    // Vulkan clip/depth expects [0, 1], so remap before rasterization.
+    clip_position.z = (clip_position.z + clip_position.w) * 0.5;
+    gl_Position = clip_position;
 }

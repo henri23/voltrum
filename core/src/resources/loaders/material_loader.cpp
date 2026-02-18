@@ -18,17 +18,17 @@ material_loader_load(Arena      *arena,
         return false;
     }
 
-    String full_path = str_fmt(arena,
+    String full_path = string_fmt(arena,
                                "%s/%s/%s%s",
                                resource_system_base_path(),
                                "materials",
                                name,
                                ".vol");
 
-    out_resource->full_path = (char *)full_path.str;
+    out_resource->full_path = (char *)full_path.buff;
 
     File_Handle file;
-    if (!filesystem_open((const char *)full_path.str,
+    if (!filesystem_open((const char *)full_path.buff,
                          File_Modes::READ,
                          false,
                          &file))
@@ -36,7 +36,7 @@ material_loader_load(Arena      *arena,
         CORE_ERROR(
             "material_loader_load - unable to open material file for "
             "reading: '%s'",
-            (const char *)full_path.str);
+            (const char *)full_path.buff);
         return false;
     }
 
@@ -44,8 +44,8 @@ material_loader_load(Arena      *arena,
     // Set default values
     resource_data->auto_release    = true;
     resource_data->diffuse_color   = vec4_one();
-    resource_data->diffuse_map_name = {};
-    resource_data->name = const_str_from_cstr<MATERIAL_NAME_MAX_LENGTH>(name);
+    resource_data->diffuse_map_name[0] = '\0';
+    string_set(resource_data->name, name);
 
     char line_buffer[512] = "";
     char *p = &line_buffer[0];
@@ -55,63 +55,61 @@ material_loader_load(Arena      *arena,
 
     while (filesystem_read_line(&file, 511, &p, &line_length))
     {
-        String trimmed = str_trim_whitespace(str_from_cstr(line_buffer));
+        String trimmed = string_trim_whitespace(STR(line_buffer));
 
-        if (trimmed.size < 1 || trimmed.str[0] == '#')
+        if (trimmed.size < 1 || trimmed.buff[0] == '#')
         {
             line_number++;
             continue;
         }
 
-        u64 equal_index = str_index_of(trimmed, '=');
+        u64 equal_index = string_index_of(trimmed, '=');
         if (equal_index == (u64)-1)
         {
             CORE_WARN(
                 "material_loader_load - Potential formatting issue found "
                 "in '%s': token '=' not "
                 "found. Skipping line '%ui'",
-                (const char *)full_path.str,
+                (const char *)full_path.buff,
                 line_number);
             line_number++;
             continue;
         }
 
-        String var_name = str_trim_whitespace(
-            str_prefix(trimmed, equal_index));
-        String value = str_trim_whitespace(
-            str_skip(trimmed, equal_index + 1));
+        String var_name = string_trim_whitespace(
+            string_prefix(trimmed, equal_index));
+        String value = string_trim_whitespace(
+            string_skip(trimmed, equal_index + 1));
 
-        if (str_match(var_name,
+        if (string_match(var_name,
                       STR_LIT("version"),
                       String_Match_Flags::CASE_INSENSITIVE))
         {
             // TODO: handle version
         }
-        else if (str_match(var_name,
+        else if (string_match(var_name,
                            STR_LIT("name"),
                            String_Match_Flags::CASE_INSENSITIVE))
         {
-            resource_data->name =
-                const_str_from_str<MATERIAL_NAME_MAX_LENGTH>(value);
+            string_set(resource_data->name, value);
         }
-        else if (str_match(var_name,
+        else if (string_match(var_name,
                            STR_LIT("diffuse_map_name"),
                            String_Match_Flags::CASE_INSENSITIVE))
         {
-            resource_data->diffuse_map_name =
-                const_str_from_str<TEXTURE_NAME_MAX_LENGTH>(value);
+            string_set(resource_data->diffuse_map_name, value);
         }
-        else if (str_match(var_name,
+        else if (string_match(var_name,
                            STR_LIT("diffuse_color"),
                            String_Match_Flags::CASE_INSENSITIVE))
         {
-            if (!str_to_vec4(value, &resource_data->diffuse_color))
+            if (!string_to_vec4(value, &resource_data->diffuse_color))
             {
                 CORE_WARN(
                     "material_loader_load - Error parsing diffuse color in "
                     "file '%s'. Using default "
                     "of white instead",
-                    (const char *)full_path.str);
+                    (const char *)full_path.buff);
                 resource_data->diffuse_color = vec4_one();
             }
         }

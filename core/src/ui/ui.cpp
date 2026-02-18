@@ -12,6 +12,65 @@
 #include <imgui_impl_vulkan.h>
 #include <imgui_internal.h>
 
+internal_var UI_State *state_ptr;
+
+static const String DOCKSPACE_WINDOW_NAME    = STR_LIT("DockSpace");
+static const String MAIN_DOCKSPACE_ID        = STR_LIT("MainDockspace");
+static const String APP_WINDOW_SETTINGS_NAME = STR_LIT("AppWindow");
+
+INTERNAL_FUNC b8
+parse_s32(String s, s32 *out_value)
+{
+    if (!out_value || !s.buff || s.size == 0)
+    {
+        return false;
+    }
+
+    s = string_trim_whitespace(s);
+    if (s.size == 0)
+    {
+        return false;
+    }
+
+    b8  is_negative = false;
+    u64 i           = 0;
+
+    if (s.buff[0] == '-' || s.buff[0] == '+')
+    {
+        is_negative = (s.buff[0] == '-');
+        i           = 1;
+    }
+
+    if (i >= s.size)
+    {
+        return false;
+    }
+
+    s64 value = 0;
+    for (; i < s.size; ++i)
+    {
+        const char c = s.buff[i];
+        if (c < '0' || c > '9')
+        {
+            return false;
+        }
+
+        value = (value * 10) + (s64)(c - '0');
+        if (!is_negative && value > 2147483647LL)
+        {
+            return false;
+        }
+
+        if (is_negative && value > 2147483648LL)
+        {
+            return false;
+        }
+    }
+
+    *out_value = is_negative ? (s32)(-value) : (s32)value;
+    return true;
+}
+
 INTERNAL_FUNC void
 ui_dockspace_render(UI_State *state)
 {
@@ -21,7 +80,8 @@ ui_dockspace_render(UI_State *state)
 
     if (dockspace->dockspace_id == 0)
     {
-        dockspace->dockspace_id = ImGui::GetID("MainDockspace");
+        dockspace->dockspace_id =
+            ImGui::GetID((const char *)MAIN_DOCKSPACE_ID.buff);
         CORE_DEBUG("Generated dockspace ID: %u", dockspace->dockspace_id);
     }
 
@@ -46,8 +106,9 @@ ui_dockspace_render(UI_State *state)
         ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoBackground;
 
-    const char *window_name = "DockSpace";
-    ImGui::Begin(window_name, &dockspace->dockspace_open, window_flags);
+    ImGui::Begin((const char *)DOCKSPACE_WINDOW_NAME.buff,
+                 &dockspace->dockspace_open,
+                 window_flags);
     dockspace->window_began = true;
 
     ImGui::PopStyleVar(3);
@@ -80,16 +141,18 @@ ui_dockspace_render(UI_State *state)
 INTERNAL_FUNC b8
 load_default_fonts(UI_State *state)
 {
-    ImGuiIO &io = ImGui::GetIO();
-    f32 scale = state->platform->main_scale;
+    ImGuiIO &io    = ImGui::GetIO();
+    f32      scale = state->platform->main_scale;
 
     // Scratch arena keeps font data alive until Build() copies it
     Scratch_Arena scratch = scratch_begin(nullptr, 0);
 
-    constexpr const char *style_names[] = {"normal",
-                                           "italic",
-                                           "bold_normal",
-                                           "bold_italic"};
+    static const String style_names[] = {STR_LIT("normal"),
+                                         STR_LIT("italic"),
+                                         STR_LIT("bold_normal"),
+                                         STR_LIT("bold_italic")};
+    static const String icon_font_resource_path =
+        STR_LIT("fontawesome/fontawesome_normal");
 
     Resource font_resources[FONT_MAX_COUNT] = {};
     Resource icon_resource                  = {};
@@ -97,7 +160,7 @@ load_default_fonts(UI_State *state)
 
     // Load icon font once (will be merged with each text font)
     if (resource_system_load(scratch.arena,
-                             "fontawesome/fontawesome_normal",
+                             (const char *)icon_font_resource_path.buff,
                              Resource_Type::FONT,
                              &icon_resource))
     {
@@ -111,24 +174,18 @@ load_default_fonts(UI_State *state)
 
     for (u8 s = 0; s < FONT_MAX_COUNT; ++s)
     {
-        char path[128];
-        u32  i = 0;
-
-        const char *prefix = "jetbrains/jetbrains_";
-        for (u32 j = 0; prefix[j] != '\0'; ++j)
-            path[i++] = prefix[j];
-
-        for (u32 j = 0; style_names[s][j] != '\0'; ++j)
-            path[i++] = style_names[s][j];
-
-        path[i] = '\0';
+        String font_resource_path = string_fmt(scratch.arena,
+                                            "jetbrains/jetbrains_%s",
+                                            (const char *)style_names[s].buff);
+        const char *font_resource_path_cstr =
+            font_resource_path.buff ? (const char *)font_resource_path.buff : "";
 
         if (!resource_system_load(scratch.arena,
-                                  path,
+                                  font_resource_path_cstr,
                                   Resource_Type::FONT,
                                   &font_resources[s]))
         {
-            CORE_ERROR("Failed to load font: %s", path);
+            CORE_ERROR("Failed to load font: %.*s", (s32)(font_resource_path).size, (font_resource_path).buff ? (const char *)(font_resource_path).buff : "");
             state->fonts[s] = nullptr;
             continue;
         }
@@ -145,7 +202,10 @@ load_default_fonts(UI_State *state)
 
         if (state->fonts[s])
         {
-            CORE_DEBUG("Loaded font: %s at %.0fpt (scale=%.2f)", path, font_size, scale);
+            CORE_DEBUG("Loaded font: %.*s at %.0fpt (scale=%.2f)",
+                       (s32)(font_resource_path).size, (font_resource_path).buff ? (const char *)(font_resource_path).buff : "",
+                       font_size,
+                       scale);
         }
 
         // Merge icon font with this text font style
@@ -157,7 +217,7 @@ load_default_fonts(UI_State *state)
             icon_config.FontDataOwnedByAtlas = false;
             icon_config.GlyphMinAdvanceX     = 20.0f * scale;
 
-            static const ImWchar icon_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
+            constexpr ImWchar icon_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
 
             io.Fonts->AddFontFromMemoryTTF(icon_resource.data,
                                            icon_resource.data_size,
@@ -182,25 +242,25 @@ load_default_fonts(UI_State *state)
     io.FontGlobalScale = (1.0f / scale) * UI_PLATFORM_SCALE;
 
     io.FontDefault = state->fonts[(u8)Font_Style::NORMAL];
-    CORE_DEBUG("Font atlas built successfully with icon support (scale=%.2f)", scale);
+    CORE_DEBUG("Font atlas built successfully with icon support (scale=%.2f)",
+               scale);
 
     return true;
 }
 
 UI_State *
-ui_init(
-    Arena                         *allocator,
-    Dynamic_Array<UI_Layer>       *layers,
-    UI_Theme                       theme,
-    PFN_titlebar_content_callback  titlebar_content_callback,
-    const char                    *logo_asset_name,
-    Platform_State                *plat_state,
-    void                          *global_client_state
-)
+ui_init(Arena                        *allocator,
+        Dynamic_Array<UI_Layer>      *layers,
+        UI_Theme                      theme,
+        PFN_titlebar_content_callback titlebar_content_callback,
+        String                        logo_asset_name,
+        Platform_State               *plat_state,
+        void                         *global_client_state)
 {
     UI_State *state = push_struct(allocator, UI_State);
 
-    state->current_theme             = theme;
+    state->current_theme = theme;
+    ui_themes_copy_palette(theme, &state->active_palette);
     state->titlebar_content_callback = titlebar_content_callback;
     state->logo_asset_name           = logo_asset_name;
     state->is_initialized            = true;
@@ -210,38 +270,91 @@ ui_init(
 
     load_default_fonts(state);
 
-    ImGuiStyle &style = ImGui::GetStyle();
-
-    ui_themes_apply(state->current_theme, style);
+    ui_themes_apply_palette(&state->active_palette, &ImGui::GetStyle());
 
     ui_titlebar_setup(state, logo_asset_name);
 
     // Register settings handler to persist OS window size in imgui.ini
     ImGuiSettingsHandler wh;
-    wh.TypeName  = "AppWindow";
-    wh.TypeHash  = ImHashStr("AppWindow");
-    wh.UserData  = (void *)plat_state->window;
-    wh.ReadOpenFn = [](ImGuiContext *, ImGuiSettingsHandler *, const char *)
-        -> void * { return (void *)1; };
+    wh.TypeName   = (const char *)APP_WINDOW_SETTINGS_NAME.buff;
+    wh.TypeHash   = ImHashStr((const char *)APP_WINDOW_SETTINGS_NAME.buff);
+    wh.UserData   = (void *)plat_state->window;
+    wh.ReadOpenFn = [](ImGuiContext *,
+                       ImGuiSettingsHandler *,
+                       const char *) -> void * { return (void *)1; };
     wh.ReadLineFn = [](ImGuiContext *,
                        ImGuiSettingsHandler *handler,
                        void *,
-                       const char          *line) {
+                       const char *line)
+    {
         SDL_Window *win = (SDL_Window *)handler->UserData;
-        int         a, b;
-        if (sscanf(line, "Size=%d,%d", &a, &b) == 2)
-            SDL_SetWindowSize(win, a, b);
-        else if (sscanf(line, "Pos=%d,%d", &a, &b) == 2)
-            SDL_SetWindowPosition(win, a, b);
+
+        char line_buffer[512] = {};
+        string_set(line_buffer, line);
+        String line_str = string_capped(line_buffer, line_buffer + sizeof(line_buffer));
+
+        static const String SIZE_PREFIX = STR_LIT("Size=");
+        static const String POS_PREFIX  = STR_LIT("Pos=");
+
+        s32 a = 0;
+        s32 b = 0;
+
+        if (line_str.size >= SIZE_PREFIX.size &&
+            string_match(string_prefix(line_str, SIZE_PREFIX.size), SIZE_PREFIX))
+        {
+            String values      = string_skip(line_str, SIZE_PREFIX.size);
+            u64    comma_index = string_index_of(values, ',');
+            if (comma_index != (u64)-1)
+            {
+                String first_value  = string_prefix(values, comma_index);
+                String second_value = string_skip(values, comma_index + 1);
+
+                if (parse_s32(first_value, &a) && parse_s32(second_value, &b))
+                {
+                    SDL_SetWindowSize(win, a, b);
+                }
+            }
+        }
+        else if (line_str.size >= POS_PREFIX.size &&
+                 string_match(string_prefix(line_str, POS_PREFIX.size), POS_PREFIX))
+        {
+            String values      = string_skip(line_str, POS_PREFIX.size);
+            u64    comma_index = string_index_of(values, ',');
+            if (comma_index != (u64)-1)
+            {
+                String first_value  = string_prefix(values, comma_index);
+                String second_value = string_skip(values, comma_index + 1);
+
+                if (parse_s32(first_value, &a) && parse_s32(second_value, &b))
+                {
+                    SDL_SetWindowPosition(win, a, b);
+                }
+            }
+        }
     };
-    wh.WriteAllFn = [](ImGuiContext *,
-                        ImGuiSettingsHandler *handler,
-                        ImGuiTextBuffer      *buf) {
+    wh.WriteAllFn =
+        [](ImGuiContext *, ImGuiSettingsHandler *handler, ImGuiTextBuffer *buf)
+    {
         SDL_Window *win = (SDL_Window *)handler->UserData;
         int         w, h, x, y;
         SDL_GetWindowSize(win, &w, &h);
         SDL_GetWindowPosition(win, &x, &y);
-        buf->appendf("[AppWindow][Main]\nSize=%d,%d\nPos=%d,%d\n\n", w, h, x, y);
+
+        Scratch_Arena scratch  = scratch_begin(nullptr, 0);
+        String        settings = string_fmt(scratch.arena,
+                                  "[AppWindow][Main]\nSize=%d,%d\nPos=%d,%d\n\n",
+                                  w,
+                                  h,
+                                  x,
+                                  y);
+
+        if (settings.buff && settings.size > 0)
+        {
+            buf->append((const char *)settings.buff,
+                        (const char *)settings.buff + settings.size);
+        }
+
+        scratch_end(scratch);
     };
     ImGui::GetCurrentContext()->SettingsHandlers.push_back(wh);
 
@@ -250,6 +363,8 @@ ui_init(
         if (layer.on_attach)
             layer.on_attach(layer.state);
     }
+
+    state_ptr = state;
 
     return state;
 }
@@ -261,6 +376,11 @@ ui_shutdown_layers(UI_State *state)
     {
         if (layer.on_detach)
             layer.on_detach(layer.state);
+    }
+
+    if (state_ptr == state)
+    {
+        state_ptr = nullptr;
     }
 }
 
@@ -297,4 +417,105 @@ ui_draw_layers(UI_State *state, Frame_Context *ctx)
     ImGui::Render();
 
     return ImGui::GetDrawData();
+}
+
+void
+ui_set_theme_state(const UI_Theme *theme, const UI_Theme_Palette *palette)
+{
+    if (!state_ptr)
+    {
+        return;
+    }
+
+    if (!theme && !palette)
+    {
+        return;
+    }
+
+    if (theme)
+    {
+        state_ptr->current_theme = *theme;
+
+        if (!palette)
+        {
+            ui_themes_copy_palette(*theme, &state_ptr->active_palette);
+        }
+    }
+
+    if (palette)
+    {
+        state_ptr->active_palette = *palette;
+    }
+
+    ui_themes_apply_palette(&state_ptr->active_palette, &ImGui::GetStyle());
+}
+
+void
+ui_get_theme_state(UI_Theme *out_theme, UI_Theme_Palette *out_palette)
+{
+    if (!out_theme && !out_palette)
+    {
+        return;
+    }
+
+    if (!state_ptr)
+    {
+        if (out_theme)
+        {
+            *out_theme = UI_Theme::DARK;
+        }
+
+        if (out_palette)
+        {
+            ui_themes_copy_palette(UI_Theme::DARK, out_palette);
+        }
+
+        return;
+    }
+
+    if (out_theme)
+    {
+        *out_theme = state_ptr->current_theme;
+    }
+
+    if (out_palette)
+    {
+        *out_palette = state_ptr->active_palette;
+    }
+}
+
+void
+ui_set_theme(UI_Theme theme)
+{
+    ui_set_theme_state(&theme, nullptr);
+}
+
+UI_Theme
+ui_get_current_theme()
+{
+    UI_Theme theme = UI_Theme::DARK;
+    ui_get_theme_state(&theme, nullptr);
+    return theme;
+}
+
+void
+ui_set_theme_palette(const UI_Theme_Palette *palette)
+{
+    if (!palette)
+    {
+        return;
+    }
+
+    ui_set_theme_state(nullptr, palette);
+}
+
+void
+ui_get_theme_palette(UI_Theme_Palette *out_palette)
+{
+    if (!out_palette)
+    {
+        return;
+    }
+
+    ui_get_theme_state(nullptr, out_palette);
 }

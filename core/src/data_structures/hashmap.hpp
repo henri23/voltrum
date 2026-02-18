@@ -104,13 +104,13 @@ struct Hashmap
         // By exploiting the capacity as a power of two instead of using the %
         // operator to map all possible hash addresses inside the bounds of the
         // array, we instead just create a bitmask and apply a bitwise and op.
-        u64 address = str_hash(key) & (capacity - 1);
+        u64 address = string_hash(key) & (capacity - 1);
 
         RUNTIME_ASSERT(address < capacity);
 
         Hashmap_Item<T> current_item = {};
         current_item.value           = *value;
-        current_item.key             = str_copy(_allocator, key);
+        current_item.key             = string_copy(_allocator, key);
         current_item.distance        = 0;
         // Mark already as occupied because if we will use this element, we are
         // adding willingly the element inside the hash map
@@ -130,7 +130,7 @@ struct Hashmap
             }
 
             if (items[address].is_occupied &&
-                str_match(items[address].key, current_item.key))
+                string_match(items[address].key, current_item.key))
             {
                 if (overwrite)
                 {
@@ -140,7 +140,7 @@ struct Hashmap
 
                 CORE_WARN("Key '%.*s' is already present in the hashmap",
                     (int)current_item.key.size,
-                    current_item.key.str);
+                    current_item.key.buff);
                 return false;
             }
 
@@ -174,7 +174,7 @@ struct Hashmap
             return false;
         }
 
-        u64 address = str_hash(key) & (capacity - 1);
+        u64 address = string_hash(key) & (capacity - 1);
 
         RUNTIME_ASSERT(address < capacity);
 
@@ -187,11 +187,11 @@ struct Hashmap
             {
                 CORE_WARN("Key '%.*s' is not present inside the hashmap",
                     (int)key.size,
-                    key.str);
+                    key.buff);
                 return false;
             }
 
-            if (str_match(items[address].key, key))
+            if (string_match(items[address].key, key))
             {
                 *out_ptr = &items[address].value;
                 return true;
@@ -214,7 +214,7 @@ struct Hashmap
             return false;
         }
 
-        u64 address = str_hash(key) & (capacity - 1);
+        u64 address = string_hash(key) & (capacity - 1);
 
         RUNTIME_ASSERT(address < capacity);
 
@@ -227,11 +227,11 @@ struct Hashmap
             {
                 CORE_WARN("Key '%.*s' is not present inside the hashmap",
                     (int)key.size,
-                    key.str);
+                    key.buff);
                 return false;
             }
 
-            if (str_match(items[address].key, key))
+            if (string_match(items[address].key, key))
             {
                 memory_copy(out_copy, &items[address].value, sizeof(T));
                 return true;
@@ -254,7 +254,7 @@ struct Hashmap
             return false;
         }
 
-        u64 address = str_hash(key) & (capacity - 1);
+        u64 address = string_hash(key) & (capacity - 1);
 
         RUNTIME_ASSERT(address < capacity);
 
@@ -269,11 +269,11 @@ struct Hashmap
             {
                 CORE_WARN("Key '%.*s' is not present inside the hashmap",
                     (int)key.size,
-                    key.str);
+                    key.buff);
                 return false;
             }
 
-            if (str_match(items[address].key, key))
+            if (string_match(items[address].key, key))
             {
                 found         = true;
                 found_address = address;
@@ -355,7 +355,7 @@ struct Hashmap
                 idx,
                 slot->distance,
                 (int)slot->key.size,
-                slot->key.str);
+                slot->key.buff);
 
             ++printed;
         }

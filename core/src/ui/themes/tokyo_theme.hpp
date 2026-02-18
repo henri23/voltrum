@@ -65,13 +65,13 @@ static const UI_Theme_Palette tokyo_palette = {
         0), // titlebar_gradient_end - Blue fully transparent
 
     // Text colors (Tokyo Night)
-    IM_COL32(192,
-        202,
-        245,
+    IM_COL32(206,
+        216,
+        255,
         255), // text (fg)
-    IM_COL32(169,
-        177,
-        214,
+    IM_COL32(226,
+        232,
+        255,
         255), // text_brighter (fg_dark)
     IM_COL32(86,
         95,

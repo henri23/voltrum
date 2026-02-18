@@ -2,10 +2,8 @@
 
 #include "renderer/renderer_types.hpp"
 
-struct Renderer_System_State;
-
-Renderer_System_State *renderer_init(
-    Arena                 *allocator,
+struct Renderer_System_State *renderer_init(
+    struct Arena          *allocator,
     struct Platform_State *platform,
     String                 application_name);
 
@@ -33,6 +31,10 @@ void renderer_destroy_geometry(Geometry *geometry);
 // WARN: The exposing of this method from the core library is temporary until
 // the camera system is developed
 VOLTRUM_API void renderer_set_view(mat4 view);
+VOLTRUM_API void renderer_set_projection(mat4 projection);
+VOLTRUM_API void renderer_set_viewport_clear_color(vec4 color);
+VOLTRUM_API void renderer_set_grid_color(vec4 color);
+VOLTRUM_API void renderer_set_grid_spacing(f32 spacing);
 
 // Viewport management for editor
 VOLTRUM_API void  renderer_render_viewport();

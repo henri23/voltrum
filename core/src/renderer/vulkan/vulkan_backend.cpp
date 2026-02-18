@@ -7,6 +7,7 @@
 #include "platform/platform.hpp"
 #include "systems/material_system.hpp"
 
+#include "math/math.hpp"
 #include "math/math_types.hpp"
 #include "utils/string.hpp"
 
@@ -26,6 +27,7 @@
 
 #include "ui_backend/vulkan_ui_backend.hpp"
 
+#include "shaders/vulkan_grid_shader_pipeline.hpp"
 #include "shaders/vulkan_imgui_shader_pipeline.hpp"
 #include "shaders/vulkan_material_shader_pipeline.hpp"
 
@@ -115,10 +117,7 @@ free_data_range(Vulkan_Buffer *buffer, u64 offset, u64 size)
 }
 
 b8
-vulkan_initialize(
-    Arena          *allocator,
-    Platform_State *platform,
-    String          app_name)
+vulkan_initialize(Arena *allocator, Platform_State *platform, String app_name)
 {
     state_ptr = push_struct(allocator, Vulkan_Context);
 
@@ -167,8 +166,9 @@ vulkan_initialize(
 
     VkApplicationInfo app_info = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
 
-    app_info.pNext            = nullptr;
-    app_info.pApplicationName = C_STR(app_name);
+    app_info.pNext              = nullptr;
+    String app_name_copy        = string_copy(allocator, app_name);
+    app_info.pApplicationName   = app_name_copy.buff;
     app_info.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     app_info.pEngineName        = "Koala engine";
     app_info.engineVersion      = VK_MAKE_VERSION(1, 0, 0);
@@ -395,6 +395,13 @@ vulkan_initialize(
         return false;
     }
 
+    if (!vulkan_grid_shader_pipeline_create(state_ptr, &state_ptr->grid_shader))
+    {
+
+        CORE_ERROR("Error loading built-in grid shader");
+        return false;
+    }
+
     if (!vulkan_imgui_shader_pipeline_create(state_ptr,
                                              &state_ptr->imgui_shader))
     {
@@ -477,6 +484,7 @@ vulkan_shutdown()
 
     // Destroy shader modules
     vulkan_imgui_shader_pipeline_destroy(state_ptr, &state_ptr->imgui_shader);
+    vulkan_grid_shader_pipeline_destroy(state_ptr, &state_ptr->grid_shader);
     vulkan_material_shader_pipeline_destroy(state_ptr,
                                             &state_ptr->material_shader);
 
@@ -947,8 +955,8 @@ vulkan_enable_validation_layers(Arena       *scratch,
         b8 found = false;
         for (u32 j = 0; j < available_layer_count; ++j)
         {
-            if (str_match(str_from_cstr(out_layer_names[i]),
-                          str_from_cstr(available_layers[j].layerName)))
+            if (string_match(STR(out_layer_names[i]),
+                             STR(available_layers[j].layerName)))
             {
                 found = true;
                 CORE_INFO("Found.");
@@ -1828,6 +1836,48 @@ vulkan_draw_geometry(Geometry_Render_Data data)
     {
         vkCmdDraw(cmd_buffer->handle, buffer_data->vertex_count, 1, 0, 0);
     }
+}
+
+void
+vulkan_draw_grid(mat4 projection, mat4 view, vec4 grid_color, f32 grid_spacing)
+{
+    Vulkan_Grid_Shader_Pipeline *shader = &state_ptr->grid_shader;
+
+    // Populate UBO
+    shader->global_ubo.projection = projection;
+    shader->global_ubo.inv_view   = mat4_inv(view);
+
+    // Compute zoom level: pixels per world unit
+    f32 viewport_width = (f32)state_ptr->viewport.framebuffer_width;
+    f32 zoom = math_abs_value(projection.elements[0]) * viewport_width * 0.5f;
+    if (grid_spacing <= 0.0f)
+    {
+        grid_spacing = 0.000001f;
+    }
+    if (zoom <= 0.0f)
+    {
+        zoom = 0.000001f;
+    }
+
+    // Shrink dots as the grid gets denser on screen to avoid blobbing.
+    f32 screen_spacing = grid_spacing * zoom;
+    f32 density_t      = CLAMP((screen_spacing - 1.0f) / 7.0f, 0.0f, 1.0f);
+    f32 point_size_px  = 0.80f + (1.80f - 0.80f) * density_t;
+
+    shader->global_ubo.grid_color         = grid_color;
+    shader->global_ubo.grid_spacing_world = grid_spacing;
+    shader->global_ubo.point_size_px      = point_size_px;
+    shader->global_ubo.zoom_px_per_world  = zoom;
+
+    vulkan_grid_shader_pipeline_use(state_ptr, shader);
+    vulkan_grid_shader_pipeline_update_global_state(state_ptr, shader);
+    vulkan_grid_shader_pipeline_draw(state_ptr, shader);
+}
+
+void
+vulkan_set_viewport_clear_color(vec4 color)
+{
+    state_ptr->viewport_renderpass.clear_color = color;
 }
 
 void

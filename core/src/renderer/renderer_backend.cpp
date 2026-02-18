@@ -22,8 +22,10 @@ renderer_backend_initialize(Renderer_Backend_Type type,
         // Descriptors
         out_backend->update_global_viewport_state =
             vulkan_update_global_viewport_state;
-        out_backend->draw_geometry = vulkan_draw_geometry;
-        out_backend->draw_ui       = vulkan_draw_ui;
+        out_backend->draw_geometry            = vulkan_draw_geometry;
+        out_backend->draw_grid                = vulkan_draw_grid;
+        out_backend->draw_ui                  = vulkan_draw_ui;
+        out_backend->set_viewport_clear_color = vulkan_set_viewport_clear_color;
 
         out_backend->start_renderpass  = vulkan_renderpass_start;
         out_backend->finish_renderpass = vulkan_renderpass_finish;

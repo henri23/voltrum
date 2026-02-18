@@ -93,7 +93,7 @@ platform_init(Arena *allocator, String application_name, s32 width, s32 height)
                                    SDL_WINDOW_HIGH_PIXEL_DENSITY |
                                    SDL_WINDOW_BORDERLESS;
 
-    state->window = SDL_CreateWindow((const char *)application_name.str,
+    state->window = SDL_CreateWindow((const char *)application_name.buff,
                                      width,
                                      height,
                                      window_flags);
@@ -540,7 +540,7 @@ platform_hit_test_callback(SDL_Window *win, const SDL_Point *area, void *data)
     // coordinates to the hit test callback, so no DPI scaling is needed.
     // On Linux/Windows, hit test coordinates are in physical pixels, so we
     // scale by the DPI factor.
-    const int TITLEBAR_HEIGHT_LOGICAL = 58;
+    const int TITLEBAR_HEIGHT_LOGICAL = 50;
 #ifdef PLATFORM_APPLE
     const int TITLEBAR_HEIGHT_THRESHOLD = TITLEBAR_HEIGHT_LOGICAL;
 #else

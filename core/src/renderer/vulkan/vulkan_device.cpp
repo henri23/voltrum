@@ -531,9 +531,9 @@ b8 is_device_suitable(Arena *scratch,
                 b8 found = false;
 
                 for (u32 j = 0; j < available_extensions_count; ++j) {
-                    if (str_match(
-                            str_from_cstr(extension_properties[j].extensionName),
-                            str_from_cstr((*requirements->device_extension_names)[i]))) {
+                    if (string_match(
+                            STR(extension_properties[j].extensionName),
+                            STR((*requirements->device_extension_names)[i]))) {
                         found = true;
                         break;
                     }

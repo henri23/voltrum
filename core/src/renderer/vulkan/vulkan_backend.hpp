@@ -26,6 +26,12 @@ b8 vulkan_renderpass_finish(struct Frame_Context *frame_ctx,
                             Renderpass_Type       renderpass_type);
 
 void vulkan_draw_geometry(Geometry_Render_Data data);
+void vulkan_draw_grid(
+    mat4 projection,
+    mat4 view,
+    vec4 grid_color,
+    f32  grid_spacing);
+void vulkan_set_viewport_clear_color(vec4 color);
 void vulkan_draw_ui(UI_Render_Data data);
 
 void vulkan_create_texture(const u8 *pixels,

@@ -67,8 +67,7 @@ load_texture(const char *texture_name, Texture *texture, b8 is_ui_texture)
         }
     }
 
-    temp_texture.name =
-        const_str_from_cstr<TEXTURE_NAME_MAX_LENGTH>(texture_name);
+    string_set(temp_texture.name, texture_name);
     temp_texture.generation       = INVALID_ID;
     temp_texture.has_transparency = has_transparency;
 
@@ -145,8 +144,8 @@ texture_system_shutdown()
         {
             renderer_destroy_texture(texture);
             CORE_INFO("Texture '%.*s' destroyed.",
-                      (int)texture->name.size,
-                      (const char *)texture->name.data);
+                      (int)STR(texture->name).size,
+                      texture->name);
         }
     }
 
@@ -157,8 +156,8 @@ texture_system_shutdown()
 Texture *
 texture_system_acquire(const char *name, b8 auto_release, b8 is_ui_texture)
 {
-    if (str_match(str_from_cstr(name),
-                  str_from_cstr(DEFAULT_TEXTURE_NAME),
+    if (string_match(STR(name),
+                  STR(DEFAULT_TEXTURE_NAME),
                   String_Match_Flags::CASE_INSENSITIVE))
     {
         CORE_WARN(
@@ -170,7 +169,7 @@ texture_system_acquire(const char *name, b8 auto_release, b8 is_ui_texture)
     Texture_Reference ref;
     Texture          *texture = nullptr;
 
-    if (state_ptr->texture_registry.find(str_from_cstr(name), &ref))
+    if (state_ptr->texture_registry.find(STR(name), &ref))
     {
         CORE_DEBUG("Texture '%s' already present in the registry. Returning...",
                    name);
@@ -221,7 +220,7 @@ texture_system_acquire(const char *name, b8 auto_release, b8 is_ui_texture)
         ref.reference_count = 1;
     }
 
-    state_ptr->texture_registry.add(str_from_cstr(name), &ref, true);
+    state_ptr->texture_registry.add(STR(name), &ref, true);
 
     return texture;
 }
@@ -230,8 +229,8 @@ void
 texture_system_release(const char *name)
 {
 
-    if (str_match(str_from_cstr(name),
-                  str_from_cstr(DEFAULT_TEXTURE_NAME),
+    if (string_match(STR(name),
+                  STR(DEFAULT_TEXTURE_NAME),
                   String_Match_Flags::CASE_INSENSITIVE))
     {
         CORE_WARN(
@@ -241,7 +240,7 @@ texture_system_release(const char *name)
 
     Texture_Reference ref;
 
-    if (state_ptr->texture_registry.find(str_from_cstr(name), &ref))
+    if (state_ptr->texture_registry.find(STR(name), &ref))
     {
         ref.reference_count--;
 
@@ -251,7 +250,7 @@ texture_system_release(const char *name)
         // of the name, so that the external modules and directly use the
         // texture name to release it, so texture->name as input will still
         // work
-        u64 len = str_from_cstr(name).size;
+        u64 len = STR(name).size;
         memory_copy(name_copy, name, len);
         name_copy[len] = '\0';
 
@@ -267,7 +266,7 @@ texture_system_release(const char *name)
             destroy_texture(&state_ptr->registered_textures[ref.handle]);
             CORE_DEBUG("Resources of texture destroyed from renderer");
 
-            if (!state_ptr->texture_registry.remove(str_from_cstr(name_copy)))
+            if (!state_ptr->texture_registry.remove(STR(name_copy)))
             {
                 CORE_FATAL("Error while removing texture from registry");
             }
@@ -276,7 +275,7 @@ texture_system_release(const char *name)
         }
 
         // Update texture reference with the new reference count
-        state_ptr->texture_registry.add(str_from_cstr(name_copy), &ref, true);
+        state_ptr->texture_registry.add(STR(name_copy), &ref, true);
     }
     else
     {
@@ -324,8 +323,7 @@ create_default_textures(Texture_System_State *state)
         }
     }
 
-    state->default_texture.name =
-        const_str_from_cstr<TEXTURE_NAME_MAX_LENGTH>(DEFAULT_TEXTURE_NAME);
+    string_set(state->default_texture.name, DEFAULT_TEXTURE_NAME);
 
     state->default_texture.width            = tex_dimension;
     state->default_texture.height           = tex_dimension;

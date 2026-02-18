@@ -22,7 +22,7 @@ main()
 #endif
 
     Thread_Context *thread_context = thread_context_allocate();
-    thread_context->thread_name    = "Application thread";
+    thread_context->thread_name    = "Application main thread";
     thread_context_select(thread_context);
 
     auto config = request_client_config();

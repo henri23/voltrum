@@ -17,16 +17,16 @@ binary_loader_load(Arena      *arena,
         return false;
     }
 
-    String full_path = str_fmt(arena,
+    String full_path = string_fmt(arena,
                                "%s/%s%s",
                                resource_system_base_path(),
                                name,
                                "");
 
-    out_resource->full_path = (char *)full_path.str;
+    out_resource->full_path = (char *)full_path.buff;
 
     File_Handle file;
-    if (!filesystem_open((const char *)full_path.str,
+    if (!filesystem_open((const char *)full_path.buff,
                          File_Modes::READ,
                          true,
                          &file))
@@ -34,7 +34,7 @@ binary_loader_load(Arena      *arena,
         CORE_ERROR(
             "binary_loader_load - unable to open binary file for "
             "reading: '%s'",
-            (const char *)full_path.str);
+            (const char *)full_path.buff);
         return false;
     }
 
@@ -42,7 +42,7 @@ binary_loader_load(Arena      *arena,
     if (!filesystem_size(&file, &file_size))
     {
         CORE_ERROR("binary_loader_load - Unable to read file: '%s'",
-                   (const char *)full_path.str);
+                   (const char *)full_path.buff);
         filesystem_close(&file);
         return false;
     }
@@ -53,7 +53,7 @@ binary_loader_load(Arena      *arena,
     if (!filesystem_read_all_bytes(&file, resource_data, &read_size))
     {
         CORE_ERROR("binary_loader_load - Unable to binary read file '%s'",
-                   (const char *)full_path.str);
+                   (const char *)full_path.buff);
         filesystem_close(&file);
         return false;
     }

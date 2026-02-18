@@ -65,13 +65,13 @@ static const UI_Theme_Palette dark_palette = {
         0), // titlebar_gradient_end - Teal fully transparent
 
     // Text colors
-    IM_COL32(192,
-        192,
-        192,
+    IM_COL32(204,
+        204,
+        204,
         255), // text
-    IM_COL32(210,
-        210,
-        210,
+    IM_COL32(220,
+        220,
+        220,
         255), // text_brighter
     IM_COL32(128,
         128,

@@ -65,13 +65,13 @@ static const UI_Theme_Palette catppuccin_palette = {
         0), // titlebar_gradient_end - Mauve fully transparent
 
     // Text colors (Catppuccin Mocha)
-    IM_COL32(220,
-        224,
-        252,
+    IM_COL32(232,
+        236,
+        255,
         255), // text (Text)
-    IM_COL32(186,
-        194,
-        222,
+    IM_COL32(244,
+        247,
+        255,
         255), // text_brighter (Subtext1)
     IM_COL32(147,
         153,

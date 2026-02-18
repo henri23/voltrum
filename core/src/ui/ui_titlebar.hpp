@@ -1,14 +1,13 @@
 #pragma once
 
 #include "defines.hpp"
+#include "utils/string.hpp"
 
-struct UI_State;
-
-const f32 TITLEBAR_HEIGHT = 54.0f;
+const f32 TITLEBAR_HEIGHT = 50.0f;
 
 VOLTRUM_API void ui_titlebar_setup(
-    UI_State   *state,
-    const char *logo_asset_name
+    struct UI_State *state,
+    String           logo_asset_name
 );
 
-VOLTRUM_API void ui_titlebar_draw(UI_State *state);
+VOLTRUM_API void ui_titlebar_draw(struct UI_State *state);

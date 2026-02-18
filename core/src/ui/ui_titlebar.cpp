@@ -7,21 +7,32 @@
 
 #include "core/asserts.hpp"
 #include "core/logger.hpp"
+#include "core/thread_context.hpp"
 
 #include "platform/platform.hpp"
 
 #include <imgui_internal.h>
 
+INTERNAL_FUNC u32
+ui_color_with_alpha_scale(u32 color, f32 alpha_scale)
+{
+    ImVec4 color_v = ImGui::ColorConvertU32ToFloat4(color);
+    color_v.w      = ImClamp(color_v.w * alpha_scale, 0.0f, 1.0f);
+    return ImGui::ColorConvertFloat4ToU32(color_v);
+}
+
 void
 ui_titlebar_setup(
-    UI_State   *context,
-    const char *logo_asset_name
+    UI_State *context,
+    String    logo_asset_name
 )
 {
     UI_Titlebar_State *state = &context->titlebar;
+    Scratch_Arena      scratch = scratch_begin(nullptr, 0);
+    String             logo_name_copy = string_copy(scratch.arena, logo_asset_name);
 
     state->app_icon_texture = texture_system_acquire(
-        logo_asset_name,
+        logo_name_copy.buff ? logo_name_copy.buff : "",
         false,
         true
     );
@@ -56,6 +67,8 @@ ui_titlebar_setup(
     RUNTIME_ASSERT_MSG(state->restore_icon_texture, "Failed to load restore icon");
     RUNTIME_ASSERT_MSG(state->close_icon_texture, "Failed to load close icon");
 
+    scratch_end(scratch);
+
     CORE_INFO("Titlebar icons loaded successfully");
 }
 
@@ -63,7 +76,7 @@ void
 ui_titlebar_draw(UI_State *context)
 {
     UI_Titlebar_State      *state   = &context->titlebar;
-    const UI_Theme_Palette &palette = ui_themes_get_palette(context->current_theme);
+    const UI_Theme_Palette *palette = &context->active_palette;
 
     ImGuiViewport *viewport    = ImGui::GetMainViewport();
     ImVec2         window_pos  = viewport->Pos;
@@ -91,7 +104,7 @@ ui_titlebar_draw(UI_State *context)
     bg_draw_list->AddRectFilled(
         state->titlebar_min,
         state->titlebar_max,
-        palette.titlebar
+        palette->titlebar
     );
 
     // Gradient on left side
@@ -105,15 +118,16 @@ ui_titlebar_draw(UI_State *context)
     bg_draw_list->AddRectFilledMultiColor(
         gradient_min,
         gradient_max,
-        palette.titlebar_gradient_start,
-        palette.titlebar_gradient_end,
-        palette.titlebar_gradient_end,
-        palette.titlebar_gradient_start
+        palette->titlebar_gradient_start,
+        palette->titlebar_gradient_end,
+        palette->titlebar_gradient_end,
+        palette->titlebar_gradient_start
     );
 
     // Logo
     const f32 logo_margin = 4.0f;
-    f32       logo_size   = 50.0f * UI_PLATFORM_SCALE;
+    f32       logo_size   = ImMax(30.0f * UI_PLATFORM_SCALE,
+                            TITLEBAR_HEIGHT - (8.0f * UI_PLATFORM_SCALE));
     f32       logo_y      = state->titlebar_min.y + (TITLEBAR_HEIGHT - logo_size) * 0.5f;
     ImVec2    logo_pos    = ImVec2(
         state->titlebar_min.x + logo_margin,
@@ -138,13 +152,13 @@ ui_titlebar_draw(UI_State *context)
         ImDrawList *draw_list               = ImGui::GetWindowDrawList();
 
         // Window controls as a compact cluster with custom vector icons.
-        f32 button_size     = 30.0f * UI_PLATFORM_SCALE;
-        f32 button_spacing  = 2.0f * UI_PLATFORM_SCALE;
-        f32 button_rounding = 7.0f * UI_PLATFORM_SCALE;
-        f32 right_margin    = 10.0f * UI_PLATFORM_SCALE;
-        f32 cluster_padding = 2.0f * UI_PLATFORM_SCALE;
-        f32 cluster_rounding = 10.0f * UI_PLATFORM_SCALE;
-        f32 stroke          = 1.6f * UI_PLATFORM_SCALE;
+        f32 button_size      = IM_ROUND(30.0f * UI_PLATFORM_SCALE);
+        f32 button_spacing   = IM_ROUND(2.0f * UI_PLATFORM_SCALE);
+        f32 button_rounding  = IM_ROUND(7.0f * UI_PLATFORM_SCALE);
+        f32 right_margin     = IM_ROUND(10.0f * UI_PLATFORM_SCALE);
+        f32 cluster_padding  = IM_ROUND(2.0f * UI_PLATFORM_SCALE);
+        f32 cluster_rounding = IM_ROUND(10.0f * UI_PLATFORM_SCALE);
+        f32 stroke           = IM_ROUND(1.6f * UI_PLATFORM_SCALE);
 
         f32 cluster_width =
             button_size * 3.0f + button_spacing * 2.0f + cluster_padding * 2.0f;
@@ -154,6 +168,8 @@ ui_titlebar_draw(UI_State *context)
             state->titlebar_max.x - right_margin - cluster_width,
             state->titlebar_min.y + (TITLEBAR_HEIGHT - cluster_height) * 0.5f
         );
+        cluster_min.x = IM_ROUND(cluster_min.x);
+        cluster_min.y = IM_ROUND(cluster_min.y);
         ImVec2 cluster_max = ImVec2(
             cluster_min.x + cluster_width,
             cluster_min.y + cluster_height
@@ -172,15 +188,6 @@ ui_titlebar_draw(UI_State *context)
             cluster_rounding
         );
 
-        // Visual separation between titlebar content and control cluster.
-        f32 separator_x = cluster_min.x - 8.0f * UI_PLATFORM_SCALE;
-        draw_list->AddLine(
-            ImVec2(separator_x, state->titlebar_min.y + 11.0f * UI_PLATFORM_SCALE),
-            ImVec2(separator_x, state->titlebar_max.y - 11.0f * UI_PLATFORM_SCALE),
-            IM_COL32(255, 255, 255, 22),
-            1.0f
-        );
-
         f32 button_y = cluster_min.y + cluster_padding;
         ImVec2 min_pos = ImVec2(cluster_min.x + cluster_padding, button_y);
         ImVec2 max_pos = ImVec2(min_pos.x + button_size + button_spacing, button_y);
@@ -188,10 +195,11 @@ ui_titlebar_draw(UI_State *context)
 
         const u32 neutral_hover_bg  = IM_COL32(255, 255, 255, 26);
         const u32 neutral_active_bg = IM_COL32(255, 255, 255, 42);
-        // Catppuccin-friendly red family for close button (idle/hover/active).
-        const u32 close_idle_bg   = IM_COL32(231, 130, 132, 190);
-        const u32 close_hover_bg  = IM_COL32(243, 139, 168, 255);
-        const u32 close_active_bg = IM_COL32(214, 110, 130, 255);
+        const u32 close_idle_bg   =
+            ui_color_with_alpha_scale(palette->component_primary, 0.76f);
+        const u32 close_hover_bg  = palette->component_primary;
+        const u32 close_active_bg =
+            ui_color_with_alpha_scale(palette->component_primary, 0.88f);
 
         // Minimize button
         ImGui::SetCursorScreenPos(min_pos);
@@ -212,7 +220,7 @@ ui_titlebar_draw(UI_State *context)
             );
         }
         {
-            u32    icon_col = min_hovered ? palette.text_brighter : palette.text;
+            u32    icon_col = min_hovered ? palette->text_brighter : palette->text;
             ImVec2 c        = ImVec2(
                 min_pos.x + button_size * 0.5f,
                 min_pos.y + button_size * 0.5f + 3.0f * UI_PLATFORM_SCALE
@@ -251,7 +259,7 @@ ui_titlebar_draw(UI_State *context)
             );
         }
         {
-            u32    icon_col = max_hovered ? palette.text_brighter : palette.text;
+            u32    icon_col = max_hovered ? palette->text_brighter : palette->text;
             ImVec2 c        = ImVec2(
                 max_pos.x + button_size * 0.5f,
                 max_pos.y + button_size * 0.5f
@@ -312,7 +320,8 @@ ui_titlebar_draw(UI_State *context)
             button_rounding
         );
         {
-            u32    icon_col = (close_hovered || close_active) ? IM_COL32_WHITE : palette.text;
+            u32    icon_col =
+                (close_hovered || close_active) ? IM_COL32_WHITE : palette->text;
             ImVec2 c        = ImVec2(
                 close_pos.x + button_size * 0.5f,
                 close_pos.y + button_size * 0.5f
@@ -367,47 +376,54 @@ ui_titlebar_draw(UI_State *context)
         context->platform->button_area_min_y = local_button_min.y * scale;
         context->platform->button_area_max_y = local_button_max.y * scale;
 
-        // Compute content bounds for client callback
+        // Compute content area for client callback
         f32 content_start_x = logo_margin + logo_size + 8.0f;
         f32 content_end_x   = cluster_min.x - 10.0f * UI_PLATFORM_SCALE;
 
-        state->content_bounds.x      = state->titlebar_min.x + content_start_x;
-        state->content_bounds.y      = state->titlebar_min.y;
-        state->content_bounds.width  = content_end_x - content_start_x;
-        state->content_bounds.height = TITLEBAR_HEIGHT;
+        state->content_area_min.x = state->titlebar_min.x + content_start_x;
+        state->content_area_min.y = state->titlebar_min.y;
+        state->content_area_max.x = state->titlebar_min.x + content_end_x;
+        state->content_area_max.y = state->titlebar_min.y + TITLEBAR_HEIGHT;
 
         // Call client titlebar content callback
         if (context->titlebar_content_callback)
         {
             context->titlebar_content_callback(
                 context->global_client_state,
-                state->content_bounds,
+                state->content_area_min,
+                state->content_area_max,
                 palette
             );
         }
 
-        // Update menu hover state from content bounds
+        // Update menu hover state from content area
         ImVec2 mouse_pos       = ImGui::GetMousePos();
         state->is_menu_hovered =
-            mouse_pos.x >= state->content_bounds.x &&
-            mouse_pos.x <= state->content_bounds.x + state->content_bounds.width &&
-            mouse_pos.y >= state->content_bounds.y &&
-            mouse_pos.y <= state->content_bounds.y + ImGui::GetFrameHeightWithSpacing();
+            mouse_pos.x >= state->content_area_min.x &&
+            mouse_pos.x <= state->content_area_max.x &&
+            mouse_pos.y >= state->content_area_min.y &&
+            mouse_pos.y <= state->content_area_max.y;
 
         // Compute titlebar hover state for window dragging
         b8 in_titlebar = mouse_pos.x >= state->titlebar_min.x &&
                          mouse_pos.x <= state->titlebar_max.x &&
                          mouse_pos.y >= state->titlebar_min.y &&
                          mouse_pos.y <= state->titlebar_max.y;
-        b8 any_item_hovered    = ImGui::IsAnyItemHovered();
-        state->is_titlebar_hovered = in_titlebar && !any_item_hovered;
+        b8 any_item_hovered = ImGui::IsAnyItemHovered();
 
         // Block OS-level titlebar drag when an ImGui window overlaps
         ImGuiWindow *hovered_window  = GImGui->HoveredWindow;
         ImGuiWindow *titlebar_window = ImGui::GetCurrentWindow();
-        b8 imgui_blocks_drag = in_titlebar && hovered_window != nullptr &&
-                               hovered_window != titlebar_window;
-        context->platform->block_titlebar_drag = imgui_blocks_drag;
+        b8 imgui_overlay_blocks_drag = in_titlebar && hovered_window != nullptr &&
+                                       hovered_window != titlebar_window;
+        b8 titlebar_ui_blocks_drag =
+            in_titlebar && (state->is_menu_hovered || any_item_hovered);
+
+        context->platform->block_titlebar_drag =
+            imgui_overlay_blocks_drag || titlebar_ui_blocks_drag;
+
+        state->is_titlebar_hovered =
+            in_titlebar && !context->platform->block_titlebar_drag;
     }
     ImGui::End();
 }

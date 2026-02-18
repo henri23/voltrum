@@ -2,6 +2,10 @@
 #include "editor/editor_layer.hpp"
 #include "global_client_state.hpp"
 #include "titlebar/titlebar_content.hpp"
+#include "utilities/components/command_palette_component.hpp"
+#include "utilities/components/settings_component.hpp"
+#include "utilities/components/theme_selector_component.hpp"
+#include "utilities/utilities_layer.hpp"
 
 #ifdef DEBUG_BUILD
 #    include "debug/debug_layer.hpp"
@@ -19,27 +23,18 @@
 // WARN: This is temporary, the renderer subsystem should not be
 // exposed outside the engine
 #include <renderer/renderer_frontend.hpp>
+#include <ui/ui.hpp>
 
 #if defined(PLATFORM_WINDOWS) && !defined(VOLTRUM_STATIC_LINKING)
 #    include <imgui.h>
 #endif
 
-// Memory debug callback function
-b8
-client_memory_debug_callback(const Event *event)
-{
-    if (event->key.key_code == Key_Code::M && !event->key.repeat)
-    {
-        u64 allocation_count = memory_get_allocations_count();
-        CLIENT_INFO("Current memory allocations: %llu", allocation_count);
-    }
-    return false; // Don't consume, let other callbacks process
-}
-
 // Client lifecycle callback implementations
 b8
-client_initialize(Client *client_state)
+client_initialize(Client *client_instance)
 {
+    Global_Client_State *g_state =
+        (Global_Client_State *)client_instance->state;
 
 #if defined(PLATFORM_WINDOWS) && !defined(VOLTRUM_STATIC_LINKING)
     // Get ImGui context from core DLL for Windows compatibility
@@ -54,9 +49,16 @@ client_initialize(Client *client_state)
     // }
 #endif
 
-    events_register_callback(Event_Type::KEY_PRESSED,
-                             client_memory_debug_callback,
-                             Event_Priority::LOW);
+    UI_Theme current_theme          = UI_Theme::DARK;
+    ui_get_theme_state(&current_theme, &g_state->theme_palette);
+    g_state->target_theme           = current_theme;
+    g_state->requested_theme        = current_theme;
+    g_state->request_theme_change   = false;
+    g_state->is_theme_transitioning = false;
+    g_state->theme_transition_t     = 1.0f;
+
+    g_state->theme_transition_from = g_state->theme_palette;
+    g_state->theme_transition_to   = g_state->theme_palette;
 
     CLIENT_INFO("Client initialized.");
 
@@ -136,28 +138,60 @@ create_client(Client *client)
     client->shutdown   = client_shutdown;
 
     // Initialize state pointers
-    client->state = push_struct(client->mode_arena, Global_Client_State);
+    client->state = push_struct(client->project_arena, Global_Client_State);
 
-    auto g_state                    = (Global_Client_State *)client->state;
+    auto g_state = (Global_Client_State *)client->state;
+
     g_state->is_imgui_demo_visible  = true;
     g_state->is_implot_demo_visible = true;
-    g_state->is_titlebar_menu_expanded = false;
-    g_state->titlebar_active_mode_index = 0;
-    g_state->titlebar_mode_anim_t = 0.0f;
-    g_state->titlebar_menu_overlay_t = 0.0f;
-    g_state->titlebar_menu_hover_open_t = 0.0f;
+    g_state->target_theme           = UI_Theme::CATPPUCCIN;
+    g_state->requested_theme        = UI_Theme::CATPPUCCIN;
+    g_state->theme_transition_t     = 1.0f;
+    g_state->mode                   = Client_Mode::SCHEMATIC;
 
     auto editor_layer_state =
-        push_struct(client->mode_arena, Editor_Layer_State);
+        push_struct(client->project_arena, Editor_Layer_State);
+    auto utilities_layer_state =
+        push_struct(client->project_arena, Utilities_Layer_State);
+    auto command_palette_state =
+        push_struct(client->project_arena, Command_Palette_State);
+
+    utilities_layer_state->command_palette_state = command_palette_state;
+
+    Command_Palette_Component command_palette_components[] = {
+        {
+            STR_LIT("component.theme_selector"),
+            STR_LIT("Theme Selector"),
+            STR_LIT("Browse and apply the built-in themes"),
+            STR_LIT("theme colors style appearance ui"),
+            theme_selector_component_on_open,
+            theme_selector_component_render,
+            &utilities_layer_state->theme_selector_component_state,
+        },
+        {
+            STR_LIT("component.settings"),
+            STR_LIT("Settings"),
+            STR_LIT("Toggle editor utility settings"),
+            STR_LIT("settings preferences demos debug palette"),
+            nullptr,
+            settings_component_render,
+            nullptr,
+        },
+    };
+    command_palette_init(command_palette_state,
+                         command_palette_components,
+                         (s32)ARRAY_COUNT(command_palette_components));
 
     // Create and register editor layer
-    client->layers.init(client->mode_arena);
+    client->layers.init(client->project_arena);
 
     // Add layers
     client->layers.add(create_editor_layer(editor_layer_state));
+    client->layers.add(create_utilities_layer(utilities_layer_state));
 
 #ifdef DEBUG_BUILD
-    auto debug_layer_state = push_struct(client->mode_arena, Debug_Layer_State);
+    auto debug_layer_state =
+        push_struct(client->project_arena, Debug_Layer_State);
     client->layers.add(create_debug_layer(debug_layer_state));
 #endif
 

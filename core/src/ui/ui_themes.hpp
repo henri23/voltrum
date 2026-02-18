@@ -1,25 +1,30 @@
 #pragma once
 
 #include "defines.hpp"
+#include "utils/string.hpp"
 
-// Forward declarations
-struct ImGuiStyle;
-
-/**
- * Available UI themes
- */
-enum class UI_Theme {
+// Available UI themes
+enum class UI_Theme : u32
+{
     DARK = 0,   // Current Walnut-inspired dark theme
     LIGHT,      // Light theme
     CATPPUCCIN, // Catppuccin Mocha color scheme
     TOKYO,      // Tokyo Night color scheme
-    COUNT       // Number of available themes
+    DRACULA,    // Dracula color scheme
+    NORD,       // Nord color scheme
+    GRUVBOX,    // Gruvbox Dark color scheme
+    ROSE_PINE,  // Rose Pine color scheme
+    KANAGAWA,   // Kanagawa color scheme
+    EVERFOREST, // Everforest color scheme
+    AYU_DARK,   // Ayu Dark color scheme
+    ONE_DARK,   // One Dark color scheme
+
+    MAX_COUNT // Number of available themes
 };
 
-/**
- * Theme color palette structure
- */
-struct UI_Theme_Palette {
+// Theme color palette structure
+struct UI_Theme_Palette
+{
     // Primary colors
     u32 accent;
     u32 highlight;
@@ -85,23 +90,28 @@ struct UI_Theme_Palette {
     u32 component_info;
 };
 
-/**
- * Apply a theme to ImGui style
- * @param theme - Theme to apply
- * @param style - ImGui style to modify
- */
-void ui_themes_apply(UI_Theme theme, ImGuiStyle &style);
+struct UI_Theme_Metadata
+{
+    String description;
+    String keywords;
+};
 
-/**
- * Get theme palette
- * @param theme - Theme to get palette for
- * @return Theme color palette
- */
-const UI_Theme_Palette &ui_themes_get_palette(UI_Theme theme);
+// Apply a theme to ImGui style
+void ui_themes_apply(UI_Theme theme, struct ImGuiStyle *style);
 
-/**
- * Get clear color from theme palette as ImVec4
- * @param theme - Theme to get clear color for
- * @return Clear color as ImVec4
- */
+// Apply a palette to ImGui style
+void ui_themes_apply_palette(const UI_Theme_Palette *palette,
+                             ImGuiStyle             *style);
+
+// Copy the palette for a theme into an output buffer
+void ui_themes_copy_palette(UI_Theme theme, UI_Theme_Palette *out_palette);
+
+// Get theme display name
+String ui_themes_get_name(UI_Theme theme);
+
+// Get theme metadata used by searchable UI components.
+UI_Theme_Metadata ui_themes_get_metadata(UI_Theme theme);
+
+// Get clear color from theme palette as ImVec4. Used for viewport background
+// coloring
 struct ImVec4 ui_themes_get_clear_color(UI_Theme theme);

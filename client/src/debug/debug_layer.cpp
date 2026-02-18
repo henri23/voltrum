@@ -63,8 +63,8 @@ imgui_text_bytes_colored(ImVec4 color, u64 bytes)
 INTERNAL_FUNC String
 arena_display_name(const char *file, s32 line)
 {
-    String path     = str_from_cstr(file);
-    String filename = str_skip_last_slash(path);
+    String path     = STR(file);
+    String filename = string_skip_last_slash(path);
 
     if (filename.size == 0)
         return STR_LIT("unknown");
@@ -239,8 +239,7 @@ render_arena_utilization_bar(Arena             *arena,
                             ImGui::Text("Allocation #%u", i + 1);
                             ImGui::Separator();
                             ImGui::Text("Source:  %.*s:%d",
-                                        (s32)name.size,
-                                        C_STR(name),
+                                        (s32)(name).size, (name).buff ? (const char *)(name).buff : "",
                                         rec->line);
                             ImGui::Text("Offset:  0x%llX", rec->offset);
                             imgui_tooltip_bytes("Size", rec->size);
@@ -352,7 +351,7 @@ render_allocation_table(Arena_Debug_Entry *entry)
 
             ImGui::TableNextColumn();
             String name = arena_display_name(rec->file, rec->line);
-            ImGui::Text("%.*s:%d", (s32)name.size, C_STR(name), rec->line);
+            ImGui::Text("%.*s:%d", (s32)(name).size, (name).buff ? (const char *)(name).buff : "", rec->line);
         }
 
         ImGui::EndTable();
@@ -383,8 +382,7 @@ render_arena_detail(Arena_Debug_Entry *entry, Debug_Layer_State *state)
         arena_display_name(arena->allocation_file, arena->allocation_line);
 
     ImGui::Text(ICON_FA_MICROCHIP " %.*s:%d",
-                (s32)display.size,
-                C_STR(display),
+                (s32)(display).size, (display).buff ? (const char *)(display).buff : "",
                 arena->allocation_line);
     ImGui::Separator();
 
@@ -537,6 +535,23 @@ render_arena_detail(Arena_Debug_Entry *entry, Debug_Layer_State *state)
                                   ? (zoomed_w - bar_width) / zoomed_w
                                   : 0.0f;
             state->scroll_x = CLAMP(state->scroll_x, 0.0f, max_pan);
+        }
+    }
+    else if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
+    {
+        // Detail child has NoScrollWithMouse set, so provide manual wheel
+        // scrolling when not interacting with the zoomable memory bar.
+        f32 wheel = ImGui::GetIO().MouseWheel;
+        if (wheel != 0.0f)
+        {
+            f32 scroll_step = 5.0f * ImGui::GetFontSize();
+            f32 max_step    = ImGui::GetWindowHeight() * 0.67f;
+            if (scroll_step > max_step)
+            {
+                scroll_step = max_step;
+            }
+
+            ImGui::SetScrollY(ImGui::GetScrollY() - wheel * scroll_step);
         }
     }
 
@@ -702,21 +717,31 @@ debug_layer_on_render(void *layer_state, void *global_state, Frame_Context *ctx)
                 if (arena->offset < MiB)
                     measurement_unit = (f64)KiB;
 
+                String display_measurement_unit = (measurement_unit == (f64)MiB)
+                                                      ? STR_LIT("MiB")
+                                                      : STR_LIT("KiB");
+
                 auto scratch_arena = scratch_begin(&arena, 1);
 
                 String arena_details =
-                    str_fmt(scratch_arena.arena,
-                            "%.*s:%d  —  %.2f MiB / %.2f MiB  (%.0f%c)",
-                            (s32)name.size,
-                            C_STR(name),
+                    string_fmt(scratch_arena.arena,
+                            "%.*s:%d  —  %.2f %.*s / %.2f %.*s  (%.0f%c)",
+                            (s32)(name).size, (name).buff ? (const char *)(name).buff : "",
                             arena->allocation_line,
                             arena->offset / measurement_unit,
+                            (s32)(display_measurement_unit).size, (display_measurement_unit).buff ? (const char *)(display_measurement_unit).buff : "",
                             arena->committed_memory / measurement_unit,
+                            (s32)(display_measurement_unit).size, (display_measurement_unit).buff ? (const char *)(display_measurement_unit).buff : "",
                             pct,
                             '%');
 
-                ImGui::TextUnformatted(C_STR(arena_details),
-                                       C_STR(arena_details) + arena_details.size);
+                const char *arena_details_begin = arena_details.buff
+                                                      ? (const char *)arena_details.buff
+                                                      : "";
+                ImGui::TextUnformatted(arena_details_begin,
+                                       arena_details_begin +
+                                           (arena_details.buff ? arena_details.size
+                                                              : 0));
 
                 scratch_end(scratch_arena);
 
@@ -784,14 +809,25 @@ debug_layer_on_render(void *layer_state, void *global_state, Frame_Context *ctx)
             if (arena->offset < MiB)
                 measurement_unit = (f64)KiB;
 
+            String display_measurement_unit = (measurement_unit == (f64)MiB)
+                                                  ? STR_LIT("MiB")
+                                                  : STR_LIT("KiB");
+
             String arena_summary =
-                str_fmt(scratch.arena,
-                        "  %.2f MiB / %.2f MiB  (%u allocs)",
+                string_fmt(scratch.arena,
+                        "  %.2f %.*s / %.2f %.*s  (%u allocs)",
                         arena->offset / measurement_unit,
+                        (s32)(display_measurement_unit).size, (display_measurement_unit).buff ? (const char *)(display_measurement_unit).buff : "",
                         arena->committed_memory / measurement_unit,
+                        (s32)(display_measurement_unit).size, (display_measurement_unit).buff ? (const char *)(display_measurement_unit).buff : "",
                         entry->record_count);
 
-            ImGui::TextDisabled("%s", C_STR(arena_summary));
+            const char *arena_summary_begin =
+                arena_summary.buff ? (const char *)arena_summary.buff : "";
+            ImGui::TextUnformatted(arena_summary_begin,
+                                   arena_summary_begin +
+                                       (arena_summary.buff ? arena_summary.size
+                                                          : 0));
 
             scratch_end(scratch);
 
@@ -805,7 +841,8 @@ debug_layer_on_render(void *layer_state, void *global_state, Frame_Context *ctx)
 
         ImGui::BeginChild("##ArenaDetail",
                           ImVec2(0, 0),
-                          ImGuiChildFlags_Border);
+                          ImGuiChildFlags_Border,
+                          ImGuiWindowFlags_NoScrollWithMouse);
 
         if (l_state->selected_arena_index >= 0 &&
             l_state->selected_arena_index < (s32)ARENA_DEBUG_MAX_ARENAS)

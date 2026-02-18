@@ -1,3 +1,3 @@
 #pragma once
 
-void str_register_tests();
+void string_register_tests();

@@ -1,5 +1,6 @@
 #include "utils/string.hpp"
 
+#include "core/asserts.hpp"
 #include "math/math_types.hpp"
 #include "memory/arena.hpp"
 #include "memory/memory.hpp"
@@ -8,42 +9,26 @@
 #include <stdarg.h>
 #include <stdio.h>
 
-// Construction
-String
-str_from_cstr(const char *c)
+// Matching helpers
+INTERNAL_FUNC char
+char_to_lower(char c)
 {
-    String result = {};
-    if (c)
-    {
-        u64 len = 0;
-        while (c[len])
-        {
-            len++;
-        }
-        result.str  = (const u8 *)c;
-        result.size = len;
-    }
-    return result;
+    return (c >= 'A' && c <= 'Z') ? (char)(c + ('a' - 'A')) : c;
 }
 
-// Matching
-INTERNAL_FUNC u8
-char_to_lower(u8 c)
-{
-    return (c >= 'A' && c <= 'Z') ? (c + ('a' - 'A')) : c;
-}
-
-INTERNAL_FUNC u8
-char_to_forward_slash(u8 c)
+INTERNAL_FUNC char
+char_to_forward_slash(char c)
 {
     return (c == '\\') ? '/' : c;
 }
 
 b8
-str_match(String a, String b, String_Match_Flags flags)
+string_match(String a, String b, String_Match_Flags flags)
 {
     if (a.size != b.size)
+    {
         return false;
+    }
 
     b8 case_insensitive = (flags & String_Match_Flags::CASE_INSENSITIVE) !=
                           String_Match_Flags::NONE;
@@ -53,8 +38,8 @@ str_match(String a, String b, String_Match_Flags flags)
 
     for (u64 i = 0; i < a.size; i++)
     {
-        u8 ca = a.str[i];
-        u8 cb = b.str[i];
+        char ca = a.buff[i];
+        char cb = b.buff[i];
 
         if (case_insensitive)
         {
@@ -68,20 +53,24 @@ str_match(String a, String b, String_Match_Flags flags)
         }
 
         if (ca != cb)
+        {
             return false;
+        }
     }
 
     return true;
 }
 
 u64
-str_find_needle(String             haystack,
+string_find(String             haystack,
                 u64                start,
                 String             needle,
                 String_Match_Flags flags)
 {
     if (needle.size == 0 || start + needle.size > haystack.size)
+    {
         return (u64)-1;
+    }
 
     b8 case_insensitive = (flags & String_Match_Flags::CASE_INSENSITIVE) !=
                           String_Match_Flags::NONE;
@@ -94,8 +83,8 @@ str_find_needle(String             haystack,
         b8 found = true;
         for (u64 j = 0; j < needle.size; j++)
         {
-            u8 ch = haystack.str[i + j];
-            u8 cn = needle.str[j];
+            char ch = haystack.buff[i + j];
+            char cn = needle.buff[j];
 
             if (case_insensitive)
             {
@@ -116,7 +105,9 @@ str_find_needle(String             haystack,
         }
 
         if (found)
+        {
             return i;
+        }
     }
 
     return (u64)-1;
@@ -124,97 +115,155 @@ str_find_needle(String             haystack,
 
 // Slicing
 String
-str_prefix(String s, u64 size)
+string_prefix(String s, u64 size)
 {
+    if (!s.buff)
+    {
+        return string_empty();
+    }
+
     u64 clamped = (size < s.size) ? size : s.size;
-    return String{s.str, clamped};
+    if (clamped < s.size)
+    {
+        s.buff[clamped] = '\0';
+    }
+
+    return String{s.buff, clamped};
 }
 
 String
-str_skip(String s, u64 amt)
+string_skip(String s, u64 amt)
 {
+    if (!s.buff)
+    {
+        return string_empty();
+    }
+
     u64 clamped = (amt < s.size) ? amt : s.size;
-    return String{s.str + clamped, s.size - clamped};
+    return String{s.buff + clamped, s.size - clamped};
 }
 
 String
-str_substr(String s, u64 start, u64 len)
+string_substr(String s, u64 start, u64 len)
 {
-    if (start >= s.size)
-        return str_zero();
+    if (!s.buff || start >= s.size)
+    {
+        return string_empty();
+    }
 
-    u64 max_len = s.size - start;
-    u64 clamped = (len < max_len) ? len : max_len;
-    return String{s.str + start, clamped};
+    String skipped = string_skip(s, start);
+    return string_prefix(skipped, len);
 }
 
 String
-str_trim_whitespace(String s)
+string_trim_whitespace(String s)
 {
+    if (!s.buff)
+    {
+        return string_empty();
+    }
+
     u64 start = 0;
-    while (start < s.size && isspace(s.str[start]))
-        start++;
+    while (start < s.size && isspace((unsigned char)s.buff[start]))
+    {
+        start += 1;
+    }
 
     u64 end = s.size;
-    while (end > start && isspace(s.str[end - 1]))
-        end--;
+    while (end > start && isspace((unsigned char)s.buff[end - 1]))
+    {
+        end -= 1;
+    }
 
-    return String{s.str + start, end - start};
+    if (end < s.size)
+    {
+        s.buff[end] = '\0';
+    }
+
+    return String{s.buff + start, end - start};
 }
 
 // Arena-allocated operations
 String
-str_copy(Arena *arena, String s)
+string_copy(Arena *arena, String s)
 {
-    if (s.size == 0 || !s.str)
-        return str_zero();
+    ENSURE(arena);
 
-    u8 *buf = push_array(arena, u8, s.size);
-    memory_copy(buf, s.str, s.size);
+    if (s.size > 0 && !s.buff)
+    {
+        return string_empty();
+    }
+
+    char *buf = push_array(arena, char, s.size + 1);
+    if (s.size > 0 && s.buff)
+    {
+        memory_copy(buf, s.buff, s.size);
+    }
+    buf[s.size] = 0;
     return String{buf, s.size};
 }
 
 String
-str_cat(Arena *arena, String a, String b)
+string_cat(Arena *arena, String a, String b)
 {
-    u64 total = a.size + b.size;
-    if (total == 0)
-        return str_zero();
+    if (!arena)
+    {
+        return string_empty();
+    }
 
-    u8 *buf = push_array(arena, u8, total);
+    if ((a.size > 0 && !a.buff) || (b.size > 0 && !b.buff))
+    {
+        return string_empty();
+    }
+
+    u64 total = a.size + b.size;
+    char *buf = push_array(arena, char, total + 1);
 
     if (a.size > 0)
-        memory_copy(buf, a.str, a.size);
+    {
+        memory_copy(buf, a.buff, a.size);
+    }
 
     if (b.size > 0)
-        memory_copy(buf + a.size, b.str, b.size);
+    {
+        memory_copy(buf + a.size, b.buff, b.size);
+    }
 
+    buf[total] = 0;
     return String{buf, total};
 }
 
 String
-str_fmt(Arena *arena, const char *fmt, ...)
+string_fmt(Arena *arena, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
-    String result = str_fmt_v(arena, fmt, args);
+    String result = string_fmt_v(arena, fmt, args);
     va_end(args);
     return result;
 }
 
 String
-str_fmt_v(Arena *arena, const char *fmt, va_list args)
+string_fmt_v(Arena *arena, const char *fmt, va_list args)
 {
+    if (!arena || !fmt)
+    {
+        return string_empty();
+    }
+
     va_list args_copy;
     va_copy(args_copy, args);
     s32 len = vsnprintf(nullptr, 0, fmt, args_copy);
     va_end(args_copy);
 
-    if (len <= 0)
-        return str_zero();
+    if (len < 0)
+    {
+        return string_empty();
+    }
 
-    u8 *buf = push_array(arena, u8, (u64)len + 1);
-    vsnprintf((char *)buf, (u64)len + 1, fmt, args);
+    u64 needed = (u64)len + 1;
+    char *buf  = push_array(arena, char, needed);
+    vsnprintf(buf, needed, fmt, args);
 
     return String{buf, (u64)len};
 }
@@ -223,215 +272,251 @@ str_fmt_v(Arena *arena, const char *fmt, va_list args)
 INTERNAL_FUNC u64
 find_last_slash(String s)
 {
+    if (!s.buff)
+    {
+        return (u64)-1;
+    }
+
     u64 pos = (u64)-1;
     for (u64 i = 0; i < s.size; i++)
     {
-        if (s.str[i] == '/' || s.str[i] == '\\')
+        if (s.buff[i] == '/' || s.buff[i] == '\\')
+        {
             pos = i;
+        }
     }
     return pos;
 }
 
 String
-str_chop_last_slash(String s)
+string_chop_last_slash(String s)
 {
     u64 pos = find_last_slash(s);
     if (pos == (u64)-1)
+    {
         return s;
+    }
 
-    return String{s.str, pos};
+    s.buff[pos] = '\0';
+    return String{s.buff, pos};
 }
 
 String
-str_skip_last_slash(String s)
+string_skip_last_slash(String s)
 {
     u64 pos = find_last_slash(s);
     if (pos == (u64)-1)
+    {
         return s;
+    }
 
-    return String{s.str + pos + 1, s.size - pos - 1};
+    return String{s.buff + pos + 1, s.size - pos - 1};
 }
 
 String
-str_chop_last_dot(String s)
+string_chop_last_dot(String s)
 {
+    if (!s.buff)
+    {
+        return string_empty();
+    }
+
     u64 pos = (u64)-1;
     for (u64 i = 0; i < s.size; i++)
     {
-        if (s.str[i] == '.')
+        if (s.buff[i] == '.')
+        {
             pos = i;
+        }
     }
 
     if (pos == (u64)-1)
+    {
         return s;
+    }
 
-    return String{s.str, pos};
+    s.buff[pos] = '\0';
+    return String{s.buff, pos};
 }
 
 String
-str_skip_last_dot(String s)
+string_skip_last_dot(String s)
 {
+    if (!s.buff)
+    {
+        return string_empty();
+    }
+
     u64 pos = (u64)-1;
     for (u64 i = 0; i < s.size; i++)
     {
-        if (s.str[i] == '.')
+        if (s.buff[i] == '.')
+        {
             pos = i;
+        }
     }
 
     if (pos == (u64)-1)
-        return str_zero();
+    {
+        return string_empty();
+    }
 
-    return String{s.str + pos + 1, s.size - pos - 1};
+    return String{s.buff + pos + 1, s.size - pos - 1};
 }
 
 String
-str_path_join(Arena *arena, String dir, String file)
+string_path_join(Arena *arena, String dir, String file)
 {
+    if (!arena)
+    {
+        return string_empty();
+    }
+
     if (dir.size == 0)
-        return str_copy(arena, file);
+    {
+        return string_copy(arena, file);
+    }
 
     if (file.size == 0)
-        return str_copy(arena, dir);
+    {
+        return string_copy(arena, dir);
+    }
 
-    u8 last = dir.str[dir.size - 1];
+    char last = dir.buff[dir.size - 1];
     if (last == '/' || last == '\\')
-        return str_cat(arena, dir, file);
+    {
+        return string_cat(arena, dir, file);
+    }
 
     u64 total = dir.size + 1 + file.size;
-    u8 *buf   = push_array(arena, u8, total);
-    memory_copy(buf, dir.str, dir.size);
+    char *buf = push_array(arena, char, total + 1);
+    memory_copy(buf, dir.buff, dir.size);
 
     buf[dir.size] = '/';
-    memory_copy(buf + dir.size + 1, file.str, file.size);
+    memory_copy(buf + dir.size + 1, file.buff, file.size);
+    buf[total] = 0;
 
     return String{buf, total};
 }
 
 // Search
 u64
-str_index_of(String s, u8 character)
+string_index_of(String s, char character)
 {
     for (u64 i = 0; i < s.size; i++)
     {
-        if (s.str[i] == character)
+        if (s.buff[i] == character)
+        {
             return i;
+        }
     }
     return (u64)-1;
 }
 
 // Hashing (FNV-1a)
 u64
-str_hash(String s)
+string_hash(String s)
 {
     u64 hash = 14695981039346656037ULL;
     for (u64 i = 0; i < s.size; i++)
     {
-        hash ^= (u64)s.str[i];
+        hash ^= (u64)(unsigned char)s.buff[i];
         hash *= 1099511628211ULL;
     }
     return hash;
 }
 
-// Parsing - uses stack buffer to null-terminate for sscanf
-INTERNAL_FUNC b8
-make_cstr_buffer(String s, char *buf, u64 buf_size)
+b8
+string_to_f32(String s, f32 *out)
 {
-    if (s.size == 0 || !s.str)
+    if (!out || !s.buff || s.size == 0)
+    {
         return false;
+    }
 
-    if (s.size >= buf_size)
-        return false;
-
-    memory_copy(buf, s.str, s.size);
-    buf[s.size] = '\0';
-
-    return true;
+    return sscanf(s.buff, "%f", out) == 1;
 }
 
 b8
-str_to_f32(String s, f32 *out)
+string_to_f64(String s, f64 *out)
 {
-    if (!out)
+    if (!out || !s.buff || s.size == 0)
+    {
         return false;
+    }
 
-    char buf[128];
-    if (!make_cstr_buffer(s, buf, sizeof(buf)))
-        return false;
-
-    return sscanf(buf, "%f", out) == 1;
+    return sscanf(s.buff, "%lf", out) == 1;
 }
 
 b8
-str_to_f64(String s, f64 *out)
+string_to_vec2(String s, vec2 *out)
 {
-    if (!out)
+    if (!out || !s.buff || s.size == 0)
+    {
         return false;
+    }
 
-    char buf[128];
-    if (!make_cstr_buffer(s, buf, sizeof(buf)))
-        return false;
-
-    return sscanf(buf, "%lf", out) == 1;
+    return sscanf(s.buff, "%f %f", &out->x, &out->y) == 2;
 }
 
 b8
-str_to_vec2(String s, vec2 *out)
+string_to_vec3(String s, vec3 *out)
 {
-    if (!out)
+    if (!out || !s.buff || s.size == 0)
+    {
         return false;
+    }
 
-    char buf[256];
-    if (!make_cstr_buffer(s, buf, sizeof(buf)))
-        return false;
-
-    return sscanf(buf, "%f %f", &out->x, &out->y) == 2;
+    return sscanf(s.buff, "%f %f %f", &out->x, &out->y, &out->z) == 3;
 }
 
 b8
-str_to_vec3(String s, vec3 *out)
+string_to_vec4(String s, vec4 *out)
 {
-    if (!out)
+    if (!out || !s.buff || s.size == 0)
+    {
         return false;
+    }
 
-    char buf[256];
-    if (!make_cstr_buffer(s, buf, sizeof(buf)))
-        return false;
-
-    return sscanf(buf, "%f %f %f", &out->x, &out->y, &out->z) == 3;
+    return sscanf(s.buff, "%f %f %f %f", &out->x, &out->y, &out->z, &out->w) ==
+           4;
 }
 
 b8
-str_to_vec4(String s, vec4 *out)
+string_to_bool(String s, b8 *out)
 {
-    if (!out)
+    if (!out || s.size == 0 || !s.buff)
+    {
         return false;
+    }
 
-    char buf[256];
-    if (!make_cstr_buffer(s, buf, sizeof(buf)))
-        return false;
+    u64 start = 0;
+    while (start < s.size && isspace((unsigned char)s.buff[start]))
+    {
+        start += 1;
+    }
 
-    return sscanf(buf, "%f %f %f %f", &out->x, &out->y, &out->z, &out->w) == 4;
-}
+    u64 end = s.size;
+    while (end > start && isspace((unsigned char)s.buff[end - 1]))
+    {
+        end -= 1;
+    }
 
-b8
-str_to_bool(String s, b8 *out)
-{
-    if (!out || s.size == 0 || !s.str)
-        return false;
+    String trimmed = String{s.buff + start, end - start};
 
-    String trimmed = str_trim_whitespace(s);
-
-    if (str_match(trimmed, STR_LIT("true"), String_Match_Flags::CASE_INSENSITIVE) ||
-        str_match(trimmed, STR_LIT("1")))
+    if (string_match(trimmed,
+                  STR_LIT("true"),
+                  String_Match_Flags::CASE_INSENSITIVE) ||
+        string_match(trimmed, STR_LIT("1")))
     {
         *out = true;
         return true;
     }
 
-    if (str_match(trimmed,
+    if (string_match(trimmed,
                   STR_LIT("false"),
                   String_Match_Flags::CASE_INSENSITIVE) ||
-        str_match(trimmed, STR_LIT("0")))
+        string_match(trimmed, STR_LIT("0")))
     {
         *out = false;
         return true;

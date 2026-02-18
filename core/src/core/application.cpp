@@ -22,8 +22,13 @@
 #include "utils/string.hpp"
 
 // Application configuration
-constexpr u32 TARGET_FPS        = 120;
-constexpr f64 TARGET_FRAME_TIME = 1 / (f64)TARGET_FPS;
+constexpr u32         TARGET_FPS                        = 120;
+constexpr f64         TARGET_FRAME_TIME                 = 1 / (f64)TARGET_FPS;
+constexpr f32         TEST_LAYER_SPACING_Z              = 0.50f;
+constexpr f32         TEST_SECOND_LAYER_ROTATION_FACTOR = -0.70f;
+constexpr const char *TEST_LAYER_TEXTURES[]             = {"metal",
+                                                           "space_parallax",
+                                                           "yellow_track"};
 
 struct Engine_State
 {
@@ -60,7 +65,9 @@ struct Engine_State
     UI_State              *ui;
 
     Geometry *test_geometry;
-    f32       cube_rotation;
+    Geometry *test_geometry_secondary;
+    Material *test_secondary_material;
+    f32       layer_rotation;
 };
 
 // Internal pointer to application state for easy access
@@ -96,40 +103,43 @@ application_set_window_icon()
 }
 
 INTERNAL_FUNC b8
-app_escape_key_callback(const Event *event)
-{
-    if (event->key.key_code == Key_Code::ESCAPE && !event->key.repeat)
-    {
-        CORE_INFO("ESC key pressed - closing application");
-        engine_state->is_running = false;
-    }
-    return false; // Don't consume, let other callbacks process
-}
-
-INTERNAL_FUNC b8
 app_on_debug_event(const Event *event)
 {
-    const char *names[3] = {"metal", "space_parallax", "yellow_track"};
-
-    local_persist s8 choice = 0;
-
-    const char *old_name = names[choice];
+    local_persist s8 choice        = 0;
+    constexpr s8     texture_count = (s8)ARRAY_COUNT(TEST_LAYER_TEXTURES);
 
     choice++;
-    choice %= 3;
+    choice %= texture_count;
 
-    if (engine_state->test_geometry)
+    s8 primary_index   = choice;
+    s8 secondary_index = (choice + 1) % texture_count;
+
+    if (engine_state->test_geometry && engine_state->test_geometry->material)
     {
         engine_state->test_geometry->material->diffuse_map.texture =
-            texture_system_acquire(names[choice], true);
+            texture_system_acquire(TEST_LAYER_TEXTURES[primary_index], true);
         if (!engine_state->test_geometry->material->diffuse_map.texture)
         {
             CORE_WARN("event_on_debug_event not nexture! using default");
             engine_state->test_geometry->material->diffuse_map.texture =
                 texture_system_get_default_texture();
         }
+    }
 
-        texture_system_release(old_name);
+    if (engine_state->test_geometry_secondary &&
+        engine_state->test_geometry_secondary->material)
+    {
+        engine_state->test_geometry_secondary->material->diffuse_map.texture =
+            texture_system_acquire(TEST_LAYER_TEXTURES[secondary_index], true);
+        if (!engine_state->test_geometry_secondary->material->diffuse_map
+                 .texture)
+        {
+            CORE_WARN(
+                "event_on_debug_event no texture for secondary layer, "
+                "using default");
+            engine_state->test_geometry_secondary->material->diffuse_map
+                .texture = texture_system_get_default_texture();
+        }
     }
 
     return true;
@@ -200,8 +210,8 @@ application_init(App_Config *config)
     // Client state
     Client *client_state = push_struct(engine_state->client_arena, Client);
 
-    engine_state->client             = client_state;
-    engine_state->client->mode_arena = engine_state->client_arena;
+    engine_state->client                = client_state;
+    engine_state->client->project_arena = engine_state->client_arena;
 
     if (!log_init())
     {
@@ -263,94 +273,72 @@ application_init(App_Config *config)
         geometry_system_init(engine_state->persistent_arena, geometry_config);
     ENSURE(engine_state->geometries);
 
-    // TODO: Temp
-    // internal_state->test_geometry = geometry_system_get_default();
-
-    // -- PLANE GEOMETRY (commented out) --
-    // Geometry_Config g_config = geometry_system_generate_plane_config(10.0f,
-    //     5.0f,
-    //     5,
-    //     5,
-    //     5.0f,
-    //     2.0f,
-    //     "test geometry",
-    //     "test_material");
-
-    // -- CUBE GEOMETRY (delete later) --
-    Geometry_Config g_config;
-    g_config.vertex_count = 24;
-    g_config.vertices =
-        push_array(engine_state->persistent_arena, vertex_3d, 24);
-    g_config.index_count = 36;
-    g_config.indices     = push_array(engine_state->persistent_arena, u32, 36);
-
-    g_config.name = const_str_from_cstr<GEOMETRY_NAME_MAX_LENGTH>("test_cube");
-    g_config.material_name =
-        const_str_from_cstr<MATERIAL_NAME_MAX_LENGTH>("test_material");
-
-    f32 s = 1.0f; // half-size
-
-    // Vertices wound CLOCKWISE when viewed from outside each face
-    // (CW = front face with negative viewport height in Vulkan)
-
-    // Front face (+Z) - looking from +Z toward origin
-    g_config.vertices[0] = {{-s, -s, s}, {0, 1}}; // bottom-left
-    g_config.vertices[1] = {{-s, s, s}, {0, 0}};  // top-left
-    g_config.vertices[2] = {{s, s, s}, {1, 0}};   // top-right
-    g_config.vertices[3] = {{s, -s, s}, {1, 1}};  // bottom-right
-
-    // Back face (-Z) - looking from -Z toward origin
-    g_config.vertices[4] = {{s, -s, -s}, {0, 1}};  // bottom-left
-    g_config.vertices[5] = {{s, s, -s}, {0, 0}};   // top-left
-    g_config.vertices[6] = {{-s, s, -s}, {1, 0}};  // top-right
-    g_config.vertices[7] = {{-s, -s, -s}, {1, 1}}; // bottom-right
-
-    // Top face (+Y) - looking from +Y toward origin
-    g_config.vertices[8]  = {{-s, s, s}, {0, 1}};  // bottom-left
-    g_config.vertices[9]  = {{-s, s, -s}, {0, 0}}; // top-left
-    g_config.vertices[10] = {{s, s, -s}, {1, 0}};  // top-right
-    g_config.vertices[11] = {{s, s, s}, {1, 1}};   // bottom-right
-
-    // Bottom face (-Y) - looking from -Y toward origin
-    g_config.vertices[12] = {{-s, -s, -s}, {0, 1}}; // bottom-left
-    g_config.vertices[13] = {{-s, -s, s}, {0, 0}};  // top-left
-    g_config.vertices[14] = {{s, -s, s}, {1, 0}};   // top-right
-    g_config.vertices[15] = {{s, -s, -s}, {1, 1}};  // bottom-right
-
-    // Right face (+X) - looking from +X toward origin
-    g_config.vertices[16] = {{s, -s, s}, {0, 1}};  // bottom-left
-    g_config.vertices[17] = {{s, s, s}, {0, 0}};   // top-left
-    g_config.vertices[18] = {{s, s, -s}, {1, 0}};  // top-right
-    g_config.vertices[19] = {{s, -s, -s}, {1, 1}}; // bottom-right
-
-    // Left face (-X) - looking from -X toward origin
-    g_config.vertices[20] = {{-s, -s, -s}, {0, 1}}; // bottom-left
-    g_config.vertices[21] = {{-s, s, -s}, {0, 0}};  // top-left
-    g_config.vertices[22] = {{-s, s, s}, {1, 0}};   // top-right
-    g_config.vertices[23] = {{-s, -s, s}, {1, 1}};  // bottom-right
-
-    // Indices: two triangles per face (0,1,2) and (0,2,3)
-    u32 base_idx[] = {0, 1, 2, 0, 2, 3};
-    for (u32 f = 0; f < 6; ++f)
-    {
-        for (u32 i = 0; i < 6; ++i)
-        {
-            g_config.indices[f * 6 + i] = f * 4 + base_idx[i];
-        }
-    }
-    engine_state->cube_rotation = 0.0f;
-    // -- END CUBE GEOMETRY --
+    // TODO: Temp - test plane geometry
+    Geometry_Config g_config =
+        geometry_system_generate_plane_config(engine_state->persistent_arena,
+                                              2.0f,
+                                              2.0f,
+                                              1,
+                                              1,
+                                              1.0f,
+                                              1.0f,
+                                              "test_plane",
+                                              "test_material");
+    engine_state->layer_rotation = 0.0f;
 
     engine_state->test_geometry =
         geometry_system_acquire_by_config(g_config, true);
 
+    Geometry_Config g_config_secondary =
+        geometry_system_generate_plane_config(engine_state->persistent_arena,
+                                              2.0f,
+                                              2.0f,
+                                              1,
+                                              1,
+                                              1.0f,
+                                              1.0f,
+                                              "test_plane_layer_2",
+                                              "test_material");
+    engine_state->test_geometry_secondary =
+        geometry_system_acquire_by_config(g_config_secondary, true);
+
+    Material_Config secondary_material_config = {};
+    string_set(secondary_material_config.name, "test_material_layer2");
+    string_set(secondary_material_config.diffuse_map_name, TEST_LAYER_TEXTURES[1]);
+    secondary_material_config.auto_release  = true;
+    secondary_material_config.diffuse_color = vec4_one();
+
+    engine_state->test_secondary_material =
+        material_system_acquire_from_config(secondary_material_config);
+
+    if (engine_state->test_geometry_secondary &&
+        engine_state->test_secondary_material)
+    {
+        // Geometry creation assigns its own material based on config.
+        // Release that reference and bind the dedicated secondary material.
+        if (engine_state->test_geometry_secondary->material)
+        {
+            material_system_release(
+                engine_state->test_geometry_secondary->material->name);
+        }
+        engine_state->test_geometry_secondary->material =
+            engine_state->test_secondary_material;
+    }
+
+    if (engine_state->test_geometry && engine_state->test_geometry->material)
+    {
+        engine_state->test_geometry->material->diffuse_map.texture =
+            texture_system_acquire(TEST_LAYER_TEXTURES[0], true);
+    }
+    if (engine_state->test_geometry_secondary &&
+        engine_state->test_geometry_secondary->material)
+    {
+        engine_state->test_geometry_secondary->material->diffuse_map.texture =
+            texture_system_acquire(TEST_LAYER_TEXTURES[1], true);
+    }
+
     // Vertices and indices are arena-allocated and will be freed with the arena
     // TODO: Temp
-
-    // Register application ESC key handler with HIGH priority to always work
-    events_register_callback(Event_Type::KEY_PRESSED,
-                             app_escape_key_callback,
-                             Event_Priority::HIGH);
 
     events_register_callback(Event_Type::WINDOW_RESIZED,
                              app_on_resized_callback,
@@ -375,15 +363,13 @@ application_run()
         return;
     }
 
-    engine_state->ui = ui_init(
-        engine_state->persistent_arena,
-        &engine_state->client->layers,
-        UI_Theme::CATPPUCCIN,
-        engine_state->client->titlebar_content_callback,
-        engine_state->client->logo_asset_name,
-        engine_state->platform,
-        engine_state->client->state
-    );
+    engine_state->ui = ui_init(engine_state->persistent_arena,
+                               &engine_state->client->layers,
+                               engine_state->config.theme,
+                               engine_state->client->titlebar_content_callback,
+                               str(engine_state->client->logo_asset_name),
+                               engine_state->platform,
+                               engine_state->client->state);
 
     ENSURE(engine_state->ui);
 
@@ -461,17 +447,33 @@ application_run()
                 push_struct(frame_ctx.frame_arena, Render_Context);
 
             // TODO: temp - viewport geometry
-            Geometry_Render_Data test_render;
-            test_render.geometry = engine_state->test_geometry;
-            // Rotate cube over time
-            engine_state->cube_rotation += delta_time;
-            test_render.model =
-                mat4_euler_xyz(engine_state->cube_rotation,
-                               engine_state->cube_rotation * 0.7f,
-                               0.0f);
+            Geometry_Render_Data *test_renders =
+                push_array(frame_ctx.frame_arena, Geometry_Render_Data, 2);
 
-            packet->geometry_count = 1;
-            packet->geometries     = &test_render;
+            test_renders[0].geometry = engine_state->test_geometry;
+            test_renders[1].geometry = engine_state->test_geometry_secondary;
+
+            // Animate both layers around Z at different speeds.
+            engine_state->layer_rotation += delta_time;
+            mat4 top_rotation =
+                mat4_euler_xyz(0.0f, 0.0f, engine_state->layer_rotation);
+
+            test_renders[0].model =
+                mat4_translation({0.0f, 0.0f, 0.0f}) * top_rotation;
+
+            mat4 bottom_rotation =
+                mat4_euler_xyz(0.0f,
+                               0.0f,
+                               engine_state->layer_rotation *
+                                   TEST_SECOND_LAYER_ROTATION_FACTOR);
+
+            // Second stacked plane below with its own rotation.
+            test_renders[1].model =
+                mat4_translation({0.0f, 0.0f, -TEST_LAYER_SPACING_Z}) *
+                bottom_rotation;
+
+            packet->geometry_count = 2;
+            packet->geometries     = test_renders;
 
             ui_update_layers(engine_state->ui, &frame_ctx);
 
