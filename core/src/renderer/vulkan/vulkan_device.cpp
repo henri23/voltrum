@@ -47,6 +47,19 @@ b8 vulkan_device_initialize(Vulkan_Context *context,
     return true;
 }
 
+INTERNAL_FUNC const char *vulkan_depth_format_string(VkFormat format) {
+    switch (format) {
+    case VK_FORMAT_D32_SFLOAT:
+        return "VK_FORMAT_D32_SFLOAT";
+    case VK_FORMAT_D32_SFLOAT_S8_UINT:
+        return "VK_FORMAT_D32_SFLOAT_S8_UINT";
+    case VK_FORMAT_D24_UNORM_S8_UINT:
+        return "VK_FORMAT_D24_UNORM_S8_UINT";
+    default:
+        return "VK_FORMAT_UNDEFINED";
+    }
+}
+
 // TODO: Get back to this method as it is not clear enough
 b8 vulkan_device_detect_depth_format(Vulkan_Device *device) {
 
@@ -69,11 +82,15 @@ b8 vulkan_device_detect_depth_format(Vulkan_Device *device) {
 
         if ((properties.linearTilingFeatures & flags) == flags) {
             device->depth_format = candidates[i];
+            CORE_INFO("Selected depth format: %s",
+                vulkan_depth_format_string(device->depth_format));
             return true;
         }
 
         if ((properties.optimalTilingFeatures & flags) == flags) {
             device->depth_format = candidates[i];
+            CORE_INFO("Selected depth format: %s",
+                vulkan_depth_format_string(device->depth_format));
             return true;
         }
     }

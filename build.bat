@@ -49,18 +49,23 @@ exit /b 1
 
 :end_parse
 
-:: Hardcoded vcvarsall.bat path
-set VCVARS="C:\Program Files\Microsoft Visual Studio\18\Community\\VC\Auxiliary\Build\vcvarsall.bat"
+:: Locate vcvarsall.bat for multiple Visual Studio versions/editions
+set "VCVARS="
 
 :: Setup MSVC if cl.exe not found
 where cl >nul 2>&1
 if errorlevel 1 (
-    if not exist %VCVARS% (
-        echo ERROR: Could not find vcvarsall.bat at %VCVARS%
+    call :find_vcvars
+    if "!VCVARS!"=="" (
+        echo ERROR: Could not find vcvarsall.bat. Install Visual Studio with C++ build tools.
+        exit /b 1
+    )
+    if not exist "!VCVARS!" (
+        echo ERROR: vcvarsall.bat not found at "!VCVARS!".
         exit /b 1
     )
     echo Setting up MSVC environment...
-    call %VCVARS% x64
+    call "!VCVARS!" x64
 )
 
 :: Check required tools
@@ -168,3 +173,38 @@ if "%RUN_TESTS%"=="true" (
 REM echo Launching voltrum_client...
 REM client\voltrum_client.exe
 cd ..
+
+goto :eof
+
+:find_vcvars
+set "VS_INSTALL="
+set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
+if exist "%VSWHERE%" (
+    for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do (
+        set "VS_INSTALL=%%i"
+    )
+    if defined VS_INSTALL if exist "!VS_INSTALL!\VC\Auxiliary\Build\vcvarsall.bat" (
+        set "VCVARS=!VS_INSTALL!\VC\Auxiliary\Build\vcvarsall.bat"
+        goto :eof
+    )
+)
+
+for %%D in ("%ProgramFiles%" "%ProgramFiles(x86)%") do (
+    for %%V in (18 17 16 15) do (
+        for %%E in (Community Professional Enterprise BuildTools) do (
+            if exist "%%~D\Microsoft Visual Studio\%%V\%%E\VC\Auxiliary\Build\vcvarsall.bat" (
+                set "VCVARS=%%~D\Microsoft Visual Studio\%%V\%%E\VC\Auxiliary\Build\vcvarsall.bat"
+                goto :eof
+            )
+        )
+    )
+)
+
+for %%D in ("%ProgramFiles%" "%ProgramFiles(x86)%") do (
+    if exist "%%~D\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" (
+        set "VCVARS=%%~D\Microsoft Visual Studio 14.0\VC\vcvarsall.bat"
+        goto :eof
+    )
+)
+
+goto :eof

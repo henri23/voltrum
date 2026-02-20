@@ -530,11 +530,11 @@ mat4_project_orthographic(f32 left,
 
     out_matrix.elements[0]  = -2.0f * lr;
     out_matrix.elements[5]  = -2.0f * bt;
-    out_matrix.elements[10] = -2.0f * nf; // OpenGL depth range [-1,1]
+    out_matrix.elements[10] = nf; // Vulkan depth range [0,1]
 
     out_matrix.elements[12] = (left + right) * lr;
     out_matrix.elements[13] = (top + bottom) * bt;
-    out_matrix.elements[14] = (far_clip + near_clip) * nf; // OpenGL [-1,1]
+    out_matrix.elements[14] = near_clip * nf; // Vulkan [0,1]
 
     return out_matrix;
 }
@@ -552,11 +552,10 @@ mat4_project_perspective(f32 fov_radians,
 
     out_matrix.elements[0] = 1.0f / (aspect_ratio * half_tan_fov);
     out_matrix.elements[5] = 1.0f / half_tan_fov;
-    // OpenGL depth range [-1, 1]
-    out_matrix.elements[10] = (far_clip + near_clip) / (near_clip - far_clip);
+    // Vulkan depth range [0, 1]
+    out_matrix.elements[10] = far_clip / (near_clip - far_clip);
     out_matrix.elements[11] = -1.0f;
-    out_matrix.elements[14] =
-        (2.0f * near_clip * far_clip) / (near_clip - far_clip);
+    out_matrix.elements[14] = (near_clip * far_clip) / (near_clip - far_clip);
 
     return out_matrix;
 }

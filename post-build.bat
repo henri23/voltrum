@@ -27,6 +27,20 @@ if errorlevel 1 (
     exit /b 1
 )
 
+rem Grid vertex shader
+"%VULKAN_SDK%\Bin\glslc.exe" -fshader-stage=vert "%SCRIPT_DIR%\assets\shaders\Builtin.GridShader.vert.glsl" -o "%SCRIPT_DIR%\assets\shaders\Builtin.GridShader.vert.spv"
+if errorlevel 1 (
+    echo Error: grid vertex shader compilation failed
+    exit /b 1
+)
+
+rem Grid fragment shader
+"%VULKAN_SDK%\Bin\glslc.exe" -fshader-stage=frag "%SCRIPT_DIR%\assets\shaders\Builtin.GridShader.frag.glsl" -o "%SCRIPT_DIR%\assets\shaders\Builtin.GridShader.frag.spv"
+if errorlevel 1 (
+    echo Error: grid fragment shader compilation failed
+    exit /b 1
+)
+
 echo Compiled shaders are in: %SCRIPT_DIR%
 
 endlocal
