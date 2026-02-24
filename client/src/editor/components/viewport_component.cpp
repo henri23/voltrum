@@ -129,7 +129,7 @@ INTERNAL_FUNC b8
 viewport_component_is_3d_camera_active(const Editor_Layer_State *state)
 {
 #ifdef DEBUG_BUILD
-    return state && state->camera_mode == Viewport_Camera_Mode::THREE_D;
+    return state && state->camera_mode == Viewport_Camera_Mode::_3D;
 #else
     (void)state;
     return false;
@@ -147,7 +147,7 @@ viewport_component_on_attach(Editor_Layer_State *state)
     state->camera.zoom_anchor_viewport_local = {0.0f, 0.0f};
     state->camera.zoom_anchor_world = {0.0f, 0.0f};
     state->camera.dirty       = true;
-    state->camera_mode        = Viewport_Camera_Mode::TWO_D;
+    state->camera_mode        = Viewport_Camera_Mode::_2D;
 #ifdef DEBUG_BUILD
     state->debug_camera.enabled       = false;
     state->debug_camera.position      = {0.0f, 0.0f, 6.0f};
@@ -973,7 +973,7 @@ viewport_component_render_context_menu(Editor_Layer_State *state,
                   false);
 #ifdef DEBUG_BUILD
     b8 free_camera_enabled =
-        state->camera_mode == Viewport_Camera_Mode::THREE_D;
+        state->camera_mode == Viewport_Camera_Mode::_3D;
     if (ui::menu_item((const char *)VIEWPORT_CONTEXT_MENU_FREE_CAMERA_LABEL.buff,
                       nullptr,
                       &free_camera_enabled,
@@ -981,8 +981,8 @@ viewport_component_render_context_menu(Editor_Layer_State *state,
                       false))
     {
         state->camera_mode = free_camera_enabled
-                                 ? Viewport_Camera_Mode::THREE_D
-                                 : Viewport_Camera_Mode::TWO_D;
+                                 ? Viewport_Camera_Mode::_3D
+                                 : Viewport_Camera_Mode::_2D;
         state->debug_camera.enabled = free_camera_enabled;
         state->debug_camera.orbit_active = false;
         state->camera.zoom_anchor_active = false;

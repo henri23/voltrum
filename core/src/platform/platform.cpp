@@ -553,12 +553,12 @@ platform_hit_test_callback(SDL_Window *win, const SDL_Point *area, void *data)
 
     if (area->y <= TITLEBAR_HEIGHT_THRESHOLD)
     {
-        // Check if mouse is over window control buttons - let ImGui handle clicks
-        if (state_ptr->button_area_max_x > 0)
-        {
-            f32 px = (f32)area->x;
-            f32 py = (f32)area->y;
+        f32 px = (f32)area->x;
+        f32 py = (f32)area->y;
 
+        // Check if mouse is over window control buttons - let ImGui handle clicks
+        if (state_ptr->button_area_max_x > state_ptr->button_area_min_x)
+        {
             if (px >= state_ptr->button_area_min_x &&
                 px <= state_ptr->button_area_max_x &&
                 py >= state_ptr->button_area_min_y &&
@@ -574,7 +574,10 @@ platform_hit_test_callback(SDL_Window *win, const SDL_Point *area, void *data)
         {
             return SDL_HITTEST_NORMAL;
         }
-        return SDL_HITTEST_DRAGGABLE;
+
+        // Titlebar dragging is handled manually in UI code to support
+        // background-only drag detection and movement threshold gating.
+        // Keep this area non-client only for resize hit-testing below.
     }
 
     // Don't allow resizing when window is maximized, but allow titlebar

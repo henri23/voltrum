@@ -54,6 +54,12 @@ struct UI_Titlebar_State
     vec2 content_area_min;
     vec2 content_area_max;
 
+    // Manual titlebar dragging state (thresholded background drag)
+    b8     drag_pending;
+    b8     drag_active;
+    ImVec2 drag_start_global_mouse;
+    ImVec2 drag_start_window_pos;
+
     b8 is_titlebar_hovered;
     b8 is_menu_hovered;
 };

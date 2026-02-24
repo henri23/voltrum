@@ -396,13 +396,7 @@ ui_titlebar_draw(UI_State *context)
             );
         }
 
-        // Update menu hover state from content area
-        ImVec2 mouse_pos       = ImGui::GetMousePos();
-        state->is_menu_hovered =
-            mouse_pos.x >= state->content_area_min.x &&
-            mouse_pos.x <= state->content_area_max.x &&
-            mouse_pos.y >= state->content_area_min.y &&
-            mouse_pos.y <= state->content_area_max.y;
+        ImVec2 mouse_pos = ImGui::GetMousePos();
 
         // Compute titlebar hover state for window dragging
         b8 in_titlebar = mouse_pos.x >= state->titlebar_min.x &&
@@ -410,20 +404,96 @@ ui_titlebar_draw(UI_State *context)
                          mouse_pos.y >= state->titlebar_min.y &&
                          mouse_pos.y <= state->titlebar_max.y;
         b8 any_item_hovered = ImGui::IsAnyItemHovered();
+        b8 any_item_active  = ImGui::IsAnyItemActive();
+
+        // Only treat the titlebar as UI-blocked when an actual widget is
+        // hovered/active. Empty titlebar background remains draggable.
+        state->is_menu_hovered = in_titlebar && (any_item_hovered || any_item_active);
 
         // Block OS-level titlebar drag when an ImGui window overlaps
         ImGuiWindow *hovered_window  = GImGui->HoveredWindow;
         ImGuiWindow *titlebar_window = ImGui::GetCurrentWindow();
         b8 imgui_overlay_blocks_drag = in_titlebar && hovered_window != nullptr &&
                                        hovered_window != titlebar_window;
-        b8 titlebar_ui_blocks_drag =
-            in_titlebar && (state->is_menu_hovered || any_item_hovered);
+        b8 titlebar_ui_blocks_drag = state->is_menu_hovered;
 
         context->platform->block_titlebar_drag =
             imgui_overlay_blocks_drag || titlebar_ui_blocks_drag;
 
         state->is_titlebar_hovered =
             in_titlebar && !context->platform->block_titlebar_drag;
+
+        // Manual titlebar background drag with movement threshold:
+        // start only when pressing on empty titlebar background.
+        b8 left_mouse_clicked  = ImGui::IsMouseClicked(ImGuiMouseButton_Left);
+        b8 left_mouse_down     = ImGui::IsMouseDown(ImGuiMouseButton_Left);
+        b8 left_mouse_released = ImGui::IsMouseReleased(ImGuiMouseButton_Left);
+        b8 can_begin_drag      = state->is_titlebar_hovered &&
+                            !any_item_hovered &&
+                            !any_item_active &&
+                            !platform_is_window_maximized(context->platform);
+
+        if (left_mouse_clicked)
+        {
+            state->drag_pending = false;
+            state->drag_active  = false;
+
+            if (can_begin_drag)
+            {
+                f32 global_x = 0.0f;
+                f32 global_y = 0.0f;
+                SDL_GetGlobalMouseState(&global_x, &global_y);
+
+                s32 window_x = 0;
+                s32 window_y = 0;
+                SDL_GetWindowPosition(context->platform->window, &window_x, &window_y);
+
+                state->drag_pending            = true;
+                state->drag_start_global_mouse = ImVec2(global_x, global_y);
+                state->drag_start_window_pos =
+                    ImVec2((f32)window_x, (f32)window_y);
+            }
+        }
+
+        if ((state->drag_pending || state->drag_active) && left_mouse_down)
+        {
+            f32 global_x = 0.0f;
+            f32 global_y = 0.0f;
+            SDL_GetGlobalMouseState(&global_x, &global_y);
+
+            f32 dx = global_x - state->drag_start_global_mouse.x;
+            f32 dy = global_y - state->drag_start_global_mouse.y;
+
+            f32 drag_threshold = ImMax(6.0f, ImGui::GetIO().MouseDragThreshold);
+            f32 dist_sq        = dx * dx + dy * dy;
+            f32 threshold_sq   = drag_threshold * drag_threshold;
+
+            if (!state->drag_active && dist_sq >= threshold_sq)
+            {
+                state->drag_active = true;
+                SDL_CaptureMouse(true);
+            }
+
+            if (state->drag_active)
+            {
+                s32 new_window_x = (s32)(state->drag_start_window_pos.x + dx);
+                s32 new_window_y = (s32)(state->drag_start_window_pos.y + dy);
+                SDL_SetWindowPosition(context->platform->window,
+                                      new_window_x,
+                                      new_window_y);
+            }
+        }
+
+        if (left_mouse_released || !left_mouse_down)
+        {
+            if (state->drag_active)
+            {
+                SDL_CaptureMouse(false);
+            }
+
+            state->drag_pending = false;
+            state->drag_active  = false;
+        }
     }
     ImGui::End();
 }

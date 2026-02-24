@@ -17,8 +17,8 @@ struct Viewport_Camera_2D
 
 enum class Viewport_Camera_Mode : u8
 {
-    TWO_DIM,
-    THREE_DIM
+    _2D,
+    _3D
 };
 
 #ifdef DEBUG_BUILD
