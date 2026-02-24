@@ -69,11 +69,13 @@ b8 vulkan_ui_backend_initialize(Vulkan_Context *context, void *window) {
     init_info.Queue = context->device.graphics_queue;
     init_info.PipelineCache = VK_NULL_HANDLE;
     init_info.DescriptorPoolSize = VULKAN_IMGUI_SHADER_MAX_TEXTURE_COUNT;
-    init_info.RenderPass = context->ui_renderpass.handle;
-    init_info.Subpass = 0;
+    init_info.PipelineInfoMain.RenderPass = context->ui_renderpass.handle;
+    init_info.PipelineInfoMain.Subpass = 0;
+    init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+    init_info.PipelineInfoForViewports.Subpass = 0;
+    init_info.PipelineInfoForViewports.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     init_info.MinImageCount = context->swapchain.image_count;
     init_info.ImageCount = context->swapchain.image_count;
-    init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
     init_info.Allocator = context->allocator;
     init_info.CheckVkResultFn = check_vk_result;
 

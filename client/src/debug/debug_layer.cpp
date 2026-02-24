@@ -617,9 +617,13 @@ render_arena_detail(Arena_Debug_Entry *entry, Debug_Layer_State *state)
                                    BUCKET_COUNT,
                                    bucket_labels);
 
-            ImPlot::SetNextFillStyle(ImVec4(0.80f, 0.65f, 0.97f, 0.85f));
-
-            ImPlot::PlotBars("Allocations", bucket_counts, BUCKET_COUNT, 0.6);
+            ImPlot::PlotBars("Allocations",
+                             bucket_counts,
+                             BUCKET_COUNT,
+                             0.6,
+                             0.0,
+                             {ImPlotProp_FillColor,
+                              ImVec4(0.80f, 0.65f, 0.97f, 0.85f)});
 
             ImPlot::EndPlot();
         }
@@ -766,7 +770,7 @@ debug_layer_on_render(void *layer_state, void *global_state, Frame_Context *ctx)
 
         ImGui::BeginChild("##ArenaList",
                           ImVec2(list_width, 0),
-                          ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX);
+                          ImGuiChildFlags_Borders | ImGuiChildFlags_ResizeX);
 
         ImGui::Text(ICON_FA_DATABASE " Arenas (%u)", registry->active_count);
         ImGui::Separator();
@@ -841,7 +845,7 @@ debug_layer_on_render(void *layer_state, void *global_state, Frame_Context *ctx)
 
         ImGui::BeginChild("##ArenaDetail",
                           ImVec2(0, 0),
-                          ImGuiChildFlags_Border,
+                          ImGuiChildFlags_Borders,
                           ImGuiWindowFlags_NoScrollWithMouse);
 
         if (l_state->selected_arena_index >= 0 &&

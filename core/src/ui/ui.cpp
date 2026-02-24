@@ -142,11 +142,9 @@ ui_dockspace_render(UI_State *state)
 INTERNAL_FUNC b8
 load_default_fonts(UI_State *state)
 {
-    ImGuiIO &io    = ImGui::GetIO();
-    f32      scale = state->platform->main_scale;
-
-    // Scratch arena keeps font data alive until Build() copies it
-    Scratch_Arena scratch = scratch_begin(nullptr, 0);
+    ImGuiIO &io         = ImGui::GetIO();
+    f32      scale      = state->platform->main_scale;
+    Arena   *font_arena = state->allocator;
 
     static const String style_names[] = {STR_LIT("normal"),
                                          STR_LIT("italic"),
@@ -160,7 +158,7 @@ load_default_fonts(UI_State *state)
     b8       icon_loaded                    = false;
 
     // Load icon font once (will be merged with each text font)
-    if (resource_system_load(scratch.arena,
+    if (resource_system_load(font_arena,
                              (const char *)icon_font_resource_path.buff,
                              Resource_Type::FONT,
                              &icon_resource))
@@ -175,13 +173,13 @@ load_default_fonts(UI_State *state)
 
     for (u8 s = 0; s < FONT_MAX_COUNT; ++s)
     {
-        String font_resource_path = string_fmt(scratch.arena,
+        String font_resource_path = string_fmt(font_arena,
                                             "jetbrains/jetbrains_%s",
                                             (const char *)style_names[s].buff);
         const char *font_resource_path_cstr =
             font_resource_path.buff ? (const char *)font_resource_path.buff : "";
 
-        if (!resource_system_load(scratch.arena,
+        if (!resource_system_load(font_arena,
                                   font_resource_path_cstr,
                                   Resource_Type::FONT,
                                   &font_resources[s]))
@@ -232,12 +230,8 @@ load_default_fonts(UI_State *state)
     if (!io.Fonts->Build())
     {
         CORE_ERROR("Failed to build font atlas");
-        scratch_end(scratch);
         return false;
     }
-
-    // All font data freed implicitly when scratch ends
-    scratch_end(scratch);
 
     // Compensate for scaled font size so layout uses logical coordinates
     io.FontGlobalScale = (1.0f / scale) * UI_PLATFORM_SCALE;
@@ -268,6 +262,7 @@ ui_init(Arena                        *allocator,
     state->logo_asset_name           = logo_asset_name;
     state->is_initialized            = true;
     state->platform                  = plat_state;
+    state->allocator                 = allocator;
     state->layers                    = layers;
     state->global_client_state       = global_client_state;
 

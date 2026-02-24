@@ -184,13 +184,17 @@ render_signal_analyzer(Editor_Layer_State *state, f32 delta_time)
         ImPlot::SetupAxisLimits(ImAxis_Y1, -120, 120, ImGuiCond_Always);
         ImPlot::SetupLegend(ImPlotLocation_NorthEast);
 
-        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.9f, 0.4f, 0.1f, 1.0f));
-        ImPlot::PlotLine("Sine", time_data, voltage_signal, sample_count);
-        ImPlot::PopStyleColor();
+        ImPlot::PlotLine("Sine",
+                         time_data,
+                         voltage_signal,
+                         sample_count,
+                         {ImPlotProp_LineColor, ImVec4(0.9f, 0.4f, 0.1f, 1.0f)});
 
-        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.2f, 0.7f, 0.9f, 1.0f));
-        ImPlot::PlotLine("Cosine", time_data, current_signal, sample_count);
-        ImPlot::PopStyleColor();
+        ImPlot::PlotLine("Cosine",
+                         time_data,
+                         current_signal,
+                         sample_count,
+                         {ImPlotProp_LineColor, ImVec4(0.2f, 0.7f, 0.9f, 1.0f)});
 
         ImPlot::EndPlot();
     }
@@ -201,11 +205,17 @@ render_signal_analyzer(Editor_Layer_State *state, f32 delta_time)
         ImPlot::SetupAxisLimits(ImAxis_X1, 0, 2, ImGuiCond_Always);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -10, 110, ImGuiCond_Always);
 
-        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.3f, 0.9f, 0.4f, 1.0f));
-        ImPlot::SetNextFillStyle(ImVec4(0.3f, 0.9f, 0.4f, 0.25f));
-        ImPlot::PlotShaded("Slow Wave", time_data, power_signal, sample_count);
-        ImPlot::PlotLine("Slow Wave", time_data, power_signal, sample_count);
-        ImPlot::PopStyleColor();
+        ImPlot::PlotShaded("Slow Wave",
+                           time_data,
+                           power_signal,
+                           sample_count,
+                           0.0,
+                           {ImPlotProp_FillColor, ImVec4(0.3f, 0.9f, 0.4f, 0.25f)});
+        ImPlot::PlotLine("Slow Wave",
+                         time_data,
+                         power_signal,
+                         sample_count,
+                         {ImPlotProp_LineColor, ImVec4(0.3f, 0.9f, 0.4f, 1.0f)});
 
         ImPlot::EndPlot();
     }
@@ -216,9 +226,11 @@ render_signal_analyzer(Editor_Layer_State *state, f32 delta_time)
         ImPlot::SetupAxisLimits(ImAxis_X1, 0, 2, ImGuiCond_Always);
         ImPlot::SetupAxisLimits(ImAxis_Y1, -0.5, 6, ImGuiCond_Always);
 
-        ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0.9f, 0.2f, 0.6f, 1.0f));
-        ImPlot::PlotLine("Fast Wave", time_data, pwm_signal, sample_count);
-        ImPlot::PopStyleColor();
+        ImPlot::PlotLine("Fast Wave",
+                         time_data,
+                         pwm_signal,
+                         sample_count,
+                         {ImPlotProp_LineColor, ImVec4(0.9f, 0.2f, 0.6f, 1.0f)});
 
         ImPlot::EndPlot();
     }

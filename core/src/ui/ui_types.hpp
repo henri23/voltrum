@@ -123,6 +123,7 @@ struct UI_State
     UI_Footer_State          footer;
     UI_Dockspace_State       dockspace;
     struct Platform_State   *platform;
+    struct Arena            *allocator;
 
     void *global_client_state;
 };
