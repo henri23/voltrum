@@ -16,6 +16,12 @@ using PFN_titlebar_content_callback = void (*)(void *client_state,
                                                vec2  content_area_max,
                                                const UI_Theme_Palette *palette);
 
+// Callback type for footer content rendering
+using PFN_footer_content_callback = void (*)(void *client_state,
+                                             vec2  content_area_min,
+                                             vec2  content_area_max,
+                                             const UI_Theme_Palette *palette);
+
 enum class Font_Style : u8
 {
     NORMAL,
@@ -71,6 +77,17 @@ struct UI_Dockspace_State
     b8  window_began;
 };
 
+struct UI_Footer_State
+{
+    ImVec2 footer_min;
+    ImVec2 footer_max;
+
+    vec2 content_area_min;
+    vec2 content_area_max;
+
+    b8 is_footer_hovered;
+};
+
 struct UI_Layer
 {
     void *state; // Layer state used in client, but managed in core
@@ -93,6 +110,7 @@ struct UI_Layer
 struct UI_State
 {
     PFN_titlebar_content_callback titlebar_content_callback;
+    PFN_footer_content_callback   footer_content_callback;
     UI_Theme                      current_theme;
     UI_Theme_Palette              active_palette;
     String                        app_name;
@@ -102,6 +120,7 @@ struct UI_State
 
     Dynamic_Array<UI_Layer> *layers;
     UI_Titlebar_State        titlebar;
+    UI_Footer_State          footer;
     UI_Dockspace_State       dockspace;
     struct Platform_State   *platform;
 

@@ -368,6 +368,7 @@ application_run()
                                &engine_state->client->layers,
                                engine_state->config.theme,
                                engine_state->client->titlebar_content_callback,
+                               engine_state->client->footer_content_callback,
                                str(engine_state->client->logo_asset_name),
                                engine_state->platform,
                                engine_state->client->state);

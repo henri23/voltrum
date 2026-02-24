@@ -11,6 +11,7 @@ ui_init(Arena                        *arena,
         Dynamic_Array<UI_Layer>      *layers,
         UI_Theme                      theme,
         PFN_titlebar_content_callback titlebar_content_callback,
+        PFN_footer_content_callback   footer_content_callback,
         String                        logo_asset_name,
         struct Platform_State        *plat_state,
         void                         *global_client_state);

@@ -1,5 +1,6 @@
 #include "defines.hpp"
 #include "editor/editor_layer.hpp"
+#include "footer/footer_content.hpp"
 #include "global_client_state.hpp"
 #include "titlebar/titlebar_content.hpp"
 #include "utilities/components/command_palette_component.hpp"
@@ -197,6 +198,7 @@ create_client(Client *client)
 
     // Set titlebar content callback and logo asset
     client->titlebar_content_callback = client_titlebar_content_callback;
+    client->footer_content_callback   = client_footer_content_callback;
     client->logo_asset_name           = "voltrum_icon";
 
     return true;

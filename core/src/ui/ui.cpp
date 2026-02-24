@@ -1,4 +1,5 @@
 #include "ui.hpp"
+#include "ui_footer.hpp"
 #include "icons.hpp"
 #include "ui_titlebar.hpp"
 
@@ -90,7 +91,7 @@ ui_dockspace_render(UI_State *state)
     ImVec2               work_size = viewport->WorkSize;
 
     work_pos.y += TITLEBAR_HEIGHT;
-    work_size.y -= TITLEBAR_HEIGHT;
+    work_size.y -= (TITLEBAR_HEIGHT + FOOTER_HEIGHT);
 
     ImGui::SetNextWindowPos(work_pos);
     ImGui::SetNextWindowSize(work_size);
@@ -253,6 +254,7 @@ ui_init(Arena                        *allocator,
         Dynamic_Array<UI_Layer>      *layers,
         UI_Theme                      theme,
         PFN_titlebar_content_callback titlebar_content_callback,
+        PFN_footer_content_callback   footer_content_callback,
         String                        logo_asset_name,
         Platform_State               *plat_state,
         void                         *global_client_state)
@@ -262,6 +264,7 @@ ui_init(Arena                        *allocator,
     state->current_theme = theme;
     ui_themes_copy_palette(theme, &state->active_palette);
     state->titlebar_content_callback = titlebar_content_callback;
+    state->footer_content_callback   = footer_content_callback;
     state->logo_asset_name           = logo_asset_name;
     state->is_initialized            = true;
     state->platform                  = plat_state;
@@ -406,6 +409,7 @@ ui_draw_layers(UI_State *state, Frame_Context *ctx)
     ImGui::NewFrame();
 
     ui_titlebar_draw(state);
+    ui_footer_draw(state);
     ui_dockspace_render(state);
 
     for (auto &layer : *state->layers)

@@ -32,6 +32,7 @@ struct Client
 
     // Titlebar content callback and logo asset name
     PFN_titlebar_content_callback titlebar_content_callback;
+    PFN_footer_content_callback   footer_content_callback;
     const char                   *logo_asset_name;
 
     void *state; // Client state
