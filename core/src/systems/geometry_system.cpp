@@ -2,6 +2,7 @@
 
 #include "core/asserts.hpp"
 #include "core/logger.hpp"
+#include "defines.hpp"
 #include "memory/memory.hpp"
 #include "renderer/renderer_frontend.hpp"
 #include "systems/material_system.hpp"
@@ -151,7 +152,7 @@ geometry_system_get_default()
 // WARN: The vertex and index arrays are dynamically allocated and should be
 // freed upon object disposal
 Geometry_Config
-geometry_system_generate_plane_config(Arena       *arena,
+geometry_system_generate_plane_config(Arena      *arena,
                                       f32         width,
                                       f32         height,
                                       u32         x_segment_count,
@@ -337,8 +338,7 @@ destroy_geometry(Geometry_System_State *state, Geometry *geometry)
     geometry->name[0] = '\0';
 
     // Release the material
-    if (geometry->material &&
-        STR(geometry->material->name).size > 0)
+    if (geometry->material && STR(geometry->material->name).size > 0)
     {
         material_system_release(geometry->material->name);
         geometry->material = nullptr;

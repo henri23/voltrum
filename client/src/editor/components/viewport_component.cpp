@@ -22,6 +22,8 @@ constexpr f32 VIEWPORT_MILS_PER_MM = 39.37007874015748f;
 constexpr f32 VIEWPORT_MIN_GRID_SPACING_MM = 0.000001f;
 constexpr f32 VIEWPORT_CAMERA_MIN_ZOOM = 0.01f;
 constexpr f32 VIEWPORT_CAMERA_MAX_ZOOM = 1e8f;
+constexpr f32 VIEWPORT_2D_CAMERA_NEAR = -16.0f;
+constexpr f32 VIEWPORT_2D_CAMERA_FAR = 16.0f;
 #ifdef DEBUG_BUILD
 constexpr f32 VIEWPORT_DEBUG_CAMERA_ROTATE_SENSITIVITY = 0.16f;
 constexpr f32 VIEWPORT_DEBUG_CAMERA_SPEED_BOOST = 3.0f;
@@ -102,6 +104,8 @@ INTERNAL_FUNC void viewport_component_apply_grid_spacing(Editor_Layer_State *sta
 INTERNAL_FUNC void viewport_component_render_context_menu(
     Editor_Layer_State *state,
     b8                  cursor_panel_hovered);
+INTERNAL_FUNC b8 viewport_component_is_3d_camera_active(
+    const Editor_Layer_State *state);
 #ifdef DEBUG_BUILD
 INTERNAL_FUNC f32 viewport_component_sanitize_wheel_delta(f32 raw_delta);
 INTERNAL_FUNC b8  viewport_component_debug_camera_position_valid(vec3 p);
@@ -121,6 +125,17 @@ INTERNAL_FUNC b8 viewport_component_debug_pick_orbit_pivot(
     vec3                     *out_pivot);
 #endif
 
+INTERNAL_FUNC b8
+viewport_component_is_3d_camera_active(const Editor_Layer_State *state)
+{
+#ifdef DEBUG_BUILD
+    return state && state->camera_mode == Viewport_Camera_Mode::THREE_D;
+#else
+    (void)state;
+    return false;
+#endif
+}
+
 void
 viewport_component_on_attach(Editor_Layer_State *state)
 {
@@ -132,11 +147,13 @@ viewport_component_on_attach(Editor_Layer_State *state)
     state->camera.zoom_anchor_viewport_local = {0.0f, 0.0f};
     state->camera.zoom_anchor_world = {0.0f, 0.0f};
     state->camera.dirty       = true;
+    state->camera_mode        = Viewport_Camera_Mode::TWO_D;
 #ifdef DEBUG_BUILD
     state->debug_camera.enabled       = false;
     state->debug_camera.position      = {0.0f, 0.0f, 6.0f};
     state->debug_camera.yaw_degrees   = -90.0f;
-    state->debug_camera.pitch_degrees = -30.0f;
+    // Look straight along -Z by default so stacked Z layers read naturally.
+    state->debug_camera.pitch_degrees = 0.0f;
     state->debug_camera.move_speed    = 5.0f;
     state->debug_camera.orbit_active  = false;
     state->debug_camera.orbit_pivot   = {0.0f, 0.0f, 0.0f};
@@ -164,7 +181,7 @@ void
 viewport_component_on_update(Editor_Layer_State *state, Frame_Context *ctx)
 {
 #ifdef DEBUG_BUILD
-    if (state->debug_camera.enabled)
+    if (viewport_component_is_3d_camera_active(state))
     {
         b8 lmb_pressed =
             input_is_mouse_button_pressed(Mouse_Button::LEFT);
@@ -422,7 +439,7 @@ viewport_component_on_mouse_wheel(Editor_Layer_State *state, const Event *event)
     }
 
 #ifdef DEBUG_BUILD
-    if (state->debug_camera.enabled)
+    if (viewport_component_is_3d_camera_active(state))
     {
         delta = viewport_component_sanitize_wheel_delta(delta);
         if (delta == 0.0f)
@@ -519,7 +536,7 @@ viewport_component_on_mouse_moved(Editor_Layer_State *state, const Event *event)
     f32 dy = (f32)event->mouse_move.delta_y;
 
 #ifdef DEBUG_BUILD
-    if (state->debug_camera.enabled)
+    if (viewport_component_is_3d_camera_active(state))
     {
         // Clamp pathological motion spikes (common on some touchpads) so
         // free-camera rotation/orbit stays stable.
@@ -650,7 +667,7 @@ viewport_component_update_matrices(Editor_Layer_State *state)
     }
 
 #ifdef DEBUG_BUILD
-    if (state->debug_camera.enabled)
+    if (viewport_component_is_3d_camera_active(state))
     {
         renderer_set_projection(viewport_component_debug_camera_projection(state));
         renderer_set_view(viewport_component_debug_camera_view(state));
@@ -666,8 +683,8 @@ viewport_component_update_matrices(Editor_Layer_State *state)
         half_w,
         -half_h,
         half_h,
-        -1.0f,
-        1.0f);
+        VIEWPORT_2D_CAMERA_NEAR,
+        VIEWPORT_2D_CAMERA_FAR);
 
     mat4 view = mat4_translation(
         {-state->camera.position.x,
@@ -682,7 +699,7 @@ INTERNAL_FUNC void
 viewport_component_update_cursor_world(Editor_Layer_State *state)
 {
 #ifdef DEBUG_BUILD
-    if (state->debug_camera.enabled)
+    if (viewport_component_is_3d_camera_active(state))
     {
         state->cursor_world_valid = false;
         return;
@@ -749,7 +766,8 @@ viewport_component_render_cursor_panel(Editor_Layer_State  *state,
     String zoom_label = string_fmt(scratch.arena, "%.2f px/mm", state->camera.zoom);
     String grid_label = string_fmt(scratch.arena, "%.6f mm", state->grid_spacing);
 #ifdef DEBUG_BUILD
-    String camera_mode_label = state->debug_camera.enabled
+    b8     is_3d_camera = viewport_component_is_3d_camera_active(state);
+    String camera_mode_label = is_3d_camera
                                    ? STR_LIT("Debug 3D")
                                    : STR_LIT("Production 2D");
     String camera_pos_label = string_fmt(scratch.arena,
@@ -761,7 +779,7 @@ viewport_component_render_cursor_panel(Editor_Layer_State  *state,
                                          "Yaw %.1f, Pitch %.1f",
                                          state->debug_camera.yaw_degrees,
                                          state->debug_camera.pitch_degrees);
-    if (state->debug_camera.enabled)
+    if (is_3d_camera)
     {
         zoom_label = STR_LIT("N/A (Perspective)");
         x_label    = STR_LIT("--");
@@ -817,7 +835,7 @@ viewport_component_render_cursor_panel(Editor_Layer_State  *state,
                                      camera_mode_label.size
                                : "");
 
-    if (state->debug_camera.enabled)
+    if (is_3d_camera)
     {
         ImGui::TextUnformatted("Cam Pos");
         ImGui::SameLine(value_col_x);
@@ -954,13 +972,17 @@ viewport_component_render_context_menu(Editor_Layer_State *state,
                   true,
                   false);
 #ifdef DEBUG_BUILD
-    b8 free_camera_enabled = state->debug_camera.enabled;
+    b8 free_camera_enabled =
+        state->camera_mode == Viewport_Camera_Mode::THREE_D;
     if (ui::menu_item((const char *)VIEWPORT_CONTEXT_MENU_FREE_CAMERA_LABEL.buff,
                       nullptr,
                       &free_camera_enabled,
                       true,
                       false))
     {
+        state->camera_mode = free_camera_enabled
+                                 ? Viewport_Camera_Mode::THREE_D
+                                 : Viewport_Camera_Mode::TWO_D;
         state->debug_camera.enabled = free_camera_enabled;
         state->debug_camera.orbit_active = false;
         state->camera.zoom_anchor_active = false;

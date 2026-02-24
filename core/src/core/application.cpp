@@ -24,7 +24,7 @@
 // Application configuration
 constexpr u32         TARGET_FPS                        = 120;
 constexpr f64         TARGET_FRAME_TIME                 = 1 / (f64)TARGET_FPS;
-constexpr f32         TEST_LAYER_SPACING_Z              = 0.50f;
+constexpr f32         TEST_LAYER_SPACING_Z              = 1.5f;
 constexpr f32         TEST_SECOND_LAYER_ROTATION_FACTOR = -0.70f;
 constexpr const char *TEST_LAYER_TEXTURES[]             = {"metal",
                                                            "space_parallax",
@@ -276,10 +276,10 @@ application_init(App_Config *config)
     // TODO: Temp - test plane geometry
     Geometry_Config g_config =
         geometry_system_generate_plane_config(engine_state->persistent_arena,
-                                              2.0f,
-                                              2.0f,
-                                              1,
-                                              1,
+                                              10.0f,
+                                              5.0f,
+                                              3,
+                                              3,
                                               1.0f,
                                               1.0f,
                                               "test_plane",
@@ -291,10 +291,10 @@ application_init(App_Config *config)
 
     Geometry_Config g_config_secondary =
         geometry_system_generate_plane_config(engine_state->persistent_arena,
-                                              2.0f,
-                                              2.0f,
-                                              1,
-                                              1,
+                                              10.0f,
+                                              5.0f,
+                                              3,
+                                              3,
                                               1.0f,
                                               1.0f,
                                               "test_plane_layer_2",
@@ -304,7 +304,8 @@ application_init(App_Config *config)
 
     Material_Config secondary_material_config = {};
     string_set(secondary_material_config.name, "test_material_layer2");
-    string_set(secondary_material_config.diffuse_map_name, TEST_LAYER_TEXTURES[1]);
+    string_set(secondary_material_config.diffuse_map_name,
+               TEST_LAYER_TEXTURES[1]);
     secondary_material_config.auto_release  = true;
     secondary_material_config.diffuse_color = vec4_one();
 
@@ -450,16 +451,18 @@ application_run()
             Geometry_Render_Data *test_renders =
                 push_array(frame_ctx.frame_arena, Geometry_Render_Data, 2);
 
-            test_renders[0].geometry = engine_state->test_geometry;
-            test_renders[1].geometry = engine_state->test_geometry_secondary;
+            // Swap draw order for depth-behaviour testing.
+            test_renders[0].geometry = engine_state->test_geometry_secondary;
+            test_renders[1].geometry = engine_state->test_geometry;
 
             // Animate both layers around Z at different speeds.
             engine_state->layer_rotation += delta_time;
             mat4 top_rotation =
                 mat4_euler_xyz(0.0f, 0.0f, engine_state->layer_rotation);
 
-            test_renders[0].model =
-                mat4_translation({0.0f, 0.0f, 0.0f}) * top_rotation;
+            mat4 primary_model =
+                top_rotation *
+                mat4_translation({0.0f, 0.0f, -TEST_LAYER_SPACING_Z});
 
             mat4 bottom_rotation =
                 mat4_euler_xyz(0.0f,
@@ -467,10 +470,13 @@ application_run()
                                engine_state->layer_rotation *
                                    TEST_SECOND_LAYER_ROTATION_FACTOR);
 
-            // Second stacked plane below with its own rotation.
-            test_renders[1].model =
-                mat4_translation({0.0f, 0.0f, -TEST_LAYER_SPACING_Z}) *
-                bottom_rotation;
+            // Keep layers parallel and separated only by Z, avoiding debug
+            // tilt/offset distortions that can look like depth inversion.
+            mat4 secondary_model = bottom_rotation;
+
+            // Keep each transform attached to the same geometry after swap.
+            test_renders[0].model = secondary_model;
+            test_renders[1].model = primary_model;
 
             packet->geometry_count = 2;
             packet->geometries     = test_renders;
