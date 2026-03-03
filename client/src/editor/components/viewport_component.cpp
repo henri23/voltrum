@@ -1,10 +1,10 @@
 #include "viewport_component.hpp"
 
+#include "core/thread_context.hpp"
 #include "editor/editor_layer.hpp"
 #include "global_client_state.hpp"
 #include "input/input.hpp"
 #include "input/input_codes.hpp"
-#include "core/thread_context.hpp"
 
 #include <core/frame_context.hpp>
 #include <core/logger.hpp>
@@ -17,36 +17,36 @@
 #include <ui/ui_widgets.hpp>
 #include <utils/string.hpp>
 
-constexpr f32 VIEWPORT_MM_PER_MIL = 0.0254f;
-constexpr f32 VIEWPORT_MILS_PER_MM = 39.37007874015748f;
+constexpr f32 VIEWPORT_MM_PER_MIL          = 0.0254f;
+constexpr f32 VIEWPORT_MILS_PER_MM         = 39.37007874015748f;
 constexpr f32 VIEWPORT_MIN_GRID_SPACING_MM = 0.000001f;
-constexpr f32 VIEWPORT_CAMERA_MIN_ZOOM = 0.01f;
-constexpr f32 VIEWPORT_CAMERA_MAX_ZOOM = 1e8f;
-constexpr f32 VIEWPORT_2D_CAMERA_NEAR = -16.0f;
-constexpr f32 VIEWPORT_2D_CAMERA_FAR = 16.0f;
+constexpr f32 VIEWPORT_CAMERA_MIN_ZOOM     = 0.01f;
+constexpr f32 VIEWPORT_CAMERA_MAX_ZOOM     = 1e8f;
+constexpr f32 VIEWPORT_2D_CAMERA_NEAR      = -16.0f;
+constexpr f32 VIEWPORT_2D_CAMERA_FAR       = 16.0f;
 #ifdef DEBUG_BUILD
-constexpr f32 VIEWPORT_DEBUG_CAMERA_ROTATE_SENSITIVITY = 0.16f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_SPEED_BOOST = 3.0f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_PAN_FACTOR = 0.001f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_MOVE_SPEED_MIN = 0.1f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_MOVE_SPEED_MAX = 2000.0f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_DOLLY_FACTOR = 0.15f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_SPEED_STEP = 1.15f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_ROTATE_SENSITIVITY            = 0.16f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_SPEED_BOOST                   = 3.0f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_PAN_FACTOR                    = 0.001f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_MOVE_SPEED_MIN                = 0.1f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_MOVE_SPEED_MAX                = 2000.0f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_DOLLY_FACTOR                  = 0.15f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_SPEED_STEP                    = 1.15f;
 constexpr f32 VIEWPORT_DEBUG_CAMERA_ORBIT_PIVOT_FALLBACK_DISTANCE = 5.0f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_MIN_ORBIT_RADIUS = 0.05f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_MAX_ORBIT_RADIUS = 400.0f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_ORBIT_PLANE_Z = 0.0f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_MIN_ORBIT_RADIUS              = 0.05f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_MAX_ORBIT_RADIUS              = 400.0f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_ORBIT_PLANE_Z                 = 0.0f;
 constexpr f32 VIEWPORT_DEBUG_CAMERA_FOV_RADIANS = 60.0f * math::DEG_RAD_FACTOR;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_MAX_WHEEL_DELTA = 3.0f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_WHEEL_DEADZONE = 0.01f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_MAX_MOUSE_DELTA = 120.0f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_MAX_POSITION_ABS = 10000.0f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_MAX_WHEEL_DELTA   = 3.0f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_WHEEL_DEADZONE    = 0.01f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_MAX_MOUSE_DELTA   = 120.0f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_MAX_POSITION_ABS  = 10000.0f;
 constexpr f32 VIEWPORT_DEBUG_CAMERA_MAX_PICK_DISTANCE = 800.0f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_PICK_MIN_DIR_Z = 0.02f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_PICK_MIN_DIR_Z    = 0.02f;
 // Keep clip range tighter in debug free-camera to reduce depth precision issues
 // when inspecting closely stacked planes.
 constexpr f32 VIEWPORT_DEBUG_CAMERA_NEAR = 0.10f;
-constexpr f32 VIEWPORT_DEBUG_CAMERA_FAR = 500.0f;
+constexpr f32 VIEWPORT_DEBUG_CAMERA_FAR  = 500.0f;
 #endif
 
 internal_var const String VIEWPORT_CONTEXT_MENU_ID =
@@ -59,7 +59,8 @@ internal_var const String VIEWPORT_CONTEXT_MENU_GRID_CLOSE_TIMER_ID =
     STR_LIT("viewport_ctx_menu_grid_close_timer");
 internal_var const String VIEWPORT_CONTEXT_MENU_GRID_POPUP_ID =
     STR_LIT("viewport_context_menu_grid_popup");
-internal_var const String VIEWPORT_CONTEXT_MENU_GRID_LABEL = STR_LIT("Grid Size");
+internal_var const String VIEWPORT_CONTEXT_MENU_GRID_LABEL =
+    STR_LIT("Grid Size");
 internal_var const String VIEWPORT_CONTEXT_MENU_NEW_SHAPE_LABEL =
     STR_LIT("New Shape (Placeholder)");
 internal_var const String VIEWPORT_CONTEXT_MENU_CURSOR_SETTINGS_LABEL =
@@ -89,40 +90,42 @@ internal_var const Grid_Size_Preset GRID_SIZE_PRESETS[] = {
     {STR_LIT("1.00 mm (39.370 mil)"), 1.00f},
     {STR_LIT("2.00 mm (78.740 mil)"), 2.00f}};
 
-INTERNAL_FUNC void viewport_component_update_matrices(Editor_Layer_State *state);
-INTERNAL_FUNC void viewport_component_update_cursor_world(
-    Editor_Layer_State *state);
-INTERNAL_FUNC b8   viewport_component_render_cursor_panel(
-    Editor_Layer_State *state,
-    const UI_Theme_Palette &palette);
+INTERNAL_FUNC void
+viewport_component_update_matrices(Editor_Layer_State *state);
+INTERNAL_FUNC void
+viewport_component_update_cursor_world(Editor_Layer_State *state);
+INTERNAL_FUNC b8
+viewport_component_render_cursor_panel(Editor_Layer_State     *state,
+                                       const UI_Theme_Palette &palette);
 INTERNAL_FUNC b8 viewport_component_is_mouse_inside_viewport_image(
     const Editor_Layer_State *state,
     ImVec2                    mouse);
-INTERNAL_FUNC b8   viewport_component_spacing_matches(f32 a, f32 b);
-INTERNAL_FUNC void viewport_component_apply_grid_spacing(Editor_Layer_State *state,
-                                                         f32                 spacing_mm);
-INTERNAL_FUNC void viewport_component_render_context_menu(
-    Editor_Layer_State *state,
-    b8                  cursor_panel_hovered);
-INTERNAL_FUNC b8 viewport_component_is_3d_camera_active(
-    const Editor_Layer_State *state);
+INTERNAL_FUNC b8 viewport_component_spacing_matches(f32 a, f32 b);
+INTERNAL_FUNC void
+viewport_component_apply_grid_spacing(Editor_Layer_State *state,
+                                      f32                 spacing_mm);
+INTERNAL_FUNC void
+viewport_component_render_context_menu(Editor_Layer_State *state,
+                                       b8 cursor_panel_hovered);
+INTERNAL_FUNC b8
+viewport_component_is_3d_camera_active(const Editor_Layer_State *state);
 #ifdef DEBUG_BUILD
-INTERNAL_FUNC f32 viewport_component_sanitize_wheel_delta(f32 raw_delta);
-INTERNAL_FUNC b8  viewport_component_debug_camera_position_valid(vec3 p);
+INTERNAL_FUNC f32  viewport_component_sanitize_wheel_delta(f32 raw_delta);
+INTERNAL_FUNC b8   viewport_component_debug_camera_position_valid(vec3 p);
 INTERNAL_FUNC vec3 viewport_component_debug_camera_clamped_position(vec3 p);
-INTERNAL_FUNC vec3 viewport_component_debug_camera_forward(
-    const Editor_Layer_State *state);
-INTERNAL_FUNC vec3 viewport_component_debug_camera_right(
-    const Editor_Layer_State *state);
-INTERNAL_FUNC vec3 viewport_component_debug_camera_up(
-    const Editor_Layer_State *state);
-INTERNAL_FUNC mat4 viewport_component_debug_camera_projection(
-    const Editor_Layer_State *state);
-INTERNAL_FUNC mat4 viewport_component_debug_camera_view(
-    const Editor_Layer_State *state);
-INTERNAL_FUNC b8 viewport_component_debug_pick_orbit_pivot(
-    const Editor_Layer_State *state,
-    vec3                     *out_pivot);
+INTERNAL_FUNC vec3
+viewport_component_debug_camera_forward(const Editor_Layer_State *state);
+INTERNAL_FUNC vec3
+viewport_component_debug_camera_right(const Editor_Layer_State *state);
+INTERNAL_FUNC vec3
+viewport_component_debug_camera_up(const Editor_Layer_State *state);
+INTERNAL_FUNC mat4
+viewport_component_debug_camera_projection(const Editor_Layer_State *state);
+INTERNAL_FUNC mat4
+viewport_component_debug_camera_view(const Editor_Layer_State *state);
+INTERNAL_FUNC b8
+viewport_component_debug_pick_orbit_pivot(const Editor_Layer_State *state,
+                                          vec3                     *out_pivot);
 #endif
 
 INTERNAL_FUNC b8
@@ -140,18 +143,18 @@ void
 viewport_component_on_attach(Editor_Layer_State *state)
 {
     // Initialize 2D camera
-    state->camera.position    = {0.0f, 0.0f};
-    state->camera.zoom        = 50.0f; // pixels per world unit
-    state->camera.target_zoom = 50.0f;
-    state->camera.zoom_anchor_active = false;
+    state->camera.position                   = {0.0f, 0.0f};
+    state->camera.zoom                       = 50.0f; // pixels per world unit
+    state->camera.target_zoom                = 50.0f;
+    state->camera.zoom_anchor_active         = false;
     state->camera.zoom_anchor_viewport_local = {0.0f, 0.0f};
-    state->camera.zoom_anchor_world = {0.0f, 0.0f};
-    state->camera.dirty       = true;
-    state->camera_mode        = Viewport_Camera_Mode::_2D;
+    state->camera.zoom_anchor_world          = {0.0f, 0.0f};
+    state->camera.dirty                      = true;
+    state->camera_mode                       = Viewport_Camera_Mode::_2D;
 #ifdef DEBUG_BUILD
-    state->debug_camera.enabled       = false;
-    state->debug_camera.position      = {0.0f, 0.0f, 6.0f};
-    state->debug_camera.yaw_degrees   = -90.0f;
+    state->debug_camera.enabled     = false;
+    state->debug_camera.position    = {0.0f, 0.0f, 6.0f};
+    state->debug_camera.yaw_degrees = -90.0f;
     // Look straight along -Z by default so stacked Z layers read naturally.
     state->debug_camera.pitch_degrees = 0.0f;
     state->debug_camera.move_speed    = 5.0f;
@@ -159,13 +162,13 @@ viewport_component_on_attach(Editor_Layer_State *state)
     state->debug_camera.orbit_pivot   = {0.0f, 0.0f, 0.0f};
 #endif
 
-    state->viewport_focused    = false;
-    state->viewport_hovered    = false;
-    state->cursor_world_valid  = false;
+    state->viewport_focused      = false;
+    state->viewport_hovered      = false;
+    state->cursor_world_valid    = false;
     state->cursor_world_position = {0.0f, 0.0f};
-    state->viewport_image_pos  = {0.0f, 0.0f};
-    state->viewport_image_size = {0.0f, 0.0f};
-    state->grid_spacing        = 1.0f; // mm
+    state->viewport_image_pos    = {0.0f, 0.0f};
+    state->viewport_image_size   = {0.0f, 0.0f};
+    state->grid_spacing          = 1.0f; // mm
 
     u32 width  = 0;
     u32 height = 0;
@@ -183,10 +186,8 @@ viewport_component_on_update(Editor_Layer_State *state, Frame_Context *ctx)
 #ifdef DEBUG_BUILD
     if (viewport_component_is_3d_camera_active(state))
     {
-        b8 lmb_pressed =
-            input_is_mouse_button_pressed(Mouse_Button::LEFT);
-        b8 rmb_pressed =
-            input_is_mouse_button_pressed(Mouse_Button::RIGHT);
+        b8 lmb_pressed = input_is_mouse_button_pressed(Mouse_Button::LEFT);
+        b8 rmb_pressed = input_is_mouse_button_pressed(Mouse_Button::RIGHT);
 
         if (!lmb_pressed)
         {
@@ -231,7 +232,7 @@ viewport_component_on_update(Editor_Layer_State *state, Frame_Context *ctx)
 
             if (vec3_length_squared(velocity) > 0.0f)
             {
-                velocity = vec3_norm_copy(velocity);
+                velocity       = vec3_norm_copy(velocity);
                 f32 move_speed = state->debug_camera.move_speed;
                 if (input_is_key_pressed(Key_Code::LSHIFT) ||
                     input_is_key_pressed(Key_Code::RSHIFT))
@@ -264,8 +265,8 @@ viewport_component_on_update(Editor_Layer_State *state, Frame_Context *ctx)
     // Keyboard panning
     if (state->viewport_hovered)
     {
-        f32 pan_speed = 300.0f / state->camera.zoom; // world units per second
-        vec2 velocity = {0.0f, 0.0f};
+        f32  pan_speed = 300.0f / state->camera.zoom; // world units per second
+        vec2 velocity  = {0.0f, 0.0f};
 
         if (input_is_key_pressed(Key_Code::W) ||
             input_is_key_pressed(Key_Code::UP))
@@ -290,22 +291,22 @@ viewport_component_on_update(Editor_Layer_State *state, Frame_Context *ctx)
 
         if (velocity.x != 0.0f || velocity.y != 0.0f)
         {
-            f32 len = math_sqrt(velocity.x * velocity.x +
-                                velocity.y * velocity.y);
+            f32 len =
+                math_sqrt(velocity.x * velocity.x + velocity.y * velocity.y);
             velocity.x /= len;
             velocity.y /= len;
 
             state->camera.position.x += velocity.x * pan_speed * ctx->delta_t;
             state->camera.position.y += velocity.y * pan_speed * ctx->delta_t;
             state->camera.zoom_anchor_active = false;
-            state->camera.dirty = true;
+            state->camera.dirty              = true;
         }
     }
 
     // Smooth zoom animation
     if (state->camera.zoom != state->camera.target_zoom)
     {
-        f32 speed = 10.0f;
+        f32 speed = 16.0f;
         f32 t     = speed * ctx->delta_t;
         if (t > 1.0f)
         {
@@ -316,23 +317,23 @@ viewport_component_on_update(Editor_Layer_State *state, Frame_Context *ctx)
             (state->camera.target_zoom - state->camera.zoom) * t;
 
         f32 ratio = state->camera.zoom / state->camera.target_zoom;
-        if (ratio > 0.999f && ratio < 1.001f)
+        if (ratio > 0.997f && ratio < 1.003f)
         {
-            state->camera.zoom = state->camera.target_zoom;
+            state->camera.zoom               = state->camera.target_zoom;
             state->camera.zoom_anchor_active = false;
         }
 
         if (state->camera.zoom_anchor_active)
         {
-            f32 width  = state->viewport_size.x < 1.0f ? 1.0f : state->viewport_size.x;
-            f32 height = state->viewport_size.y < 1.0f ? 1.0f : state->viewport_size.y;
+            f32 width =
+                state->viewport_size.x < 1.0f ? 1.0f : state->viewport_size.x;
+            f32 height =
+                state->viewport_size.y < 1.0f ? 1.0f : state->viewport_size.y;
 
-            f32 local_x = CLAMP(state->camera.zoom_anchor_viewport_local.x,
-                                0.0f,
-                                width);
-            f32 local_y = CLAMP(state->camera.zoom_anchor_viewport_local.y,
-                                0.0f,
-                                height);
+            f32 local_x =
+                CLAMP(state->camera.zoom_anchor_viewport_local.x, 0.0f, width);
+            f32 local_y =
+                CLAMP(state->camera.zoom_anchor_viewport_local.y, 0.0f, height);
 
             state->camera.position.x =
                 state->camera.zoom_anchor_world.x -
@@ -378,9 +379,11 @@ viewport_component_on_render(Editor_Layer_State  *state,
         state->viewport_size.y != state->last_viewport_size.y)
     {
         u32 width =
-            (u32)(state->viewport_size.x < 1.0f ? 1.0f : state->viewport_size.x);
+            (u32)(state->viewport_size.x < 1.0f ? 1.0f
+                                                : state->viewport_size.x);
         u32 height =
-            (u32)(state->viewport_size.y < 1.0f ? 1.0f : state->viewport_size.y);
+            (u32)(state->viewport_size.y < 1.0f ? 1.0f
+                                                : state->viewport_size.y);
 
         CLIENT_DEBUG("Viewport window resized to %ux%u", width, height);
 
@@ -403,10 +406,10 @@ viewport_component_on_render(Editor_Layer_State  *state,
 
     if (global_state)
     {
-        global_state->viewport_bounds_valid = true;
-        global_state->viewport_bounds_x     = image_pos.x;
-        global_state->viewport_bounds_y     = image_pos.y;
-        global_state->viewport_bounds_width = content_size.x;
+        global_state->viewport_bounds_valid  = true;
+        global_state->viewport_bounds_x      = image_pos.x;
+        global_state->viewport_bounds_y      = image_pos.y;
+        global_state->viewport_bounds_width  = content_size.x;
         global_state->viewport_bounds_height = content_size.y;
     }
 
@@ -452,8 +455,7 @@ viewport_component_on_mouse_wheel(Editor_Layer_State *state, const Event *event)
             // Fractional wheel values from trackpads should adjust speed
             // proportionally, instead of applying full discrete wheel steps.
             f32 speed_scale =
-                1.0f +
-                ((VIEWPORT_DEBUG_CAMERA_SPEED_STEP - 1.0f) * delta);
+                1.0f + ((VIEWPORT_DEBUG_CAMERA_SPEED_STEP - 1.0f) * delta);
             speed_scale = MAX(speed_scale, 0.01f);
             state->debug_camera.move_speed *= speed_scale;
 
@@ -466,11 +468,11 @@ viewport_component_on_mouse_wheel(Editor_Layer_State *state, const Event *event)
         {
             vec3 forward = viewport_component_debug_camera_forward(state);
             f32  dolly_distance =
-                delta *
-                MAX(state->debug_camera.move_speed * VIEWPORT_DEBUG_CAMERA_DOLLY_FACTOR,
-                    VIEWPORT_DEBUG_CAMERA_MIN_ORBIT_RADIUS);
-            state->debug_camera.position =
-                state->debug_camera.position + vec3_scale(forward, dolly_distance);
+                delta * MAX(state->debug_camera.move_speed *
+                                VIEWPORT_DEBUG_CAMERA_DOLLY_FACTOR,
+                            VIEWPORT_DEBUG_CAMERA_MIN_ORBIT_RADIUS);
+            state->debug_camera.position = state->debug_camera.position +
+                                           vec3_scale(forward, dolly_distance);
             state->debug_camera.position =
                 viewport_component_debug_camera_clamped_position(
                     state->debug_camera.position);
@@ -498,9 +500,11 @@ viewport_component_on_mouse_wheel(Editor_Layer_State *state, const Event *event)
     f32 local_y = mouse.y - state->viewport_image_pos.y;
 
     state->camera.zoom_anchor_viewport_local = {local_x, local_y};
-    state->camera.zoom_anchor_world = {
-        ((local_x - width * 0.5f) / state->camera.zoom) + state->camera.position.x,
-        (((height * 0.5f) - local_y) / state->camera.zoom) + state->camera.position.y};
+    state->camera.zoom_anchor_world          = {
+        ((local_x - width * 0.5f) / state->camera.zoom) +
+            state->camera.position.x,
+        (((height * 0.5f) - local_y) / state->camera.zoom) +
+            state->camera.position.y};
     state->camera.zoom_anchor_active = true;
 
     f32 zoom_factor = 1.15f;
@@ -572,11 +576,13 @@ viewport_component_on_mouse_moved(Editor_Layer_State *state, const Event *event)
                         state,
                         &state->debug_camera.orbit_pivot))
                 {
-                    vec3 forward = viewport_component_debug_camera_forward(state);
+                    vec3 forward =
+                        viewport_component_debug_camera_forward(state);
                     state->debug_camera.orbit_pivot =
                         state->debug_camera.position +
-                        vec3_scale(forward,
-                                   VIEWPORT_DEBUG_CAMERA_ORBIT_PIVOT_FALLBACK_DISTANCE);
+                        vec3_scale(
+                            forward,
+                            VIEWPORT_DEBUG_CAMERA_ORBIT_PIVOT_FALLBACK_DISTANCE);
                 }
                 state->debug_camera.orbit_active = true;
             }
@@ -584,10 +590,9 @@ viewport_component_on_mouse_moved(Editor_Layer_State *state, const Event *event)
             vec3 to_pivot =
                 state->debug_camera.orbit_pivot - state->debug_camera.position;
             f32 orbit_radius = vec3_length(to_pivot);
-            orbit_radius =
-                CLAMP(orbit_radius,
-                      VIEWPORT_DEBUG_CAMERA_MIN_ORBIT_RADIUS,
-                      VIEWPORT_DEBUG_CAMERA_MAX_ORBIT_RADIUS);
+            orbit_radius     = CLAMP(orbit_radius,
+                                 VIEWPORT_DEBUG_CAMERA_MIN_ORBIT_RADIUS,
+                                 VIEWPORT_DEBUG_CAMERA_MAX_ORBIT_RADIUS);
 
             state->debug_camera.yaw_degrees +=
                 dx * VIEWPORT_DEBUG_CAMERA_ROTATE_SENSITIVITY;
@@ -597,9 +602,8 @@ viewport_component_on_mouse_moved(Editor_Layer_State *state, const Event *event)
                 CLAMP(state->debug_camera.pitch_degrees, -89.0f, 89.0f);
 
             vec3 forward = viewport_component_debug_camera_forward(state);
-            state->debug_camera.position =
-                state->debug_camera.orbit_pivot -
-                vec3_scale(forward, orbit_radius);
+            state->debug_camera.position = state->debug_camera.orbit_pivot -
+                                           vec3_scale(forward, orbit_radius);
             state->debug_camera.position =
                 viewport_component_debug_camera_clamped_position(
                     state->debug_camera.position);
@@ -610,13 +614,12 @@ viewport_component_on_mouse_moved(Editor_Layer_State *state, const Event *event)
         state->debug_camera.orbit_active = false;
         if (mmb_pressed)
         {
-            vec3 right = viewport_component_debug_camera_right(state);
-            vec3 up    = viewport_component_debug_camera_up(state);
-            f32 pan_scale = VIEWPORT_DEBUG_CAMERA_PAN_FACTOR *
+            vec3 right     = viewport_component_debug_camera_right(state);
+            vec3 up        = viewport_component_debug_camera_up(state);
+            f32  pan_scale = VIEWPORT_DEBUG_CAMERA_PAN_FACTOR *
                             MAX(state->debug_camera.move_speed, 1.0f);
-            vec3 pan_delta =
-                vec3_scale(right, -dx * pan_scale) +
-                vec3_scale(up, dy * pan_scale);
+            vec3 pan_delta = vec3_scale(right, -dx * pan_scale) +
+                             vec3_scale(up, dy * pan_scale);
 
             state->debug_camera.position =
                 state->debug_camera.position + pan_delta;
@@ -646,7 +649,7 @@ viewport_component_on_mouse_moved(Editor_Layer_State *state, const Event *event)
     state->camera.position.x -= dx / state->camera.zoom;
     state->camera.position.y += dy / state->camera.zoom;
     state->camera.zoom_anchor_active = false;
-    state->camera.dirty = true;
+    state->camera.dirty              = true;
 
     return true;
 }
@@ -669,7 +672,8 @@ viewport_component_update_matrices(Editor_Layer_State *state)
 #ifdef DEBUG_BUILD
     if (viewport_component_is_3d_camera_active(state))
     {
-        renderer_set_projection(viewport_component_debug_camera_projection(state));
+        renderer_set_projection(
+            viewport_component_debug_camera_projection(state));
         renderer_set_view(viewport_component_debug_camera_view(state));
         return;
     }
@@ -678,18 +682,15 @@ viewport_component_update_matrices(Editor_Layer_State *state)
     f32 half_w = (vp_w / state->camera.zoom) * 0.5f;
     f32 half_h = (vp_h / state->camera.zoom) * 0.5f;
 
-    mat4 projection = mat4_project_orthographic(
-        -half_w,
-        half_w,
-        -half_h,
-        half_h,
-        VIEWPORT_2D_CAMERA_NEAR,
-        VIEWPORT_2D_CAMERA_FAR);
+    mat4 projection = mat4_project_orthographic(-half_w,
+                                                half_w,
+                                                -half_h,
+                                                half_h,
+                                                VIEWPORT_2D_CAMERA_NEAR,
+                                                VIEWPORT_2D_CAMERA_FAR);
 
     mat4 view = mat4_translation(
-        {-state->camera.position.x,
-         -state->camera.position.y,
-         0.0f});
+        {-state->camera.position.x, -state->camera.position.y, 0.0f});
 
     renderer_set_projection(projection);
     renderer_set_view(view);
@@ -741,44 +742,43 @@ viewport_component_update_cursor_world(Editor_Layer_State *state)
 }
 
 INTERNAL_FUNC b8
-viewport_component_render_cursor_panel(Editor_Layer_State  *state,
+viewport_component_render_cursor_panel(Editor_Layer_State     *state,
                                        const UI_Theme_Palette &palette)
 {
-    const f32 pad = 12.0f;
+    const f32 pad        = 12.0f;
     const f32 base_width = 296.0f;
 
-    ImVec2 pos = ImVec2(state->viewport_image_pos.x + pad,
+    ImVec2    pos           = ImVec2(state->viewport_image_pos.x + pad,
                         state->viewport_image_pos.y + pad);
     const f32 overlay_width = base_width;
 
     Scratch_Arena scratch = scratch_begin(nullptr, 0);
 
-    String x_label = state->cursor_world_valid
-                         ? string_fmt(scratch.arena,
-                                   "%.3f",
-                                   state->cursor_world_position.x)
-                         : STR_LIT("--");
-    String y_label = state->cursor_world_valid
-                         ? string_fmt(scratch.arena,
-                                   "%.3f",
-                                   state->cursor_world_position.y)
-                         : STR_LIT("--");
-    String zoom_label = string_fmt(scratch.arena, "%.2f px/mm", state->camera.zoom);
-    String grid_label = string_fmt(scratch.arena, "%.6f mm", state->grid_spacing);
+    String x_label =
+        state->cursor_world_valid
+            ? string_fmt(scratch.arena, "%.3f", state->cursor_world_position.x)
+            : STR_LIT("--");
+    String y_label =
+        state->cursor_world_valid
+            ? string_fmt(scratch.arena, "%.3f", state->cursor_world_position.y)
+            : STR_LIT("--");
+    String zoom_label =
+        string_fmt(scratch.arena, "%.2f px/mm", state->camera.zoom);
+    String grid_label =
+        string_fmt(scratch.arena, "%.6f mm", state->grid_spacing);
 #ifdef DEBUG_BUILD
     b8     is_3d_camera = viewport_component_is_3d_camera_active(state);
-    String camera_mode_label = is_3d_camera
-                                   ? STR_LIT("Debug 3D")
-                                   : STR_LIT("Production 2D");
-    String camera_pos_label = string_fmt(scratch.arena,
-                                      "%.2f, %.2f, %.2f",
-                                      state->debug_camera.position.x,
-                                      state->debug_camera.position.y,
-                                      state->debug_camera.position.z);
+    String camera_mode_label =
+        is_3d_camera ? STR_LIT("Debug 3D") : STR_LIT("Production 2D");
+    String camera_pos_label    = string_fmt(scratch.arena,
+                                         "%.2f, %.2f, %.2f",
+                                         state->debug_camera.position.x,
+                                         state->debug_camera.position.y,
+                                         state->debug_camera.position.z);
     String camera_angles_label = string_fmt(scratch.arena,
-                                         "Yaw %.1f, Pitch %.1f",
-                                         state->debug_camera.yaw_degrees,
-                                         state->debug_camera.pitch_degrees);
+                                            "Yaw %.1f, Pitch %.1f",
+                                            state->debug_camera.yaw_degrees,
+                                            state->debug_camera.pitch_degrees);
     if (is_3d_camera)
     {
         zoom_label = STR_LIT("N/A (Perspective)");
@@ -790,9 +790,9 @@ viewport_component_render_cursor_panel(Editor_Layer_State  *state,
     ImGui::SetCursorScreenPos(pos);
     ui::glass_content_options glass_options =
         ui::make_glass_content_options(overlay_width);
-    glass_options.emphasis                  = 1.0f;
-    glass_options.rounding                  = 10.0f;
-    glass_options.padding                   = ImVec2(12.0f, 10.0f);
+    glass_options.emphasis = 1.0f;
+    glass_options.rounding = 10.0f;
+    glass_options.padding  = ImVec2(12.0f, 10.0f);
     UI_BEGIN_GLASS_CONTENT(cursor_world_glass_scope, palette, glass_options);
 
     ImGui::TextUnformatted(ICON_FA_LOCATION_DOT " Cursor World");
@@ -802,15 +802,15 @@ viewport_component_render_cursor_panel(Editor_Layer_State  *state,
     const f32 value_col_x = 118.0f;
     ImGui::TextUnformatted("X");
     ImGui::SameLine(value_col_x);
-    ImGui::TextUnformatted(x_label.buff ? (const char *)x_label.buff : "",
-                           x_label.buff ? (const char *)x_label.buff + x_label.size
-                                       : "");
+    ImGui::TextUnformatted(
+        x_label.buff ? (const char *)x_label.buff : "",
+        x_label.buff ? (const char *)x_label.buff + x_label.size : "");
 
     ImGui::TextUnformatted("Y");
     ImGui::SameLine(value_col_x);
-    ImGui::TextUnformatted(y_label.buff ? (const char *)y_label.buff : "",
-                           y_label.buff ? (const char *)y_label.buff + y_label.size
-                                       : "");
+    ImGui::TextUnformatted(
+        y_label.buff ? (const char *)y_label.buff : "",
+        y_label.buff ? (const char *)y_label.buff + y_label.size : "");
 
     ImGui::TextUnformatted("Zoom");
     ImGui::SameLine(value_col_x);
@@ -827,49 +827,45 @@ viewport_component_render_cursor_panel(Editor_Layer_State  *state,
 #ifdef DEBUG_BUILD
     ImGui::TextUnformatted("Mode");
     ImGui::SameLine(value_col_x);
-    ImGui::TextUnformatted(camera_mode_label.buff
-                               ? (const char *)camera_mode_label.buff
-                               : "",
-                           camera_mode_label.buff
-                               ? (const char *)camera_mode_label.buff +
-                                     camera_mode_label.size
-                               : "");
+    ImGui::TextUnformatted(
+        camera_mode_label.buff ? (const char *)camera_mode_label.buff : "",
+        camera_mode_label.buff
+            ? (const char *)camera_mode_label.buff + camera_mode_label.size
+            : "");
 
     if (is_3d_camera)
     {
         ImGui::TextUnformatted("Cam Pos");
         ImGui::SameLine(value_col_x);
-        ImGui::TextUnformatted(camera_pos_label.buff
-                                   ? (const char *)camera_pos_label.buff
-                                   : "",
-                               camera_pos_label.buff
-                                   ? (const char *)camera_pos_label.buff +
-                                         camera_pos_label.size
-                                   : "");
+        ImGui::TextUnformatted(
+            camera_pos_label.buff ? (const char *)camera_pos_label.buff : "",
+            camera_pos_label.buff
+                ? (const char *)camera_pos_label.buff + camera_pos_label.size
+                : "");
 
         ImGui::TextUnformatted("Cam Rot");
         ImGui::SameLine(value_col_x);
-        ImGui::TextUnformatted(camera_angles_label.buff
-                                   ? (const char *)camera_angles_label.buff
-                                   : "",
-                               camera_angles_label.buff
-                                   ? (const char *)camera_angles_label.buff +
-                                         camera_angles_label.size
-                                   : "");
+        ImGui::TextUnformatted(
+            camera_angles_label.buff ? (const char *)camera_angles_label.buff
+                                     : "",
+            camera_angles_label.buff ? (const char *)camera_angles_label.buff +
+                                           camera_angles_label.size
+                                     : "");
 
         ImGui::Separator();
         ImGui::TextDisabled(
-            "RMB look+WASDQE | LMB orbit | MMB pan | Wheel dolly | RMB+Wheel speed");
+            "RMB look+WASDQE | LMB orbit | MMB pan | Wheel dolly | RMB+Wheel "
+            "speed");
     }
 #endif
 
     UI_END_GLASS_CONTENT(cursor_world_glass_scope);
 
-    ImVec2 panel_min = ImGui::GetItemRectMin();
-    ImVec2 panel_max = ImGui::GetItemRectMax();
-    ImVec2 mouse     = ImGui::GetIO().MousePos;
-    b8 is_hovered = mouse.x >= panel_min.x && mouse.x <= panel_max.x &&
-           mouse.y >= panel_min.y && mouse.y <= panel_max.y;
+    ImVec2 panel_min  = ImGui::GetItemRectMin();
+    ImVec2 panel_max  = ImGui::GetItemRectMax();
+    ImVec2 mouse      = ImGui::GetIO().MousePos;
+    b8     is_hovered = mouse.x >= panel_min.x && mouse.x <= panel_max.x &&
+                    mouse.y >= panel_min.y && mouse.y <= panel_max.y;
 
     scratch_end(scratch);
     return is_hovered;
@@ -932,7 +928,7 @@ viewport_component_render_context_menu(Editor_Layer_State *state,
     }
 
     ImVec2 mouse = ImGui::GetIO().MousePos;
-    b8 mouse_inside_image =
+    b8     mouse_inside_image =
         viewport_component_is_mouse_inside_viewport_image(state, mouse);
 
     if (mouse_inside_image && !cursor_panel_hovered &&
@@ -943,8 +939,9 @@ viewport_component_render_context_menu(Editor_Layer_State *state,
 
     ImGuiStorage *storage    = ImGui::GetStateStorage();
     f32           delta_time = ImGui::GetIO().DeltaTime;
-    b8 menu_open = ImGui::IsPopupOpen((const char *)VIEWPORT_CONTEXT_MENU_ID.buff,
-                                      ImGuiPopupFlags_None);
+    b8            menu_open =
+        ImGui::IsPopupOpen((const char *)VIEWPORT_CONTEXT_MENU_ID.buff,
+                           ImGuiPopupFlags_None);
     f32 menu_alpha = ui::anim::track_popup_alpha(
         storage,
         ImGui::GetID((const char *)VIEWPORT_CONTEXT_MENU_ANIM_ID.buff),
@@ -966,44 +963,45 @@ viewport_component_render_context_menu(Editor_Layer_State *state,
                   nullptr,
                   true,
                   false);
-    ui::menu_item((const char *)VIEWPORT_CONTEXT_MENU_CURSOR_SETTINGS_LABEL.buff,
-                  nullptr,
-                  nullptr,
-                  true,
-                  false);
+    ui::menu_item(
+        (const char *)VIEWPORT_CONTEXT_MENU_CURSOR_SETTINGS_LABEL.buff,
+        nullptr,
+        nullptr,
+        true,
+        false);
 #ifdef DEBUG_BUILD
-    b8 free_camera_enabled =
-        state->camera_mode == Viewport_Camera_Mode::_3D;
-    if (ui::menu_item((const char *)VIEWPORT_CONTEXT_MENU_FREE_CAMERA_LABEL.buff,
-                      nullptr,
-                      &free_camera_enabled,
-                      true,
-                      false))
+    b8 free_camera_enabled = state->camera_mode == Viewport_Camera_Mode::_3D;
+    if (ui::menu_item(
+            (const char *)VIEWPORT_CONTEXT_MENU_FREE_CAMERA_LABEL.buff,
+            nullptr,
+            &free_camera_enabled,
+            true,
+            false))
     {
-        state->camera_mode = free_camera_enabled
-                                 ? Viewport_Camera_Mode::_3D
-                                 : Viewport_Camera_Mode::_2D;
-        state->debug_camera.enabled = free_camera_enabled;
+        state->camera_mode = free_camera_enabled ? Viewport_Camera_Mode::_3D
+                                                 : Viewport_Camera_Mode::_2D;
+        state->debug_camera.enabled      = free_camera_enabled;
         state->debug_camera.orbit_active = false;
         state->camera.zoom_anchor_active = false;
-        state->camera.dirty = true;
+        state->camera.dirty              = true;
     }
 #endif
     ImGui::Separator();
 
-    b8 grid_trigger_pressed = ui::menu_item(
-        (const char *)VIEWPORT_CONTEXT_MENU_GRID_LABEL.buff,
-                                            ICON_FA_CHEVRON_RIGHT,
-                                            nullptr,
-                                            true,
-                                            false);
-    b8     grid_trigger_hovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
-    ImVec2 grid_item_min        = ImGui::GetItemRectMin();
-    ImVec2 grid_item_max        = ImGui::GetItemRectMax();
+    b8 grid_trigger_pressed =
+        ui::menu_item((const char *)VIEWPORT_CONTEXT_MENU_GRID_LABEL.buff,
+                      ICON_FA_CHEVRON_RIGHT,
+                      nullptr,
+                      true,
+                      false);
+    b8 grid_trigger_hovered =
+        ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
+    ImVec2 grid_item_min = ImGui::GetItemRectMin();
+    ImVec2 grid_item_max = ImGui::GetItemRectMax();
 
-    b8 submenu_popup_open =
-        ImGui::IsPopupOpen((const char *)VIEWPORT_CONTEXT_MENU_GRID_POPUP_ID.buff,
-                           ImGuiPopupFlags_None);
+    b8 submenu_popup_open = ImGui::IsPopupOpen(
+        (const char *)VIEWPORT_CONTEXT_MENU_GRID_POPUP_ID.buff,
+        ImGuiPopupFlags_None);
     b8 submenu_target_open =
         submenu_popup_open || grid_trigger_hovered || grid_trigger_pressed;
     f32 submenu_alpha = ui::anim::track_popup_alpha(
@@ -1014,21 +1012,25 @@ viewport_component_render_context_menu(Editor_Layer_State *state,
 
     if (grid_trigger_hovered || grid_trigger_pressed || submenu_popup_open)
     {
-        ImGui::SetNextWindowPos(ImVec2(grid_item_max.x + 2.0f, grid_item_min.y));
+        ImGui::SetNextWindowPos(
+            ImVec2(grid_item_max.x + 2.0f, grid_item_min.y));
     }
     if (grid_trigger_hovered || grid_trigger_pressed)
     {
-        ImGui::OpenPopup((const char *)VIEWPORT_CONTEXT_MENU_GRID_POPUP_ID.buff);
+        ImGui::OpenPopup(
+            (const char *)VIEWPORT_CONTEXT_MENU_GRID_POPUP_ID.buff);
     }
 
-    ImGuiID submenu_close_timer_id =
-        ImGui::GetID((const char *)VIEWPORT_CONTEXT_MENU_GRID_CLOSE_TIMER_ID.buff);
-    f32 *submenu_close_timer = storage->GetFloatRef(submenu_close_timer_id, 0.0f);
-    b8   close_context_menu  = false;
+    ImGuiID submenu_close_timer_id = ImGui::GetID(
+        (const char *)VIEWPORT_CONTEXT_MENU_GRID_CLOSE_TIMER_ID.buff);
+    f32 *submenu_close_timer =
+        storage->GetFloatRef(submenu_close_timer_id, 0.0f);
+    b8 close_context_menu = false;
 
     ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.9f * submenu_alpha);
     ImGui::PushStyleColor(ImGuiCol_PopupBg, menu_bg_col);
-    if (ImGui::BeginPopup((const char *)VIEWPORT_CONTEXT_MENU_GRID_POPUP_ID.buff))
+    if (ImGui::BeginPopup(
+            (const char *)VIEWPORT_CONTEXT_MENU_GRID_POPUP_ID.buff))
     {
         b8 submenu_hovered =
             ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup);
@@ -1036,14 +1038,15 @@ viewport_component_render_context_menu(Editor_Layer_State *state,
         for (u32 i = 0; i < ARRAY_COUNT(GRID_SIZE_PRESETS); ++i)
         {
             const Grid_Size_Preset &preset = GRID_SIZE_PRESETS[i];
-            b8 selected = viewport_component_spacing_matches(
-                state->grid_spacing,
-                preset.spacing_mm);
+            b8                      selected =
+                viewport_component_spacing_matches(state->grid_spacing,
+                                                   preset.spacing_mm);
 
-            if (ui::menu_item((const char *)preset.label.buff, nullptr, &selected))
+            if (ui::menu_item((const char *)preset.label.buff,
+                              nullptr,
+                              &selected))
             {
-                viewport_component_apply_grid_spacing(state,
-                                                      preset.spacing_mm);
+                viewport_component_apply_grid_spacing(state, preset.spacing_mm);
                 close_context_menu = true;
             }
         }
@@ -1081,8 +1084,9 @@ viewport_component_render_context_menu(Editor_Layer_State *state,
 INTERNAL_FUNC vec3
 viewport_component_debug_camera_forward(const Editor_Layer_State *state)
 {
-    f32 yaw_radians   = state->debug_camera.yaw_degrees * math::DEG_RAD_FACTOR;
-    f32 pitch_radians = state->debug_camera.pitch_degrees * math::DEG_RAD_FACTOR;
+    f32 yaw_radians = state->debug_camera.yaw_degrees * math::DEG_RAD_FACTOR;
+    f32 pitch_radians =
+        state->debug_camera.pitch_degrees * math::DEG_RAD_FACTOR;
 
     vec3 forward = {math_cos(yaw_radians) * math_cos(pitch_radians),
                     math_sin(pitch_radians),
@@ -1217,9 +1221,9 @@ viewport_component_debug_pick_orbit_pivot(const Editor_Layer_State *state,
     vec3 right   = viewport_component_debug_camera_right(state);
     vec3 up      = viewport_component_debug_camera_up(state);
     vec3 forward = viewport_component_debug_camera_forward(state);
-    vec3 ray_dir =
-        forward + vec3_scale(right, ndc_x * aspect_ratio * tan_half_fov) +
-        vec3_scale(up, ndc_y * tan_half_fov);
+    vec3 ray_dir = forward +
+                   vec3_scale(right, ndc_x * aspect_ratio * tan_half_fov) +
+                   vec3_scale(up, ndc_y * tan_half_fov);
     ray_dir = vec3_norm_copy(ray_dir);
 
     f32 dir_z = ray_dir.z;
@@ -1228,8 +1232,9 @@ viewport_component_debug_pick_orbit_pivot(const Editor_Layer_State *state,
         return false;
     }
 
-    f32 t = (VIEWPORT_DEBUG_CAMERA_ORBIT_PLANE_Z - state->debug_camera.position.z) /
-            dir_z;
+    f32 t =
+        (VIEWPORT_DEBUG_CAMERA_ORBIT_PLANE_Z - state->debug_camera.position.z) /
+        dir_z;
     if (t <= 0.0f || t > VIEWPORT_DEBUG_CAMERA_MAX_PICK_DISTANCE)
     {
         return false;

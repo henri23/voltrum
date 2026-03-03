@@ -2,33 +2,44 @@
 
 #include "defines.hpp"
 
-struct vec2 {
-    union {
-        struct {
+struct vec2
+{
+    union
+    {
+        struct
+        {
             f32 x, y;
         };
-        struct {
+        struct
+        {
             f32 u, v;
         };
-        struct {
+        struct
+        {
             f32 s, t;
         };
         f32 elements[2];
     };
 };
 
-struct vec3 {
-    union {
-        struct {
+struct vec3
+{
+    union
+    {
+        struct
+        {
             f32 x, y, z;
         };
-        struct {
+        struct
+        {
             f32 r, g, b;
         };
-        struct {
+        struct
+        {
             f32 s, t, p;
         };
-        struct {
+        struct
+        {
             f32 u, v, w;
         };
         f32 elements[3];
@@ -43,18 +54,24 @@ struct vec3 {
 
 // Another use case of vec4 is for representing 3D rotations with quaternions
 // rather than Euler angles
-struct vec4 {
-    union {
-        struct {
+struct vec4
+{
+    union
+    {
+        struct
+        {
             f32 x, y, z, w;
         };
-        struct {
+        struct
+        {
             f32 r, g, b, a;
         };
-        struct {
+        struct
+        {
             f32 s, t, p, q;
         };
-        struct {
+        struct
+        {
             f32 qx, qy, qz, qw;
         }; // Quaternion representation
         f32 elements[4];
@@ -64,16 +81,36 @@ struct vec4 {
 // typedef vec4 quaternion;
 using quaternion = vec4;
 
-struct mat4 {
+struct mat4
+{
     alignas(16) f32 elements[16];
 };
 
-struct vertex_3d {
+struct vertex_3d
+{
     vec3 position;
     vec2 texture_coordinates;
 };
 
-struct vertex_2d {
+struct vertex_2d
+{
     vec2 position;
     vec2 texture_coordinates;
+};
+
+struct transform
+{
+    vec3       position;
+    quaternion rotation;
+    vec3       scale;
+
+    b8 is_dirty; // Tracks if position/rotation/scale has changed
+
+    // This is the resulting matrix of the above transformations
+    mat4 local_transform_matrix;
+
+    // If a child transformation has a valid parent transformation, it can be
+    // used to combine transformation matrices, so that the child 'inherits'
+    // the transformation of its parent
+    struct transform *parent;
 };
