@@ -45,6 +45,7 @@ struct Texture
     u32        height;
     u8         channel_count;
     b8         has_transparency;
+    b8         is_writeable;
     b8         is_ui_texture;
     u32        generation;
     void      *internal_data; // Backend specific texture data
@@ -55,15 +56,36 @@ enum class Texture_Type
 {
     UNKNOWN     = 0x00,
     MAP_DIFFUSE = 1 << 0,
-    // MAP_DIFFUSE = 1 << 1,
+};
+
+// Defines how the texture repeats when we finish drawing the 0 - 1 texture
+// coordinates
+enum class Texture_Repeat
+{
+    NORMAL,
+    MIRRORED,
+    CLAMP_TO_EDGE,
+    CLAMP_TO_BORDER
+};
+
+enum class Texture_Filter
+{
+    NEAREST, // Smooth the texture
+    LINEAR   // More pixelated
 };
 
 ENABLE_BITMASK(Texture_Type); // Enable c++ enum to be used as bitmask
 
 struct Texture_Map
 {
-    Texture     *texture;
-    Texture_Type type;
+    Texture       *texture;
+    Texture_Type   type;
+    Texture_Filter filter_minify;
+    Texture_Filter filter_magnify;
+    Texture_Repeat repeat_u;
+    Texture_Repeat repeat_v;
+    Texture_Repeat repeat_w;
+    void *internal_data; // Render API specific data (i.e Vulkan sampler)
 };
 
 using Material_ID = u32;
@@ -88,6 +110,9 @@ struct Material
     u32         internal_id; // Renderer specific object identifier
     vec4        diffuse_color;
     Texture_Map diffuse_map;
+
+    u32 shader_id;
+    u32 render_frame_number;
 };
 
 using Geometry_ID = u32;
@@ -102,4 +127,11 @@ struct Geometry
     u32         internal_id;
     u32         generation;
     Material   *material;
+};
+
+struct Cell
+{
+    u16        geometry_count;
+    Geometry **geometry;
+    mat4       model;
 };

@@ -4,21 +4,19 @@
 #include "resources/resource_types.hpp"
 #include "vulkan_types.hpp"
 
-b8 vulkan_initialize(
-    Arena          *allocator,
-    Platform_State *platform,
-    String          app_name);
+b8
+vulkan_initialize(Arena *allocator, Platform_State *platform, String app_name);
 void vulkan_shutdown();
 
 void vulkan_on_resized(u16 width, u16 height);
 
-b8 vulkan_begin_frame(struct Frame_Context *frame_ctx, f32 delta_t);
+b8   vulkan_begin_frame(struct Frame_Context *frame_ctx, f32 delta_t);
 void vulkan_update_global_viewport_state(mat4 projection,
-                                          mat4 view,
-                                          vec3 view_position,
-                                          vec4 ambient_colour,
-                                          s32  mode);
-b8 vulkan_end_frame(struct Frame_Context *frame_ctx, f32 delta_t);
+                                         mat4 view,
+                                         vec3 view_position,
+                                         vec4 ambient_colour,
+                                         s32  mode);
+b8   vulkan_end_frame(struct Frame_Context *frame_ctx, f32 delta_t);
 
 b8 vulkan_renderpass_start(struct Frame_Context *frame_ctx,
                            Renderpass_Type       renderpass_type);
@@ -26,27 +24,23 @@ b8 vulkan_renderpass_finish(struct Frame_Context *frame_ctx,
                             Renderpass_Type       renderpass_type);
 
 void vulkan_draw_geometry(Geometry_Render_Data data);
-void vulkan_draw_grid(
-    mat4 projection,
-    mat4 view,
-    vec4 grid_color,
-    f32  grid_spacing);
+void
+vulkan_draw_grid(mat4 projection, mat4 view, vec4 grid_color, f32 grid_spacing);
 void vulkan_set_viewport_clear_color(vec4 color);
 void vulkan_draw_ui(UI_Render_Data data);
 
-void vulkan_create_texture(const u8 *pixels,
-                           Texture  *texture,
-                           b8        is_ui_texture);
+void
+vulkan_create_texture(const u8 *pixels, Texture *texture, b8 is_ui_texture);
 void vulkan_destroy_texture(Texture *texture);
 
 b8   vulkan_create_material(struct Material *material);
 void vulkan_destroy_material(struct Material *material);
 
-b8 vulkan_create_geometry(Geometry        *geometry,
-                          u32              vertex_count,
-                          const vertex_3d *vertices,
-                          u32              index_count,
-                          const u32       *indices);
+b8   vulkan_create_geometry(Geometry        *geometry,
+                            u32              vertex_count,
+                            const Vertex_3d *vertices,
+                            u32              index_count,
+                            const u32       *indices);
 void vulkan_destroy_geometry(Geometry *geometry);
 
 // Viewport management

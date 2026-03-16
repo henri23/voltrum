@@ -45,11 +45,16 @@ struct Renderer_Backend
                                          s32  mode);
     b8 (*end_frame)(struct Frame_Context *frame_ctx, f32 delta_t);
 
-    b8 (*start_renderpass)(struct Frame_Context *frame_ctx, Renderpass_Type type);
-    b8 (*finish_renderpass)(struct Frame_Context *frame_ctx, Renderpass_Type type);
+    b8 (*start_renderpass)(struct Frame_Context *frame_ctx,
+                           Renderpass_Type       type);
+    b8 (*finish_renderpass)(struct Frame_Context *frame_ctx,
+                            Renderpass_Type       type);
 
     void (*draw_geometry)(Geometry_Render_Data data);
-    void (*draw_grid)(mat4 projection, mat4 view, vec4 grid_color, f32 grid_spacing);
+    void (*draw_grid)(mat4 projection,
+                      mat4 view,
+                      vec4 grid_color,
+                      f32  grid_spacing);
     void (*set_viewport_clear_color)(vec4 color);
     void (*draw_ui)(UI_Render_Data data);
 
@@ -64,7 +69,7 @@ struct Renderer_Backend
 
     b8 (*create_geometry)(Geometry        *geometry,
                           u32              vertex_count,
-                          const vertex_3d *vertices,
+                          const Vertex_3d *vertices,
                           u32              index_count,
                           const u32       *indices);
     void (*destroy_geometry)(Geometry *geometry);

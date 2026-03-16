@@ -27,10 +27,9 @@ struct Renderer_System_State
 internal_var Renderer_System_State *state_ptr;
 
 Renderer_System_State *
-renderer_init(
-    Arena          *allocator,
-    Platform_State *platform,
-    String          application_name)
+renderer_init(Arena          *allocator,
+              Platform_State *platform,
+              String          application_name)
 {
     auto *state = push_struct(allocator, Renderer_System_State);
 
@@ -48,14 +47,14 @@ renderer_init(
     state->backend.initialize(allocator, platform, application_name);
 
     // Default orthographic projection until the editor sets its own
-    state->projection = mat4_project_orthographic(
-        -9.0f, 9.0f, -5.5f, 5.5f, -1.0f, 1.0f);
+    state->projection =
+        mat4_project_orthographic(-9.0f, 9.0f, -5.5f, 5.5f, -1.0f, 1.0f);
 
     // Default view to identity until the client provides a camera
     state->view = mat4_identity();
 
     // Default grid color until set by theme
-    state->grid_color = vec4{0.5f, 0.5f, 0.5f, 0.7f};
+    state->grid_color   = vec4{0.5f, 0.5f, 0.5f, 0.7f};
     state->grid_spacing = 1.0f;
 
     state_ptr = state;
@@ -89,11 +88,10 @@ renderer_draw_frame(Frame_Context *frame_ctx, Render_Context *render_ctx)
         }
 
         // Draw grid as background layer before scene geometry
-        state_ptr->backend.draw_grid(
-            state_ptr->projection,
-            state_ptr->view,
-            state_ptr->grid_color,
-            state_ptr->grid_spacing);
+        state_ptr->backend.draw_grid(state_ptr->projection,
+                                     state_ptr->view,
+                                     state_ptr->grid_color,
+                                     state_ptr->grid_spacing);
 
         state_ptr->backend.update_global_viewport_state(state_ptr->projection,
                                                         state_ptr->view,
@@ -229,7 +227,7 @@ renderer_destroy_material(struct Material *material)
 b8
 renderer_create_geometry(Geometry        *geometry,
                          u32              vertex_count,
-                         const vertex_3d *vertices,
+                         const Vertex_3d *vertices,
                          u32              index_count,
                          u32             *indices)
 {

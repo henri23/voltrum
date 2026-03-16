@@ -79,38 +79,38 @@ struct vec4
 };
 
 // typedef vec4 quaternion;
-using quaternion = vec4;
+using quat = vec4;
 
 struct mat4
 {
     alignas(16) f32 elements[16];
 };
 
-struct vertex_3d
+struct Vertex_3d
 {
     vec3 position;
     vec2 texture_coordinates;
 };
 
-struct vertex_2d
+struct Vertex_2d
 {
     vec2 position;
     vec2 texture_coordinates;
 };
 
-struct transform
+struct Transform
 {
-    vec3       position;
-    quaternion rotation;
-    vec3       scale;
+    vec3 position;
+    quat rotation;
+    vec3 scale;
 
     b8 is_dirty; // Tracks if position/rotation/scale has changed
 
     // This is the resulting matrix of the above transformations
-    mat4 local_transform_matrix;
+    mat4 local_matrix;
 
     // If a child transformation has a valid parent transformation, it can be
     // used to combine transformation matrices, so that the child 'inherits'
     // the transformation of its parent
-    struct transform *parent;
+    // struct Transform *parent;
 };

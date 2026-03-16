@@ -140,7 +140,7 @@ The project includes sophisticated build scripts with modern UI:
 
 ## Roadmap
 
-See [TODO.md](TODO.md) for the detailed project roadmap, including:
+See [TODO.md](docs/TODO.md) for the detailed project roadmap, including:
 
 - Engine core improvements and optimizations
 - Advanced rendering features (PBR, shadows, post-processing)

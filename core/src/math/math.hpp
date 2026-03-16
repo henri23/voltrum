@@ -872,47 +872,44 @@ mat4_right(mat4 matrix)
 }
 
 // Quaternion functions
-FORCE_INLINE quaternion
+FORCE_INLINE quat
 quat_identity()
 {
-    quaternion result = {0, 0, 0, 1.0f};
+    quat result = {0, 0, 0, 1.0f};
     return result;
 }
 
 FORCE_INLINE f32
-quat_normal(quaternion q)
+quat_normal(quat q)
 {
     return math_sqrt(q.qx * q.qx + q.qy * q.qy + q.qz * q.qz + q.qw * q.qw);
 }
 
-FORCE_INLINE quaternion
-quat_norm(quaternion q)
+FORCE_INLINE quat
+quat_norm(quat q)
 {
-    f32        normal = quat_normal(q);
-    quaternion result = {q.qx / normal,
-                         q.qy / normal,
-                         q.qz / normal,
-                         q.qw / normal};
+    f32  normal = quat_normal(q);
+    quat result = {q.qx / normal, q.qy / normal, q.qz / normal, q.qw / normal};
     return result;
 }
 
-FORCE_INLINE quaternion
-quat_conjugate(quaternion q)
+FORCE_INLINE quat
+quat_conjugate(quat q)
 {
-    quaternion result = {-q.qx, -q.qy, -q.qz, q.qw};
+    quat result = {-q.qx, -q.qy, -q.qz, q.qw};
     return result;
 }
 
-FORCE_INLINE quaternion
-quat_inv(quaternion q)
+FORCE_INLINE quat
+quat_inv(quat q)
 {
     return quat_norm(quat_conjugate(q));
 }
 
-FORCE_INLINE quaternion
-quat_mul(quaternion q0, quaternion q1)
+FORCE_INLINE quat
+quat_mul(quat q0, quat q1)
 {
-    quaternion out_quaternion;
+    quat out_quaternion;
 
     out_quaternion.x =
         q0.qx * q1.qw + q0.qy * q1.qz - q0.qz * q1.qy + q0.qw * q1.qx;
@@ -930,21 +927,21 @@ quat_mul(quaternion q0, quaternion q1)
 }
 
 FORCE_INLINE f32
-quat_dot(quaternion q0, quaternion q1)
+quat_dot(quat q0, quat q1)
 {
 
     return q0.qx * q1.qx + q0.qy * q1.qy + q0.qz * q1.qz + q0.qw * q1.qw;
 }
 
 FORCE_INLINE mat4
-quat_to_mat4(quaternion q)
+quat_to_mat4(quat q)
 {
 
     mat4 out_matrix = mat4_identity();
 
     // https://stackoverflow.com/questions/1556260/convert-quaternion-rotation-to-rotation-matrix
 
-    quaternion n = quat_norm(q);
+    quat n = quat_norm(q);
 
     out_matrix.elements[0] = 1.0f - 2.0f * n.qy * n.qy - 2.0f * n.qz * n.qz;
     out_matrix.elements[1] = 2.0f * n.qx * n.qy - 2.0f * n.qz * n.qw;
@@ -964,7 +961,7 @@ quat_to_mat4(quaternion q)
 // Calculates a rotation matrix based on the quaternion and the passed in center
 // point.
 FORCE_INLINE mat4
-quat_to_rotation_matrix(quaternion q, vec3 center)
+quat_to_rotation_matrix(quat q, vec3 center)
 {
 
     mat4 out_matrix;
@@ -994,7 +991,7 @@ quat_to_rotation_matrix(quaternion q, vec3 center)
     return out_matrix;
 }
 
-FORCE_INLINE quaternion
+FORCE_INLINE quat
 quat_from_axis_angle(vec3 axis, f32 angle, b8 normalize)
 {
 
@@ -1004,7 +1001,7 @@ quat_from_axis_angle(vec3 axis, f32 angle, b8 normalize)
 
     f32 c = math_cos(half_angle);
 
-    quaternion q = {s * axis.x, s * axis.y, s * axis.z, c};
+    quat q = {s * axis.x, s * axis.y, s * axis.z, c};
 
     if (normalize)
     {
@@ -1014,18 +1011,18 @@ quat_from_axis_angle(vec3 axis, f32 angle, b8 normalize)
     return q;
 }
 
-FORCE_INLINE quaternion
-quat_slerp(quaternion q0, quaternion q1, f32 percentage)
+FORCE_INLINE quat
+quat_slerp(quat q0, quat q1, f32 percentage)
 {
 
-    quaternion out_quaternion;
+    quat out_quaternion;
 
     // Source: https://en.wikipedia.org/wiki/Slerp
     // Only unit quaternions are valid rotations. Normalize to avoid undefined
     // behavior.
-    quaternion v0 = quat_norm(q0);
+    quat v0 = quat_norm(q0);
 
-    quaternion v1 = quat_norm(q1);
+    quat v1 = quat_norm(q1);
 
     // Compute the cosine of the angle between the two vectors.
     f32 dot = quat_dot(v0, v1);
@@ -1073,10 +1070,10 @@ quat_slerp(quaternion q0, quaternion q1, f32 percentage)
 
     f32 s1 = sin_theta / sin_theta_0;
 
-    quaternion result = {(v0.x * s0) + (v1.x * s1),
-                         (v0.y * s0) + (v1.y * s1),
-                         (v0.z * s0) + (v1.z * s1),
-                         (v0.w * s0) + (v1.w * s1)};
+    quat result = {(v0.x * s0) + (v1.x * s1),
+                   (v0.y * s0) + (v1.y * s1),
+                   (v0.z * s0) + (v1.z * s1),
+                   (v0.w * s0) + (v1.w * s1)};
 
     return result;
 }

@@ -2,10 +2,9 @@
 
 #include "renderer/renderer_types.hpp"
 
-struct Renderer_System_State *renderer_init(
-    struct Arena          *allocator,
-    struct Platform_State *platform,
-    String                 application_name);
+struct Renderer_System_State *renderer_init(struct Arena          *allocator,
+                                            struct Platform_State *platform,
+                                            String application_name);
 
 void renderer_on_resize(u16 width, u16 height);
 
@@ -23,7 +22,7 @@ void renderer_destroy_material(struct Material *material);
 
 b8   renderer_create_geometry(Geometry        *geometry,
                               u32              vertex_count,
-                              const vertex_3d *vertices,
+                              const Vertex_3d *vertices,
                               u32              index_count,
                               u32             *indices);
 void renderer_destroy_geometry(Geometry *geometry);

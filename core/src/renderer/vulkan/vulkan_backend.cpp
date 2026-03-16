@@ -267,7 +267,7 @@ vulkan_initialize(Arena *allocator, Platform_State *platform, String app_name)
     device_requirements.present            = true;
 
 #ifndef PLATFORM_APPLE
-    device_requirements.discrete_gpu = true;
+    device_requirements.discrete_gpu = false;
 #else
     device_requirements.discrete_gpu = false;
 #endif
@@ -1386,7 +1386,7 @@ create_buffers(Vulkan_Context *context)
     // buffers
     VkMemoryPropertyFlagBits memory_property_flags =
         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    constexpr u64 vertex_buffer_size = sizeof(vertex_3d) * 1024 * 1024; // 64mb
+    constexpr u64 vertex_buffer_size = sizeof(Vertex_3d) * 1024 * 1024; // 64mb
 
     if (!vulkan_buffer_create(context,
                               vertex_buffer_size,
@@ -1627,7 +1627,7 @@ vulkan_destroy_material(struct Material *material)
 b8
 vulkan_create_geometry(Geometry        *geometry,
                        u32              vertex_count,
-                       const vertex_3d *vertices,
+                       const Vertex_3d *vertices,
                        u32              index_count,
                        const u32       *indices)
 {
@@ -1687,7 +1687,7 @@ vulkan_create_geometry(Geometry        *geometry,
 
     internal_data->vertex_buffer_offset = state_ptr->geometry_vertex_offset;
     internal_data->vertex_count         = vertex_count;
-    internal_data->vertex_size          = sizeof(vertex_3d) * vertex_count;
+    internal_data->vertex_size          = sizeof(Vertex_3d) * vertex_count;
 
     upload_data_range(state_ptr,
                       pool,

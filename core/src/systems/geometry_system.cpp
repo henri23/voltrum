@@ -203,7 +203,7 @@ geometry_system_generate_plane_config(Arena      *arena,
     Geometry_Config config;
     // 4 verts per quad segment
     config.vertex_count = x_segment_count * y_segment_count * 4;
-    config.vertices     = push_array(arena, vertex_3d, config.vertex_count);
+    config.vertices     = push_array(arena, Vertex_3d, config.vertex_count);
     // 6 indices per segment
     config.index_count = x_segment_count * y_segment_count * 6;
     config.indices     = push_array(arena, u32, config.index_count);
@@ -230,10 +230,10 @@ geometry_system_generate_plane_config(Arena      *arena,
             f32 max_uvy = ((y + 1) / (f32)y_segment_count) * tile_y;
 
             u32        v_offset = ((y * x_segment_count) + x) * 4;
-            vertex_3d *v0       = &config.vertices[v_offset + 0];
-            vertex_3d *v1       = &config.vertices[v_offset + 1];
-            vertex_3d *v2       = &config.vertices[v_offset + 2];
-            vertex_3d *v3       = &config.vertices[v_offset + 3];
+            Vertex_3d *v0       = &config.vertices[v_offset + 0];
+            Vertex_3d *v1       = &config.vertices[v_offset + 1];
+            Vertex_3d *v2       = &config.vertices[v_offset + 2];
+            Vertex_3d *v3       = &config.vertices[v_offset + 3];
 
             v0->position.x            = min_x;
             v0->position.y            = min_y;
@@ -348,8 +348,8 @@ destroy_geometry(Geometry_System_State *state, Geometry *geometry)
 INTERNAL_FUNC b8
 create_default_geometry(Geometry_System_State *state)
 {
-    vertex_3d verts[4];
-    memory_zero(verts, sizeof(vertex_3d) * 4);
+    Vertex_3d verts[4];
+    memory_zero(verts, sizeof(Vertex_3d) * 4);
 
     constexpr f32 f = 10.0f;
 

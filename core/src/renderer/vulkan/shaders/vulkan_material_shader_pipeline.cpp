@@ -196,7 +196,7 @@ vulkan_material_shader_pipeline_create(
 
     if (!vulkan_graphics_pipeline_create(context,
                                          &context->viewport_renderpass,
-                                         sizeof(vertex_3d),
+                                         sizeof(Vertex_3d),
                                          attribute_count,
                                          attribute_descriptions,
                                          descriptor_set_layout_count,
