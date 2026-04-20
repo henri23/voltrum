@@ -40,31 +40,6 @@ For detailed platform-specific instructions, see:
 - [Linux Build Guide](docs/BUILD_LINUX.md)
 - [Windows Build Guide](docs/BUILD_WINDOWS.md)
 
-## Project Structure
-
-```
-voltrum/
-├── core/                  # Engine core library (~6.5k LOC)
-│   ├── src/assets/        # Asset loading and management
-│   ├── src/core/          # Application framework and entry
-│   ├── src/memory/        # Memory management (arena & pool)
-│   ├── src/platform/      # Platform layer (SDL3)
-│   ├── src/renderer/      # Vulkan rendering backend
-│   └── src/ui/            # ImGui-based UI framework
-├── client/                # Application layer (~240 LOC)
-│   └── src/               # Client-specific UI and logic
-├── external/              # Third-party dependencies
-│   ├── SDL3/              # Platform layer and input handling
-│   ├── imgui/             # Immediate mode GUI w/ docking
-│   ├── spdlog/            # High-performance logging
-│   └── stb_image/         # Image loading library
-├── assets/                # Game assets and resources
-│   ├── fonts/             # Font files (Roboto family)
-│   ├── icons/             # UI icons and graphics
-│   └── images/            # Textures and images
-└── bin/                   # Build output directory
-```
-
 ## Architecture
 
 ### Core Engine (`voltrum_core.dll/so`)
