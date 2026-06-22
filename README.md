@@ -15,30 +15,54 @@ A modern CAD application for microchip design built with **Vulkan**, **ImGui**, 
 
 ### Prerequisites
 
-- **C++17** compatible compiler (GCC 8+, Clang 7+, MSVC 2019+)
-- **CMake** 3.16 or later
-- **Vulkan SDK** 1.3+ with validation layers
-- **Git** with submodule support
+- A C++20 compiler (GCC 11+, Clang 14+, or MSVC 2019+)
+- CMake 3.16 or later
+- Ninja (or Make on Linux)
+- The Vulkan loader, headers and validation layers - from your distro on Linux,
+  or the LunarG Vulkan SDK on Windows and macOS
+- Git
+
+The default build is a debug build, and it requires the Vulkan validation
+layers to be present at runtime.
 
 ### Build
 
-**Linux:**
+Clone with submodules, then run the build script for your platform.
+
+**Linux / macOS:**
 ```bash
-git clone --recursive https://github.com/your-username/voltrum.git
+git clone --recursive https://github.com/henri23/voltrum.git
 cd voltrum
-./build-ninja.sh
+./build.sh
 ```
 
 **Windows:**
 ```cmd
-git clone --recursive https://github.com/your-username/voltrum.git
+git clone --recursive https://github.com/henri23/voltrum.git
 cd voltrum
 build.bat
 ```
 
-For detailed platform-specific instructions, see:
+If you already cloned without `--recursive`, or a `git pull` left the
+submodules behind, sync them before building:
+
+```bash
+git submodule update --init --recursive
+```
+
+Run that after pulling changes too. A plain `git pull` updates the source but
+does not move the submodules, so the ImGui checkout can fall behind what the
+renderer expects and the build fails with errors about missing members in the
+Vulkan backend. The command above brings the submodules back in line.
+
+The build writes everything under `bin/`; run the client with
+`./bin/client/voltrum_client` (`.exe` on Windows). The scripts don't launch it
+for you.
+
+For the full details, including dependencies and troubleshooting, see:
 - [Linux Build Guide](docs/BUILD_LINUX.md)
 - [Windows Build Guide](docs/BUILD_WINDOWS.md)
+- [macOS Build Guide](docs/BUILD_MACOS.md) (experimental)
 
 ## Architecture
 
@@ -87,11 +111,13 @@ All dependencies are managed through git submodules or system packages.
 
 ### Build Scripts
 
-The project includes sophisticated build scripts with modern UI:
+Each platform has one build script that handles configuration and compilation:
 
-- **`build-ninja.sh`** (Linux) - Fast ninja-based builds with colored output
-- **`build-modern.sh`** (Linux) - Advanced build with progress tracking and logs
-- **`build-ninja.bat`** (Windows) - Windows equivalent with Visual Studio integration
+- `build.sh` (Linux and macOS) - configures with CMake, builds with Ninja or
+  Make, and runs the tests. Takes flags like `--clean`, `--dynamic`,
+  `--skip-tests`, `--asan`, `--compiler` and `--build-system`.
+- `build.bat` (Windows) - sets up the MSVC environment, then configures and
+  builds with Ninja. Takes `--clean`, `--dynamic`, `--skip-tests` and `--asan`.
 
 ### IDE Integration
 
@@ -112,6 +138,7 @@ The project includes sophisticated build scripts with modern UI:
 - [Architecture Overview](docs/ARCHITECTURE.md) - Technical architecture and design
 - [Linux Build Guide](docs/BUILD_LINUX.md) - Building on Linux systems
 - [Windows Build Guide](docs/BUILD_WINDOWS.md) - Building on Windows systems
+- [macOS Build Guide](docs/BUILD_MACOS.md) - Building on macOS (experimental)
 
 ## Roadmap
 

@@ -1,287 +1,123 @@
-# Windows Build Guide
+# Building on Windows
 
-This guide explains how to build Voltrum Engine on Windows using the provided build scripts and tools.
+On Windows the project builds with MSVC, driven by `build.bat`. The script
+finds your Visual Studio installation, sets up the compiler environment, then
+configures with CMake and compiles with Ninja. As on Linux, the default is a
+debug, statically linked build that runs the tests before producing the client.
 
-## Prerequisites
+## What you need
 
-### System Requirements
+You'll install four things: a C++ compiler (MSVC), CMake, Ninja, and the Vulkan
+SDK - plus Git if you don't already have it.
 
-- **Operating System**: Windows 10 (version 1903+) or Windows 11
-- **Compiler**: Visual Studio 2019 or 2022 with C++ support
-- **CMake**: 3.16 or later
-- **Git**: With submodule support
-- **Graphics**: Vulkan-compatible GPU with updated drivers
+**Visual Studio 2019 or 2022** - this is where MSVC comes from. Download the
+Community edition (free) from
+[visualstudio.microsoft.com/downloads](https://visualstudio.microsoft.com/downloads/).
+In the installer, check the **"Desktop development with C++"** workload before
+installing; that pulls in the compiler, the Windows SDK, and `vcvarsall.bat`,
+which is what `build.bat` uses to set up the compiler environment. If you only
+want the toolchain without the full IDE, the
+[Build Tools for Visual Studio](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022)
+installer offers the same workload.
 
-### Required Software
+**CMake 3.16 or newer** - get the Windows installer from
+[cmake.org/download](https://cmake.org/download/) and let it add CMake to your
+`PATH` (there's a checkbox for it during install). Verify with `cmake --version`.
 
-1. **Visual Studio 2019 or 2022** with C++ support
-   - Community, Professional, or Enterprise edition
-   - Install "Desktop development with C++" workload
-   - Ensure "C++ CMake tools for Visual Studio" is included
+**Ninja** - the Visual Studio C++ workload already includes it, so you may not
+need a separate install. If `ninja --version` doesn't work in a normal terminal,
+download `ninja.exe` from the
+[Ninja releases page](https://github.com/ninja-build/ninja/releases), put it in a
+folder, and add that folder to your `PATH`.
 
-2. **CMake** (3.16 or later)
-   - Download from: https://cmake.org/download/
-   - **Important**: Add to PATH during installation
-   - Verify: Open Command Prompt and run `cmake --version`
+**Vulkan SDK** - download and run the installer from
+[vulkan.lunarg.com](https://vulkan.lunarg.com/sdk/home#windows). It installs the
+Vulkan loader, the validation layers, and the tools, and it sets the `VULKAN_SDK`
+environment variable for you. Check it took with `echo %VULKAN_SDK%` in a new
+terminal.
 
-3. **Ninja Build System**
-   - Download from: https://github.com/ninja-build/ninja/releases
-   - Extract `ninja.exe` to a folder in your PATH
-   - Alternative: Install via Visual Studio installer
+**Git** - if you don't have it, install
+[Git for Windows](https://git-scm.com/download/win). During setup, the default
+"Git from the command line and also from 3rd-party software" option is fine.
 
-4. **Vulkan SDK** (1.3+ recommended)
-   - Download from: https://vulkan.lunarg.com/
-   - The installer should automatically set `VULKAN_SDK` environment variable
-   - Verify: Run `vulkaninfo` in Command Prompt
+The validation layers come with the Vulkan SDK, so a normal SDK install covers
+them. They matter because the default build is a debug build and the client
+asks the loader for `VK_LAYER_KHRONOS_validation` at startup - without it the
+client aborts on `vkCreateInstance`.
 
-5. **Git** with submodule support
-   - Download from: https://git-scm.com/download/win
-   - During installation, select "Git from the command line and also from 3rd-party software"
+You don't have to open a Developer Command Prompt yourself. `build.bat` looks
+for `vcvarsall.bat` (via `vswhere` and the usual install paths) and runs it for
+you if `cl.exe` isn't already on the path. A regular Command Prompt or
+PowerShell is fine.
 
-## Quick Build
+## Getting the code
 
-### Option 1: Modern Build Script (Recommended)
+The dependencies (SDL3, ImGui, ImPlot, spdlog) are git submodules, so clone
+recursively:
 
 ```cmd
-# Clone repository with submodules
-git clone --recursive https://github.com/your-username/voltrum.git
+git clone --recursive https://github.com/henri23/voltrum.git
 cd voltrum
+```
 
-# Build with modern UI (progress tracking, colored output)
-build-modern.bat
+If you cloned without `--recursive`, or you pulled changes that moved a
+submodule, sync them:
 
-# Run the application
+```cmd
+git submodule update --init --recursive
+```
+
+Don't skip this after a `git pull`. Pulling updates the source but leaves
+submodules where they were, so the ImGui checkout can lag behind what the
+renderer expects and you'll see compile errors about missing members in the
+Vulkan backend. The command above fixes that.
+
+## Building
+
+From the repository root:
+
+```cmd
+build.bat
+```
+
+It sets up MSVC, configures into `bin\`, builds the client, then builds and runs
+the tests. It doesn't launch anything when it finishes.
+
+The flags:
+
+- `--dynamic` - build the core as a DLL instead of one static executable
+- `--skip-tests` - don't build or run the tests
+- `--asan` - compile with AddressSanitizer
+- `--clean` - delete `bin\` before configuring
+
+## Running
+
+The build output lives under `bin\`:
+
+```cmd
 bin\client\voltrum_client.exe
 ```
 
-### Option 2: Ninja Build Script
+A static build is self-contained. With `--dynamic` the client needs
+`voltrum_core.dll` beside it, so run it from inside `bin\client`.
 
-```cmd
-# Clone repository
-git clone --recursive https://github.com/your-username/voltrum.git
-cd voltrum
+## When it doesn't work
 
-# Build with ninja (fast and clean)
-build-ninja.bat
+**The build can't find a compiler.** Make sure the C++ workload is installed in
+Visual Studio. If `build.bat` reports it can't locate `vcvarsall.bat`, your VS
+install is incomplete or in an unusual location - open a "Developer Command
+Prompt for VS" and run `build.bat` from there.
 
-# Run the application
-bin\client\voltrum_client.exe
-```
+**`cmake` or `ninja` not recognized.** They aren't on your `PATH`. Reopen the
+terminal after installing, or add their folders to `PATH`.
 
-## Build Scripts Explained
+**The client aborts at startup with a validation-layer error.** The Vulkan SDK
+isn't installed or `VULKAN_SDK` isn't set. Reinstall the SDK and check
+`echo %VULKAN_SDK%` prints a path.
 
-### `build-modern.bat` - Advanced Build UI
+**Compile errors in `vulkan_ui_backend.cpp` about unknown ImGui members.** The
+ImGui submodule is behind the code. Run
+`git submodule update --init --recursive`.
 
-Features:
-- **ASCII art header** and modern terminal interface
-- **Automatic Visual Studio detection** and environment setup
-- **Progress tracking** with colored output
-- **Error handling** and detailed diagnostics
-- **Multiple build configurations** (Debug/Release)
-
-Usage:
-```cmd
-build-modern.bat                    # Debug build
-build-modern.bat Release            # Release build
-build-modern.bat Debug run          # Debug build and run
-build-modern.bat Release run        # Release build and run
-```
-
-### `build-ninja.bat` - Fast Clean Builds
-
-Features:
-- **Fast compilation** with Ninja build system
-- **Automatic tool detection** and validation
-- **Clean error reporting** with colored output
-- **IDE integration** with compile_commands.json
-
-Usage:
-```cmd
-build-ninja.bat                     # Debug build
-set BUILD_TYPE=Release & build-ninja.bat  # Release build
-```
-
-## Run the executable
-   ```cmd
-   cd client
-   voltrum_client.exe
-   ```
-
-## Verification and Testing
-
-### Verify Installation
-
-```cmd
-# Test CMake
-cmake --version
-
-# Test Ninja
-ninja --version
-
-# Test Vulkan
-vulkaninfo --summary
-
-# Test Visual Studio compiler
-cl.exe
-```
-
-### Test the Build
-
-```cmd
-# Quick smoke test
-bin\client\voltrum_client.exe --version
-
-# Run with validation layers (debug builds)
-set VK_LAYER_PATH=%VULKAN_SDK%\Bin
-bin\client\voltrum_client.exe
-```
-
-## Troubleshooting
-
-### Installation Issues
-
-**Problem:** Visual Studio not found
-```cmd
-# Solution: Verify installation
-"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vs_installer.exe"
-# Install "Desktop development with C++" workload
-```
-
-**Problem:** CMake not found
-```cmd
-# Solution: Add CMake to PATH
-# Add: C:\Program Files\CMake\bin
-# Restart Command Prompt
-cmake --version
-```
-
-**Problem:** Ninja not found
-```cmd
-# Solution: Download and extract ninja.exe
-# Place in: C:\tools\ninja\ninja.exe
-# Add C:\tools\ninja to PATH
-```
-
-**Problem:** Vulkan SDK not found
-```cmd
-# Solution: Check environment variable
-echo %VULKAN_SDK%
-# Should show: C:\VulkanSDK\1.3.xxx.x
-# If empty, reinstall Vulkan SDK
-```
-
-### Build Issues
-
-**Problem:** `MSVC not found` or `cl.exe not recognized`
-```cmd
-# Solution: Use Developer Command Prompt
-# Or run vcvarsall.bat manually:
-"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
-```
-
-**Problem:** `error C2039: 'min': is not a member of 'std'`
-```cmd
-# Solution: Windows.h macro conflict
-# The code already defines NOMINMAX, check for conflicting headers
-```
-
-**Problem:** `LNK2019: unresolved external symbol`
-```cmd
-# Solution: Missing library dependencies
-# Ensure Vulkan SDK is properly installed
-# Check that VULKAN_SDK environment variable is set
-```
-
-### Runtime Issues
-
-**Problem:** `voltrum_core.dll not found`
-```cmd
-# Solution: Library path issue
-# Run from bin directory:
-cd bin
-client\voltrum_client.exe
-```
-
-**Problem:** Vulkan device creation failed
-```cmd
-# Solution: Update graphics drivers
-# NVIDIA: Download latest drivers from nvidia.com
-# AMD: Download latest drivers from amd.com
-# Intel: Update through Windows Update or intel.com
-```
-
-## Advanced Configuration
-
-### Environment Variables
-
-```cmd
-# Enable debug output
-set VOLTRUM_DEBUG=1
-
-# Vulkan debugging
-set VK_LAYER_PATH=%VULKAN_SDK%\Bin
-
-# Custom build configuration
-set BUILD_TYPE=Release
-set CMAKE_GENERATOR=Ninja
-```
-
-### IDE Integration
-
-**Visual Studio:**
-- Open project folder in Visual Studio
-- VS automatically detects CMake configuration
-- Use "Select Startup Item" to choose voltrum_client
-
-**VS Code:**
-```json
-// .vscode/c_cpp_properties.json
-{
-    "configurations": [{
-        "name": "Win32",
-        "compileCommands": "${workspaceFolder}/compile_commands.json",
-        "cStandard": "c17",
-        "cppStandard": "c++17",
-        "intelliSenseMode": "msvc-x64"
-    }]
-}
-```
-
-### Custom Build Targets
-
-```cmd
-# Build only core library
-ninja voltrum_core
-
-# Build only client
-ninja voltrum_client
-
-# Clean build
-ninja clean
-
-# Verbose output
-ninja -v
-```
-
-## Performance Notes
-
-**Typical build times (Release mode):**
-- **4-core system**: ~5-8 minutes (full build)
-- **8-core system**: ~2-4 minutes (full build)
-- **Incremental**: ~15-45 seconds
-
-**Memory usage:**
-- **Peak RAM**: ~3-6 GB during compilation
-- **Disk space**: ~800 MB for full build
-
-**Windows-Specific Optimizations:**
-
-The codebase includes Windows-specific features:
-- **MSVC compiler optimizations** - High warning levels (`/W4`) and performance flags
-- **Windows debug support** - Integrated debug break functionality
-- **Proper DLL handling** - Export/import macros with `__declspec(dllexport)`
-- **Header optimization** - `NOMINMAX` and `WIN32_LEAN_AND_MEAN` to reduce compile times
-
----
-
-For Linux builds, see [BUILD_LINUX.md](BUILD_LINUX.md)
+For Linux and macOS see [BUILD_LINUX.md](BUILD_LINUX.md) and
+[BUILD_MACOS.md](BUILD_MACOS.md).

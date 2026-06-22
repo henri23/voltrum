@@ -1,350 +1,149 @@
-# Linux Build Guide
+# Building on Linux
 
-This guide explains how to build Voltrum Engine on Linux using the provided build scripts and tools.
+Voltrum builds with a single script, `build.sh`, which configures the project
+with CMake and compiles it with Ninja (or Make). The defaults give you a debug,
+statically linked build that also runs the test suite before producing the
+client.
 
-## Prerequisites
+## What you need
 
-### System Requirements
+- A C++20 compiler - [GCC](https://gcc.gnu.org/) 11+ or
+  [Clang](https://clang.llvm.org/) 14+
+- [CMake](https://cmake.org/) 3.16 or newer
+- [Ninja](https://ninja-build.org/) (or Make, if you prefer)
+- [Git](https://git-scm.com/)
+- The Vulkan loader, headers, and **validation layers** (the
+  [Vulkan SDK](https://vulkan.lunarg.com/) if you don't use distro packages)
+- SDL3's video dependencies (X11 and/or Wayland development headers)
 
-- **Operating System**: Ubuntu 20.04+, Arch Linux, Fedora 35+, or compatible distribution
-- **Compiler**: GCC 8+ or Clang 7+ with C++17 support
-- **CMake**: 3.16 or later
-- **Git**: With submodule support
-- **Graphics**: Vulkan-compatible GPU with updated drivers
+On Linux the easiest way to get all of these is your distribution's package
+manager - pick your distro below and the one command installs everything. The
+Vulkan SDK link above is only needed if you'd rather install LunarG's SDK by
+hand instead of using distro packages.
 
-### Required Packages
+The validation layers matter: the default build is a debug build, and it asks
+the Vulkan loader for `VK_LAYER_KHRONOS_validation` at startup. If that layer
+isn't installed the client aborts immediately on `vkCreateInstance`, so don't
+skip it.
 
-**Ubuntu/Debian:**
+You don't need any audio libraries. SDL's audio, joystick, haptic and similar
+subsystems are turned off in the top-level `CMakeLists.txt`, so the usual ALSA
+/ PulseAudio / JACK packages are irrelevant here.
+
+### Arch
+
 ```bash
-# Essential build tools
+sudo pacman -S base-devel cmake ninja git \
+    vulkan-headers vulkan-icd-loader vulkan-validation-layers vulkan-tools \
+    libx11 libxext wayland wayland-protocols
+```
+
+Add the driver for your GPU: `vulkan-radeon` (AMD), `vulkan-intel` (Intel), or
+`nvidia-utils` (NVIDIA).
+
+### Ubuntu / Debian
+
+```bash
 sudo apt update
-sudo apt install build-essential cmake ninja-build git
-
-# Graphics and development libraries
-sudo apt install vulkan-tools libvulkan-dev vulkan-validationlayers-dev spirv-tools
-sudo apt install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
-sudo apt install libgl1-mesa-dev libglu1-mesa-dev
-
-# Audio libraries (for SDL3)
-sudo apt install libasound2-dev libpulse-dev libjack-jackd2-dev
+sudo apt install build-essential cmake ninja-build git \
+    libvulkan-dev vulkan-validationlayers vulkan-tools \
+    libx11-dev libxext-dev libwayland-dev wayland-protocols
 ```
 
-**Arch Linux:**
+On AMD/Intel install `mesa-vulkan-drivers`; on NVIDIA use the proprietary
+driver package for your card.
+
+### Fedora
+
 ```bash
-# Essential build tools
-sudo pacman -S base-devel cmake ninja git
-
-# Graphics and development libraries
-sudo pacman -S vulkan-devel vulkan-validation-layers vulkan-tools spirv-tools
-sudo pacman -S libx11 libxrandr libxinerama libxcursor libxi
-sudo pacman -S mesa
-
-# Audio libraries
-sudo pacman -S alsa-lib libpulse jack2
+sudo dnf install gcc-c++ cmake ninja-build git \
+    vulkan-loader-devel vulkan-validation-layers vulkan-tools \
+    libX11-devel libXext-devel wayland-devel wayland-protocols-devel
 ```
 
-**Fedora:**
-```bash
-# Essential build tools
-sudo dnf groupinstall "Development Tools"
-sudo dnf install cmake ninja-build git
+### A note on a hand-installed Vulkan SDK
 
-# Graphics and development libraries
-sudo dnf install vulkan-devel vulkan-validation-layers vulkan-tools spirv-tools
-sudo dnf install libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel
-sudo dnf install mesa-libGL-devel mesa-libGLU-devel
+If you use the LunarG SDK from your home directory instead of distro packages,
+the loader only finds the validation layers when the SDK environment is active
+(`VK_LAYER_PATH` / `VK_ADD_LAYER_PATH` pointing at the SDK, and its `lib`
+directory on `LD_LIBRARY_PATH`). Source the SDK's `setup-env.sh` in your shell,
+or make sure those variables are set, otherwise the debug build will fail to
+find the layer even though it's installed.
 
-# Audio libraries
-sudo dnf install alsa-lib-devel pulseaudio-libs-devel jack-audio-connection-kit-devel
-```
+## Getting the code
 
-### Graphics Drivers
-
-**NVIDIA:**
-```bash
-# Ubuntu/Debian
-sudo apt install nvidia-driver-535 nvidia-utils-535
-# Arch Linux
-sudo pacman -S nvidia nvidia-utils
-# Fedora
-sudo dnf install akmod-nvidia xorg-x11-drv-nvidia-cuda
-```
-
-**AMD:**
-```bash
-# Ubuntu/Debian
-sudo apt install mesa-vulkan-drivers
-# Arch Linux
-sudo pacman -S vulkan-radeon
-# Fedora
-sudo dnf install mesa-vulkan-drivers
-```
-
-**Intel:**
-```bash
-# Ubuntu/Debian
-sudo apt install mesa-vulkan-drivers intel-media-va-driver
-# Arch Linux
-sudo pacman -S vulkan-intel
-# Fedora
-sudo dnf install mesa-vulkan-drivers
-```
-
-##  Quick Build
-
-### Option 1: Ninja Build
+The project pulls SDL3, ImGui, ImPlot and spdlog in as submodules, so clone
+recursively:
 
 ```bash
-# Clone repository with submodules
-git clone --recursive https://github.com/your-username/voltrum.git
+git clone --recursive https://github.com/henri23/voltrum.git
 cd voltrum
+```
 
-# Build with ninja (fast and clean output)
-./build-ninja.sh
+If you already cloned without `--recursive`, or if you pulled changes that moved
+a submodule, sync them before building:
 
-# Run the application
+```bash
+git submodule update --init --recursive
+```
+
+This second step matters more than it looks. A plain `git pull` updates the
+source but does not move submodules, so the ImGui checkout can fall behind what
+the renderer expects and you'll get compile errors about missing members in the
+Vulkan backend. When that happens, run the command above.
+
+## Building
+
+```bash
+./build.sh
+```
+
+That configures into `bin/`, builds and runs the tests, then builds the client.
+The script does not launch anything when it's done.
+
+The flags it understands:
+
+- `--dynamic` - build the core and SDL3 as shared libraries instead of one
+  static executable
+- `--skip-tests` - don't build or run the test suite
+- `--asan` - compile with AddressSanitizer (much slower, for debugging)
+- `--clean` - delete `bin/` before configuring
+- `--compiler gcc|clang` - pick the toolchain (GCC is the default)
+- `--build-system ninja|make` - pick the build tool (Ninja is the default)
+
+So a clean Clang build without tests is:
+
+```bash
+./build.sh --clean --compiler clang --skip-tests
+```
+
+## Running
+
+The build writes everything under `bin/`:
+
+```bash
 ./bin/client/voltrum_client
 ```
 
-### Option 2: Modern Build Script (Same as option 1 but more beautiful)
+A static build (the default) is self-contained. If you built with `--dynamic`,
+the client needs to find `libvoltrum_core.so` and `libSDL3.so` next to it, so
+run it from inside `bin/` or set `LD_LIBRARY_PATH` to include `bin/core` and
+`bin/external/SDL3`.
 
-```bash
-# Clone repository
-git clone --recursive https://github.com/your-username/voltrum.git
-cd voltrum
+## When it doesn't work
 
-# Build with advanced UI (progress tracking, logs)
-./build-modern.sh
+**The client aborts at startup with a validation-layer error.** The layer
+isn't installed, or your hand-installed SDK isn't on the environment. See the
+notes above - install `vulkan-validation-layers` (or whatever your distro calls
+it), or activate the SDK.
 
-# Run the application
-./bin/client/voltrum_client
-```
+**Compile errors in `vulkan_ui_backend.cpp` about unknown ImGui members.** Your
+ImGui submodule is out of date relative to the code. Run
+`git submodule update --init --recursive`.
 
-## Build Scripts Explained
+**`vkCreateInstance` fails with no usable device.** Your GPU driver doesn't
+expose Vulkan. Install the right driver package for your card and check
+`vulkaninfo --summary` lists your GPU.
 
-### `build-ninja.sh` - Fast Clean Builds
-
-Features:
-- **Fast compilation** with Ninja build system
-- **Colored output** with Unicode symbols
-- **Clean error reporting** and status messages
-- **Automatic tool detection** and validation
-- **IDE integration** with compile_commands.json generation
-
-Usage:
-```bash
-./build-ninja.sh           # Debug build
-BUILD_TYPE=Release ./build-ninja.sh  # Release build
-```
-
-### `build-modern.sh` - Advanced Build UI
-
-Features:
-- **ASCII art header** and modern terminal UI
-- **Real-time progress tracking** with smooth animations
-- **Scrolling build logs** with syntax highlighting
-- **Memory usage tracking** and build statistics
-- **Error highlighting** and detailed diagnostics
-
-Usage:
-```bash
-./build-modern.sh          # Interactive build with UI
-./build-modern.sh --quiet  # Minimal output mode
-```
-
-## Run the Application
-
-```bash
-cd client
-./voltrum_client
-```
-
-##  Verification and Testing
-
-### Verify Vulkan Installation
-
-```bash
-# Check Vulkan loader
-vulkaninfo --summary
-
-# Verify validation layers
-vulkaninfo | grep -i validation
-
-# Test Vulkan functionality
-vkcube  # If available
-```
-
-### Test the Build
-
-```bash
-# Quick smoke test
-./bin/client/voltrum_client --version
-
-# Run with validation layers (debug builds)
-VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d \
-./bin/client/voltrum_client
-
-# Check for memory leaks (if valgrind is installed)
-valgrind --tool=memcheck --leak-check=full \
-./bin/client/voltrum_client
-```
-
-##  Troubleshooting
-
-### Vulkan Issues
-
-**Problem:** `vkCreateInstance failed`
-```bash
-# Solution: Install Vulkan drivers and SDK
-sudo apt install vulkan-tools libvulkan-dev vulkan-validationlayers-dev
-
-# Verify installation
-vulkaninfo --summary
-```
-
-**Problem:** Validation layers not found
-```bash
-# Solution: Set validation layer path
-export VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
-```
-
-### Build Issues
-
-**Problem:** `CMake not found`
-```bash
-# Solution: Install CMake
-sudo apt install cmake
-# or use snap for latest version
-sudo snap install cmake --classic
-```
-
-**Problem:** `Ninja not found`
-```bash
-# Solution: Install Ninja
-sudo apt install ninja-build
-# Create symlink if needed
-sudo ln -s /usr/bin/ninja-build /usr/bin/ninja
-```
-
-**Problem:** `SDL3 build errors`
-```bash
-# Solution: Install development libraries
-sudo apt install libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev
-sudo apt install libasound2-dev libpulse-dev
-```
-
-**Problem:** `Compiler not found or too old`
-```bash
-# Check compiler version
-gcc --version
-g++ --version
-
-# Install newer GCC (Ubuntu)
-sudo apt install gcc-10 g++-10
-sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 100
-sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 100
-```
-
-### Runtime Issues
-
-**Problem:** `libvoltrum_core.so not found`
-```bash
-# Solution: Set library path
-export LD_LIBRARY_PATH="$(pwd)/bin/core:$LD_LIBRARY_PATH"
-# or run from bin directory
-cd bin && ./client/voltrum_client
-```
-
-**Problem:** Graphics drivers not working
-```bash
-# Check driver status
-lspci -v | grep -A12 VGA
-nvidia-smi  # For NVIDIA
-clinfo      # For OpenCL/compute
-
-# Reinstall mesa drivers
-sudo apt install --reinstall mesa-vulkan-drivers
-```
-
-### Performance Issues
-
-**Problem:** Low FPS or stuttering
-```bash
-# Run with performance monitoring
-perf stat ./bin/client/voltrum_client
-
-# Check GPU usage
-nvidia-smi -l 1  # NVIDIA
-radeontop        # AMD
-```
-
-## Advanced Configuration
-
-### Environment Variables
-
-```bash
-# Enable debug output
-export VOLTRUM_DEBUG=1
-
-# Vulkan debugging
-export VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
-
-# Force specific GPU (multi-GPU systems)
-export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/nvidia_icd.json
-
-# Build configuration
-export CC=clang
-export CXX=clang++
-export BUILD_TYPE=Release
-```
-
-### IDE Integration
-
-**VS Code:**
-```json
-// .vscode/c_cpp_properties.json
-{
-    "configurations": [{
-        "name": "Linux",
-        "compileCommands": "${workspaceFolder}/compile_commands.json",
-        "cStandard": "c17",
-        "cppStandard": "c++17"
-    }]
-}
-```
-
-**CLion:**
-- Open project folder
-- CLion automatically detects CMake configuration
-- Use "Debug" or "Release" build configurations
-
-### Custom Build Targets
-
-```bash
-# Build only core library
-ninja voltrum_core
-
-# Build only client
-ninja voltrum_client
-
-# Clean build
-ninja clean
-
-# Verbose output
-ninja -v
-```
-
-## Build Performance
-
-**Typical build times (Release mode):**
-- **4-core system**: ~3-5 minutes (full build)
-- **8-core system**: ~1-2 minutes (full build)
-- **Incremental**: ~10-30 seconds
-
-**Memory usage:**
-- **Peak RAM**: ~2-4 GB during compilation
-- **Disk space**: ~500 MB for full build
-
----
-
-For Windows builds, see [BUILD_WINDOWS.md](BUILD_WINDOWS.md)
+For the Windows and macOS instructions see
+[BUILD_WINDOWS.md](BUILD_WINDOWS.md) and [BUILD_MACOS.md](BUILD_MACOS.md).
